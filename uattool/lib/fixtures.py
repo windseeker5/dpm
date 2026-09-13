@@ -3,10 +3,13 @@ script's leftover data (each catalog row must also work when run alone via
 `run_uat.py --only <row>`).
 """
 
+import os
 import time
 from urllib.parse import quote
 
 from . import config
+
+FIXTURE_IMAGE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fixtures", "test_cover_photo.jpg")
 
 
 # Recognizable, real-world scenarios supplied for this suite. A timestamp is
@@ -41,6 +44,71 @@ def scenario_name(base_name, qualifier=None):
         parts.append(qualifier)
     parts.append(f"UAT {time.time_ns()}")
     return " — ".join(parts)
+
+
+def ensure_shop_enabled(page, ctx):
+    """Turn SHOP_ENABLED on if it isn't. Left on afterwards — shop rows depend on it."""
+    page.goto(f"{ctx.base_url}/admin/unified-settings?section=shop")
+    if page.is_checked("#shop_enabled"):
+        ctx.note("SHOP_ENABLED was already on.")
+        return
+    page.check("#shop_enabled")
+    page.locator('button:has-text("Save Shop Settings")').first.click()
+    page.wait_for_load_state("networkidle", timeout=15000)
+    if not page.is_checked("#shop_enabled"):
+        raise AssertionError("SHOP_ENABLED did not persist as checked after saving Shop settings.")
+    ctx.note("SHOP_ENABLED was off — turned it on via Settings > Shop and left it on.")
+
+
+def create_product(page, ctx, name, price, with_photo=False, sizes=None):
+    """Create a shop product through the real admin UI at /admin/products."""
+    page.goto(f"{ctx.base_url}/admin/products")
+    page.click('button[data-bs-target="#productModal"]')
+    page.wait_for_selector("#productModal.show", timeout=5000)
+
+    page.fill("#name", name)
+    page.fill("#price", str(price))
+    if sizes:
+        page.fill("#size_label", sizes)
+    if with_photo:
+        page.set_input_files("#photo", FIXTURE_IMAGE)
+
+    page.locator('#productModal button[type="submit"]').first.click()
+    page.wait_for_load_state("networkidle", timeout=15000)
+
+    if page.locator(".alert-danger, .invalid-feedback").count():
+        raise AssertionError(f"Product form appears to have validation errors creating {name!r}.")
+
+    ctx.note(f"Created product {name!r} (${float(price):.2f}, photo={'yes' if with_photo else 'no'}).")
+    return name
+
+
+def expand_collapsible_sections(page, ctx=None):
+    """Open every collapsed <details> section on the current form.
+
+    The style-guide redesign moved settings like show_in_shop and accept_credit_card inside
+    `mp-collapsible-section` <details> elements that start closed. A closed <details> has
+    `overflow: hidden` and clips its contents to a 0x0 box, so Playwright reports the fields
+    inside as not visible and check()/click() time out — even though getComputedStyle still
+    says display:block. Clicking the <summary> is what a real admin does to reach them.
+
+    Returns the number of sections opened.
+    """
+    summaries = page.locator("details:not([open]) > summary")
+    opened = 0
+    for i in range(summaries.count()):
+        try:
+            summaries.nth(i).click(timeout=5000)
+            opened += 1
+        except Exception:
+            # A section that refuses to open is only a problem if a later field is missing,
+            # and that assertion belongs to the caller, not here.
+            pass
+    if opened:
+        page.wait_for_timeout(200)  # let the disclosure settle before fields are touched
+        if ctx:
+            ctx.note(f"Expanded {opened} collapsed form section(s) to reach advanced settings.")
+    return opened
 
 
 def create_minimal_activity(page, ctx, name=None, workflow_type="payment_first",
@@ -86,6 +154,9 @@ def create_minimal_activity(page, ctx, name=None, workflow_type="payment_first",
         page.wait_for_selector("#cropModal", state="hidden", timeout=5000)
 
     if extra_setup:
+        # Advanced toggles (show_in_shop, accept_credit_card, uses_scheduling) live inside a
+        # collapsed <details> since the style-guide redesign, and are unreachable until it opens.
+        expand_collapsible_sections(page, ctx)
         extra_setup(page)
 
     page.locator('#activityForm button[type="submit"]').first.click()

@@ -1639,8 +1639,6 @@ def dashboard():
         func.sum(sql_case((Passport.paid.is_(True), 1), else_=0)).label('paid'),
         func.sum(sql_case((Passport.paid.is_(False), 1), else_=0)).label('unpaid'),
         func.sum(sql_case((Passport.uses_remaining > 0, 1), else_=0)).label('active'),
-        func.sum(sql_case((Passport.paid.is_(True), Passport.sold_amt), else_=0.0)).label('paid_amount'),
-        func.sum(sql_case((Passport.paid.is_(False), Passport.sold_amt), else_=0.0)).label('unpaid_amount'),
     ).filter(Passport.activity_id.in_(activity_ids)).group_by(Passport.activity_id).all() if activity_ids else []
     passport_agg = {row.activity_id: row for row in passport_agg_rows}
 
@@ -1667,8 +1665,6 @@ def dashboard():
             "active_passports": (pa.active or 0) if pa else 0,
             "unpaid_passports": (pa.unpaid or 0) if pa else 0,
             "paid_passports": (pa.paid or 0) if pa else 0,
-            "paid_amount": round(pa.paid_amount or 0.0, 2) if pa else 0.0,
-            "unpaid_amount": round(pa.unpaid_amount or 0.0, 2) if pa else 0.0,
             "goal_revenue": a.goal_revenue or 0.0,
             "image_filename": a.image_filename,
             "days_left": max((a.end_date - datetime.now()).days, 0) if a.end_date else "N/A",
@@ -1684,18 +1680,14 @@ def dashboard():
         func.count(Passport.id),
         func.sum(sql_case((Passport.paid.is_(True), 1), else_=0)),
         func.sum(sql_case((Passport.paid.is_(False), 1), else_=0)),
-        func.sum(sql_case((Passport.paid.is_(True), Passport.sold_amt), else_=0.0)),
-        func.sum(sql_case((Passport.paid.is_(False), Passport.sold_amt), else_=0.0)),
     ).one()
-    total_passports, paid_passport_count, unpaid_passport_count, total_revenue, pending_revenue = passport_totals
+    total_passports, paid_passport_count, unpaid_passport_count = passport_totals
 
     passport_stats = {
         'total_passports': total_passports or 0,
         'paid_passports': paid_passport_count or 0,
         'unpaid_passports': unpaid_passport_count or 0,
         'active_passports': get_active_passports_query().count(),
-        'total_revenue': total_revenue or 0.0,
-        'pending_revenue': pending_revenue or 0.0,
     }
 
     signup_totals = db.session.query(
@@ -2286,26 +2278,6 @@ def bulk_signup_action():
     return redirect(url_for("list_signups"))
 
 
-@app.route("/admin/signup/edit/<int:signup_id>", methods=["GET", "POST"])
-def edit_signup(signup_id):
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    signup = db.session.get(Signup, signup_id)
-    if not signup:
-        flash("Signup not found.", "error")
-        return redirect(url_for("list_signups"))
-
-    if request.method == "POST":
-        signup.subject = request.form.get("subject", "").strip()
-        signup.description = request.form.get("description", "").strip()
-        db.session.commit()
-        flash("Signup updated.", "success")
-        return redirect(url_for("list_signups"))
-
-    return render_template("edit_signup.html", signup=signup)
-
-
 @app.route("/signup/approve-create-pass/<int:signup_id>")
 def approve_and_create_pass(signup_id):
     if "admin" not in session:
@@ -2525,6 +2497,11 @@ def create_activity():
         return redirect(url_for("login"))
 
     if request.method == "POST":
+        if reserved_activity_name(request.form.get("name")):
+            flash("\"Boutique\" is reserved — the Financial Report uses it for shop product "
+                  "sales. Please choose a different activity name.", "error")
+            return redirect(url_for("create_activity"))
+
         # CHECK TIER LIMIT BEFORE CREATING NEW ACTIVITY
         can_create, error_msg = check_activity_limit()
         if not can_create:
@@ -2829,6 +2806,11 @@ def edit_activity(activity_id):
             if not can_activate:
                 flash(error_msg, 'warning')
                 return redirect(url_for("edit_activity", activity_id=activity.id))
+
+        if reserved_activity_name(request.form.get("name")):
+            flash("\"Boutique\" is reserved — the Financial Report uses it for shop product "
+                  "sales. Please choose a different activity name.", "error")
+            return redirect(url_for("edit_activity", activity_id=activity.id))
 
         activity.name = request.form.get("name", "").strip()
         activity.type = request.form.get("type", "").strip()
@@ -3189,10 +3171,17 @@ def signup_qr_card(passport_type_id):
 @app.route("/signup/<int:activity_id>", methods=["GET", "POST"])
 def signup(activity_id):
     activity = db.session.get(Activity, activity_id)
-    if not activity:
-        return render_template("signup_unavailable.html"), 404
-    if activity.status != "active":
-        return render_template("signup_unavailable.html", activity=activity), 410
+    if not activity or activity.status != "active":
+        # settings carries the org logo — this page used to render unbranded.
+        unavailable_settings = {s.key: s.value for s in Setting.query.all()}
+        if not activity:
+            return render_template("signup_unavailable.html", settings=unavailable_settings), 404
+        # 200, not 410: the activity is real and this is a normal, expected
+        # state ("registration closed") rendered with full valid content —
+        # not a resource that's gone. A hard error status here breaks
+        # uptime/SEO checks even though the page displays correctly.
+        return render_template("signup_unavailable.html", settings=unavailable_settings,
+                               activity=activity), 200
 
     # Get passport type if specified
     passport_type_id = request.args.get('passport_type_id')
@@ -3335,7 +3324,7 @@ def signup(activity_id):
                 from utils import get_setting
                 stripe_secret_key = get_setting('STRIPE_PAYMENTS_SECRET_KEY', '')
                 if not stripe_secret_key:
-                    flash("Credit card payments are not configured. Please use Interac.", "error")
+                    flash("Le paiement par carte de crédit n'est pas configuré. Utilisez le virement Interac.", "error")
                     return redirect(url_for("signup", activity_id=activity_id))
 
                 checkout_session = stripe.checkout.Session.create(
@@ -3360,7 +3349,7 @@ def signup(activity_id):
                 return redirect(checkout_session.url, code=303)
             except Exception as e:
                 print(f"[Stripe Checkout] Error creating session: {e}")
-                flash("Error creating payment session. Please try again or use Interac.", "error")
+                flash("Impossible de démarrer le paiement. Réessayez ou utilisez le virement Interac.", "error")
                 return redirect(url_for("signup", activity_id=activity_id))
         else:
             # Existing Interac flow
@@ -3411,6 +3400,19 @@ def _shop_cart_item_count():
     return sum(line.get("qty", 1) if line.get("type") == "product" else 1 for line in _get_shop_cart())
 
 
+def _short_location(activity):
+    """"111 2e Rue O, Rimouski, QC G5L 7H9, Canada" -> "111 2e Rue O, Rimouski".
+
+    The geocoded address is too long to sit under a title on a phone, and the
+    country and postal code carry nothing for a local buyer. Mirrors what
+    signup_form.html was doing inline in Jinja."""
+    address = (getattr(activity, "location_address_formatted", None) or "").replace(", Canada", "").strip()
+    if not address:
+        return None
+    parts = [part.strip() for part in address.split(",") if part.strip()]
+    return ", ".join(parts[:2]) if len(parts) >= 2 else address
+
+
 def _resolve_shop_cart_lines():
     """Resolve the session cart against the DB for display (shop_cart.html/shop_checkout.html)
     — fresh prices/availability every time, since a product or activity can change between
@@ -3427,7 +3429,7 @@ def _resolve_shop_cart_lines():
             product = db.session.get(Product, line.get("product_id"))
             if not product or not product.active:
                 resolved.append({"index": idx, "type": "product",
-                                  "error": "This product is no longer available."})
+                                  "error": "Ce produit n'est plus disponible."})
                 continue
             qty = max(1, int(line.get("qty", 1)))
             amount = round(product.price * qty, 2)
@@ -3440,7 +3442,7 @@ def _resolve_shop_cart_lines():
             activity = db.session.get(Activity, line.get("activity_id"))
             if not activity or activity.status != "active":
                 resolved.append({"index": idx, "type": "activity",
-                                  "error": "This activity is no longer available."})
+                                  "error": "Cette activité n'est plus disponible."})
                 continue
             passport_type = (db.session.get(PassportType, line.get("passport_type_id"))
                               if line.get("passport_type_id") else None)
@@ -3510,7 +3512,7 @@ def shop_product(product_id):
             cart.append({"type": "product", "product_id": product.id, "qty": quantity, "size": size})
         _save_shop_cart(cart)
 
-        flash(f"Added {product.name} to your cart.", "success")
+        flash(f"{product.name} a été ajouté à votre panier.", "success")
         return redirect(url_for("shop_cart"))
 
     return render_template("shop_product.html", product=product, settings=settings,
@@ -3556,17 +3558,30 @@ def shop_activity(activity_id):
         })
         _save_shop_cart(cart)
 
-        flash(f"Added {activity.name} to your cart.", "success")
+        flash(f"{activity.name} a été ajouté à votre panier.", "success")
         return redirect(url_for("shop_cart"))
 
+    # Priced choice_cards: the amount rides on the title row, sessions read as the
+    # description. Keeping the money formatting here (not in the template) means the
+    # footer total and the selected card can never disagree.
     passport_type_options = [
-        {"value": str(pt.id), "label": f"{pt.name} — ${pt.price_per_user or 0:.2f}",
-         "description": f"{pt.sessions_included} session(s) included" if pt.sessions_included else None}
+        {
+            "value": str(pt.id),
+            "title": pt.name,
+            "amount": ca_money(pt.price_per_user),
+            "description": (
+                f"{pt.sessions_included} {'séance incluse' if pt.sessions_included == 1 else 'séances incluses'}"
+                if pt.sessions_included else None
+            ),
+        }
         for pt in passport_types
     ]
+    passport_type_prices = {option["value"]: option["amount"] for option in passport_type_options}
 
     return render_template("shop_activity.html", activity=activity, settings=settings,
                             passport_types=passport_types, passport_type_options=passport_type_options,
+                            passport_type_prices=passport_type_prices,
+                            display_location=_short_location(activity),
                             remaining_capacity=remaining_capacity,
                             is_sold_out=is_sold_out, available_slots=available_slots,
                             format_slot_label=format_slot_label, cart_count=_shop_cart_item_count())
@@ -3627,7 +3642,7 @@ def shop_checkout():
 
     lines, total, has_errors = _resolve_shop_cart_lines()
     if not lines:
-        flash("Your cart is empty.", "error")
+        flash("Votre panier est vide.", "error")
         return redirect(url_for("shop"))
 
     settings = {s.key: s.value for s in Setting.query.all()}
@@ -3635,7 +3650,7 @@ def shop_checkout():
 
     if request.method == "POST":
         if has_errors:
-            flash("Some items in your cart are no longer available. Please remove them before checking out.", "error")
+            flash("Certains articles de votre panier ne sont plus disponibles. Retirez-les avant de passer à la caisse.", "error")
             return redirect(url_for("shop_cart"))
 
         buyer_name = request.form.get("buyer_name", "").strip()
@@ -3648,7 +3663,7 @@ def shop_checkout():
             payment_method = "interac"
 
         if not buyer_name or not buyer_email:
-            flash("Name and email are required.", "error")
+            flash("Le nom et l'adresse courriel sont obligatoires.", "error")
             return redirect(url_for("shop_checkout"))
 
         cart_order = CartOrder(
@@ -3694,7 +3709,7 @@ def shop_checkout():
             try:
                 stripe_secret_key = get_setting('STRIPE_PAYMENTS_SECRET_KEY', '')
                 if not stripe_secret_key:
-                    flash("Credit card payments are not configured. Please use Interac.", "error")
+                    flash("Le paiement par carte de crédit n'est pas configuré. Utilisez le virement Interac.", "error")
                     return redirect(url_for("shop_checkout"))
 
                 stripe_line_items = []
@@ -3734,7 +3749,7 @@ def shop_checkout():
                 return redirect(checkout_session.url, code=303)
             except Exception as e:
                 print(f"[Shop Cart Stripe Checkout] Error creating session: {e}")
-                flash("Error creating payment session. Please try again or use Interac.", "error")
+                flash("Impossible de démarrer le paiement. Réessayez ou utilisez le virement Interac.", "error")
                 return redirect(url_for("shop_checkout"))
         else:
             try:
@@ -3755,7 +3770,7 @@ def shop_order_thank_you(cart_code):
 
     cart_order = CartOrder.query.filter_by(cart_code=cart_code).first()
     if not cart_order:
-        flash("Order not found.", "error")
+        flash("Commande introuvable.", "error")
         return redirect(url_for("shop"))
 
     settings = {s.key: s.value for s in Setting.query.all()}
@@ -3765,6 +3780,26 @@ def shop_order_thank_you(cart_code):
     return render_template("shop_order_confirmation.html", cart_order=cart_order, settings=settings,
                             payment_email=payment_email)
 
+
+# Statuses the financial views understand. A row saved with anything outside these sets still
+# sits in the database but is bucketed by neither view, so its money silently disappears from
+# every report. Validate against these before writing, and keep them in step with task55/task56
+# in migrations/upgrade_production_database.py.
+RESERVED_ACTIVITY_NAMES = {"boutique"}
+
+
+def reserved_activity_name(name):
+    """True if `name` collides with a label the financial views use for something else.
+
+    The views label shop product sales 'Boutique' (they have no activity, so the name is a
+    literal in the SQL). An activity actually called Boutique would be indistinguishable from
+    shop revenue on the Financial Report and in every export.
+    """
+    return (name or "").strip().lower() in RESERVED_ACTIVITY_NAMES
+
+
+VALID_INCOME_STATUSES = {"received", "pending"}
+VALID_EXPENSE_STATUSES = {"paid", "unpaid"}
 
 ORDER_STATUS_LABELS = {
     "awaiting_payment": "Awaiting Payment", "paid": "Paid", "ready": "Ready",
@@ -3921,7 +3956,10 @@ def update_order_status(order_id):
         return redirect(url_for("list_orders"))
 
     order.status = new_status
-    if new_status == "paid" and not order.paid_at:
+    # ready/picked_up are post-payment states, so stamp paid_at for those too — an admin can
+    # move an order straight to "ready" without passing through "paid", and the financial views
+    # date product revenue by paid_at.
+    if new_status in ("paid", "ready", "picked_up") and not order.paid_at:
         order.paid_at = datetime.now(timezone.utc)
 
     db.session.add(AdminActionLog(
@@ -3931,6 +3969,29 @@ def update_order_status(order_id):
     db.session.commit()
     flash("Order updated.", "success")
     return redirect(url_for("list_orders", status=request.form.get("return_status", "")))
+
+
+def _resolve_charge_id(session_data, api_key):
+    """Return the Charge id (ch_...) behind a completed Checkout Session.
+
+    StripeTransaction.charge_id is matched against BalanceTransaction.source in the
+    payout.paid handler, and for a "charge" balance transaction that source is a
+    CHARGE id. The session only carries the PaymentIntent id (pi_...), so storing
+    that verbatim — as this did — meant no payout could ever match a transaction
+    and no Income was ever promoted from pending to received.
+
+    Falls back to the PaymentIntent id if the lookup fails, so a transient Stripe
+    error still records the row rather than losing the money trail entirely.
+    """
+    payment_intent_id = session_data.get("payment_intent")
+    if not payment_intent_id or not api_key:
+        return payment_intent_id
+    try:
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id, api_key=api_key)
+        return intent.get("latest_charge") or payment_intent_id
+    except Exception as exc:
+        print(f"[Stripe Webhook] Could not resolve charge for {payment_intent_id}: {exc}")
+        return payment_intent_id
 
 
 @app.route("/stripe/webhook", methods=["POST"])
@@ -3959,6 +4020,11 @@ def stripe_webhook():
 
     if event['type'] == 'checkout.session.completed':
         session_data = event['data']['object']
+        # Resolved once here: both bookkeeping branches below need the CHARGE id,
+        # not the PaymentIntent id the session carries.
+        resolved_charge_id = _resolve_charge_id(
+            session_data, get_setting('STRIPE_PAYMENTS_SECRET_KEY', '')
+        )
         order_id = session_data.get('metadata', {}).get('order_id')
         signup_id = session_data.get('metadata', {}).get('signup_id')
         cart_order_id = session_data.get('metadata', {}).get('cart_order_id')
@@ -4037,7 +4103,7 @@ def stripe_webhook():
                         # Suffixed to stay unique per line — one Checkout Session can now
                         # cover multiple signups, but session_id is a unique column.
                         session_id   = f"{session_data.get('id')}:{signup_record.id}",
-                        charge_id    = session_data.get("payment_intent"),
+                        charge_id    = resolved_charge_id,
                         gross_amount = gross,
                         stripe_fee   = fee,
                         net_amount   = round(gross - fee, 2),
@@ -4144,7 +4210,7 @@ def stripe_webhook():
 
             stripe_tx = StripeTransaction(
                 session_id   = session_data.get("id"),
-                charge_id    = session_data.get("payment_intent"),
+                charge_id    = resolved_charge_id,
                 gross_amount = gross,
                 stripe_fee   = calculated_fee,
                 net_amount   = round(gross - calculated_fee, 2),
@@ -4173,8 +4239,21 @@ def stripe_webhook():
         payout_id   = payout_obj.get('id')
         payout_date = datetime.fromtimestamp(payout_obj.get('arrival_date', 0), tz=timezone.utc)
 
+        # Use the same key the customer payment paths use (app.py's signup/cart
+        # Checkout Sessions both pass api_key= explicitly). Without it this call
+        # falls back to the module-level stripe.api_key, which is the LIVE key from
+        # .env — so a test-mode payout was looked up in the live account, found
+        # nothing, and the except below swallowed it into a 200 while no Income was
+        # ever promoted and no fee recorded.
+        stripe_secret_key = get_setting('STRIPE_PAYMENTS_SECRET_KEY', '')
+        if not stripe_secret_key:
+            print("[Stripe Webhook] payout.paid received but STRIPE_PAYMENTS_SECRET_KEY is unset")
+            return jsonify({"status": "ok"}), 200
+
         try:
-            balance_txns = stripe.BalanceTransaction.list(payout=payout_id, limit=100)
+            balance_txns = stripe.BalanceTransaction.list(
+                payout=payout_id, limit=100, api_key=stripe_secret_key
+            )
         except Exception as e:
             print(f"[Stripe Webhook] Could not list balance transactions for payout {payout_id}: {e}")
             return jsonify({"status": "ok"}), 200
@@ -8481,10 +8560,8 @@ def list_passports():
     passport_totals = db.session.query(
         func.sum(sql_case((Passport.paid.is_(True), 1), else_=0)),
         func.sum(sql_case((Passport.paid.is_(False), 1), else_=0)),
-        func.sum(sql_case((Passport.paid.is_(True), Passport.sold_amt), else_=0.0)),
-        func.sum(sql_case((Passport.paid.is_(False), Passport.sold_amt), else_=0.0)),
     ).one()
-    paid_passports, unpaid_passports, total_revenue, pending_revenue = (v or 0 for v in passport_totals)
+    paid_passports, unpaid_passports = (v or 0 for v in passport_totals)
     # Active = has remaining uses AND belongs to a non-archived activity
     active_passports = get_active_passports_query().count()
 
@@ -8493,8 +8570,6 @@ def list_passports():
         'paid_passports': paid_passports,
         'unpaid_passports': unpaid_passports,
         'active_passports': active_passports,
-        'total_revenue': total_revenue,
-        'pending_revenue': pending_revenue
     }
 
     # Determine if showing all (explicitly requested)
@@ -8765,7 +8840,8 @@ def financial_report_export():
     # Get date range parameters
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
-    activity_filter = request.args.get('activity_filter')
+    # Parsed here once, tolerantly: a hand-edited or stale URL must not 500 the export.
+    activity_filter = request.args.get('activity_filter', type=int)
 
     # If period is specified but not explicit dates, calculate from period
     if period == 'fy' and not start_date and not end_date:
@@ -8817,12 +8893,11 @@ def financial_report_export():
             query += " AND transaction_date <= :end_date"
             params['end_date'] = end_date
 
-        # Add activity filter if provided
+        # Filter on activity_id, not the activity name: names are not unique, so filtering by
+        # name merges same-named activities into one export.
         if activity_filter:
-            activity = Activity.query.get(int(activity_filter))
-            if activity:
-                query += " AND project = :activity_name"
-                params['activity_name'] = activity.name
+            query += " AND activity_id = :activity_id"
+            params['activity_id'] = activity_filter
 
         # Order by date descending
         query += " ORDER BY transaction_date DESC"
@@ -8870,102 +8945,51 @@ def financial_report_export():
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
     elif export_format == "zip":
-        # ZIP export with all documents (exports ALL data, ignores filters)
+        # ZIP export: the same rows the CSV export produces, plus the receipt documents.
         from io import BytesIO
         from zipfile import ZipFile
         import os
 
-        # Query ALL transactions (Passport sales + Income + Expense) with receipt info
-        # Matches the monthly_transactions_detail view structure
+        # Reads monthly_transactions_detail like every other money surface, so this download
+        # agrees with the CSV beside it and includes shop product sales. source_type/record_id/
+        # receipt_filename come from the view (task56), which is what the document loop below
+        # needs to name and attach each receipt.
         zip_query = """
             SELECT
-                strftime('%Y-%m', COALESCE(p.paid_date, p.created_dt)) as month,
-                a.name as project,
-                'Income' as transaction_type,
-                COALESCE(p.paid_date, p.created_dt) as transaction_date,
-                u.name as customer,
-                CASE
-                    WHEN p.payment_method IN ('cash', 'pos', 'cheque')
-                    THEN CASE WHEN p.notes IS NOT NULL AND p.notes != '' THEN p.notes || ' | ' ELSE '' END
-                         || CASE p.payment_method
-                                WHEN 'cash' THEN 'Cash'
-                                WHEN 'pos' THEN 'POS/TPV'
-                                WHEN 'cheque' THEN 'Cheque'
-                            END
-                    WHEN p.payment_method = 'interac'
-                    THEN CASE WHEN p.notes IS NOT NULL AND p.notes != '' THEN p.notes || ' | ' ELSE '' END || 'E-Transfer'
-                    ELSE p.notes
-                END as memo,
-                p.pass_code AS passport_number,
-                p.sold_amt as amount,
-                CASE WHEN p.paid = 1 THEN 'Paid' ELSE 'Unpaid (AR)' END as payment_status,
-                'Passport System' as entered_by,
-                NULL as record_id,
-                'passport' as source_type,
-                NULL as receipt_filename
-            FROM passport p
-            JOIN activity a ON p.activity_id = a.id
-            LEFT JOIN user u ON p.user_id = u.id
-
-            UNION ALL
-
-            SELECT
-                strftime('%Y-%m', i.date) as month,
-                a.name as project,
-                'Income' as transaction_type,
-                i.date as transaction_date,
-                u_stripe.name as customer,
-                CASE
-                    WHEN st.id IS NOT NULL
-                    THEN 'Stripe Credit Card' || CASE WHEN p_stripe.pass_code IS NOT NULL THEN ' | ' || p_stripe.pass_code ELSE '' END
-                    ELSE i.note
-                END as memo,
-                p_stripe.pass_code AS passport_number,
-                i.amount,
-                CASE WHEN i.payment_status = 'received' THEN 'Paid' ELSE 'Unpaid (AR)' END as payment_status,
-                COALESCE(i.created_by, 'System') as entered_by,
-                i.id as record_id,
-                'income' as source_type,
-                i.receipt_filename
-            FROM income i
-            JOIN activity a ON i.activity_id = a.id
-            LEFT JOIN stripe_transaction st ON st.income_id = i.id
-            LEFT JOIN signup sg ON sg.id = st.signup_id
-            LEFT JOIN user u_stripe ON u_stripe.id = sg.user_id
-            LEFT JOIN passport p_stripe ON p_stripe.id = st.passport_id
-
-            UNION ALL
-
-            SELECT
-                strftime('%Y-%m', e.date) as month,
-                a.name as project,
-                'Expense' as transaction_type,
-                e.date as transaction_date,
-                u_stripe.name as customer,
-                CASE
-                    WHEN st.id IS NOT NULL
-                    THEN 'Stripe processing fee' || CASE WHEN p_stripe.pass_code IS NOT NULL THEN ' | ' || p_stripe.pass_code ELSE '' END
-                    ELSE e.description
-                END as memo,
-                p_stripe.pass_code AS passport_number,
-                e.amount,
-                CASE WHEN e.payment_status = 'paid' THEN 'Paid' ELSE 'Unpaid (AP)' END as payment_status,
-                COALESCE(e.created_by, 'System') as entered_by,
-                e.id as record_id,
-                'expense' as source_type,
-                e.receipt_filename
-            FROM expense e
-            JOIN activity a ON e.activity_id = a.id
-            LEFT JOIN stripe_transaction st ON st.id = e.stripe_transaction_id
-            LEFT JOIN signup sg ON sg.id = st.signup_id
-            LEFT JOIN user u_stripe ON u_stripe.id = sg.user_id
-            LEFT JOIN passport p_stripe ON p_stripe.id = st.passport_id
-
-            ORDER BY transaction_date DESC
+                month,
+                project,
+                transaction_type,
+                transaction_date,
+                customer,
+                memo,
+                passport_number,
+                amount,
+                payment_status,
+                entered_by,
+                source_type,
+                record_id,
+                receipt_filename
+            FROM monthly_transactions_detail
+            WHERE 1=1
         """
 
-        # Execute query (no filters - exports everything)
-        zip_result = db.session.execute(text(zip_query))
+        zip_params = {}
+
+        # Honour the same filters as the CSV branch. This export used to ignore them entirely
+        # and always dump everything, so a filtered ZIP silently disagreed with the filtered CSV.
+        if start_date:
+            zip_query += " AND transaction_date >= :start_date"
+            zip_params['start_date'] = start_date
+        if end_date:
+            zip_query += " AND transaction_date <= :end_date"
+            zip_params['end_date'] = end_date
+        if activity_filter:
+            zip_query += " AND activity_id = :activity_id"
+            zip_params['activity_id'] = activity_filter
+
+        zip_query += " ORDER BY transaction_date DESC"
+
+        zip_result = db.session.execute(text(zip_query), zip_params)
 
         # Create in-memory ZIP
         zip_buffer = BytesIO()
@@ -9597,6 +9621,15 @@ def activity_income(activity_id, income_id=None):
     if request.method == "POST":
         is_update = income is not None
 
+        # Only these two statuses are bucketed by the financial views ('received' -> cash,
+        # 'pending' -> receivable). Anything else is money that still sits in the ledger but
+        # shows up in no report, so reject it at the door rather than let it vanish.
+        payment_status = request.form.get("payment_status", "received")
+        if payment_status not in VALID_INCOME_STATUSES:
+            flash(f"Invalid payment status {payment_status!r}. "
+                  f"Expected one of: {', '.join(sorted(VALID_INCOME_STATUSES))}.", "error")
+            return redirect(url_for("activity_income", activity_id=activity.id))
+
         if income:
             # Update existing income
             income.category = request.form.get("category")
@@ -9604,8 +9637,8 @@ def activity_income(activity_id, income_id=None):
             income.note = request.form.get("note")
             income.date = datetime.strptime(request.form.get("date"), "%Y-%m-%d")
             # Payment status fields
-            income.payment_status = request.form.get("payment_status", "received")
-            income.payment_date = datetime.strptime(request.form.get("payment_date"), "%Y-%m-%d") if request.form.get("payment_date") and request.form.get("payment_status") == "received" else None
+            income.payment_status = payment_status
+            income.payment_date = datetime.strptime(request.form.get("payment_date"), "%Y-%m-%d") if request.form.get("payment_date") and payment_status == "received" else None
             income.payment_method = request.form.get("payment_method")
         else:
             # Create new income
@@ -9617,8 +9650,8 @@ def activity_income(activity_id, income_id=None):
                 date=datetime.strptime(request.form.get("date"), "%Y-%m-%d"),
                 created_by=session.get("admin"),
                 # Payment status fields
-                payment_status=request.form.get("payment_status", "received"),
-                payment_date=datetime.strptime(request.form.get("payment_date"), "%Y-%m-%d") if request.form.get("payment_date") and request.form.get("payment_status") == "received" else None,
+                payment_status=payment_status,
+                payment_date=datetime.strptime(request.form.get("payment_date"), "%Y-%m-%d") if request.form.get("payment_date") and payment_status == "received" else None,
                 payment_method=request.form.get("payment_method")
             )
             db.session.add(income)
@@ -9687,22 +9720,14 @@ def activity_income(activity_id, income_id=None):
             return redirect(url_for("activity_income", activity_id=activity.id))
 
     incomes = Income.query.filter_by(activity_id=activity.id).order_by(Income.date.desc()).all()
-    passport_income = sum(p.sold_amt for p in activity.passports if p.paid)
-    other_income = sum(i.amount for i in incomes)
-
-    summary = {
-        "passport_income": passport_income,
-        "other_income": other_income,
-        "total_income": passport_income + other_income
-    }
 
     return render_template("activity_income.html",
         activity=activity,
         income=income,
         incomes=incomes,
         categories=income_categories,
-        summary=summary,
-        now=dt.now
+        # `dt` was never defined, so this page raised NameError on every request.
+        now=datetime.now
     )
 
 
@@ -9723,6 +9748,14 @@ def activity_expenses(activity_id, expense_id=None):
     if request.method == "POST":
         is_update = expense is not None
 
+        # Only these two statuses are bucketed by the financial views ('paid' -> cash out,
+        # 'unpaid' -> payable). Anything else would be a cost that appears in no report.
+        payment_status = request.form.get("payment_status", "paid")
+        if payment_status not in VALID_EXPENSE_STATUSES:
+            flash(f"Invalid payment status {payment_status!r}. "
+                  f"Expected one of: {', '.join(sorted(VALID_EXPENSE_STATUSES))}.", "error")
+            return redirect(url_for("activity_expenses", activity_id=activity.id))
+
         if expense:
             # Update
             expense.category = request.form.get("category")
@@ -9730,9 +9763,9 @@ def activity_expenses(activity_id, expense_id=None):
             expense.description = request.form.get("description")
             expense.date = datetime.strptime(request.form.get("date"), "%Y-%m-%d")
             # Payment status fields
-            expense.payment_status = request.form.get("payment_status", "paid")
-            expense.payment_date = datetime.strptime(request.form.get("payment_date"), "%Y-%m-%d") if request.form.get("payment_date") and request.form.get("payment_status") == "paid" else None
-            expense.due_date = datetime.strptime(request.form.get("due_date"), "%Y-%m-%d") if request.form.get("due_date") and request.form.get("payment_status") == "unpaid" else None
+            expense.payment_status = payment_status
+            expense.payment_date = datetime.strptime(request.form.get("payment_date"), "%Y-%m-%d") if request.form.get("payment_date") and payment_status == "paid" else None
+            expense.due_date = datetime.strptime(request.form.get("due_date"), "%Y-%m-%d") if request.form.get("due_date") and payment_status == "unpaid" else None
             expense.payment_method = request.form.get("payment_method")
         else:
             # Create new
@@ -9744,9 +9777,9 @@ def activity_expenses(activity_id, expense_id=None):
                 date=datetime.strptime(request.form.get("date"), "%Y-%m-%d"),
                 created_by=session.get("admin"),
                 # Payment status fields
-                payment_status=request.form.get("payment_status", "paid"),
-                payment_date=datetime.strptime(request.form.get("payment_date"), "%Y-%m-%d") if request.form.get("payment_date") and request.form.get("payment_status") == "paid" else None,
-                due_date=datetime.strptime(request.form.get("due_date"), "%Y-%m-%d") if request.form.get("due_date") and request.form.get("payment_status") == "unpaid" else None,
+                payment_status=payment_status,
+                payment_date=datetime.strptime(request.form.get("payment_date"), "%Y-%m-%d") if request.form.get("payment_date") and payment_status == "paid" else None,
+                due_date=datetime.strptime(request.form.get("due_date"), "%Y-%m-%d") if request.form.get("due_date") and payment_status == "unpaid" else None,
                 payment_method=request.form.get("payment_method")
             )
             db.session.add(expense)
@@ -9816,29 +9849,13 @@ def activity_expenses(activity_id, expense_id=None):
 
     expenses = Expense.query.filter_by(activity_id=activity.id).order_by(Expense.date.desc()).all()
 
-    gross_revenue = sum(p.sold_amt for p in activity.passports if p.paid)
-    cogs_total = sum(e.amount for e in expenses if e.category == "Cost of Goods Sold")
-    opex_total = sum(e.amount for e in expenses if e.category != "Cost of Goods Sold")
-    gross_profit = gross_revenue - cogs_total
-    total_expenses = cogs_total + opex_total
-    net_income = gross_revenue - total_expenses
-
-    summary = {
-        "gross_revenue": gross_revenue,
-        "cogs_total": cogs_total,
-        "gross_profit": gross_profit,
-        "opex_total": opex_total,
-        "total_expenses": total_expenses,
-        "net_income": net_income
-    }
-
     return render_template("activity_expenses.html",
         activity=activity,
         expense=expense,
         expenses=expenses,
         categories=expense_categories,
-        summary=summary,
-        now=dt.now
+        # `dt` was never defined, so both of these pages raised NameError on every request.
+        now=datetime.now
     )
 
 
@@ -9963,6 +9980,16 @@ def activity_form(activity_id=None):
     is_edit = bool(activity)
 
     if request.method == "POST":
+        # Validate BEFORE staging anything in the session. Creating the Activity first would
+        # leave a half-built row (name unset, created_by hardcoded to 1) pending in the session
+        # on the reject path — harmless today only because nothing queries before the redirect,
+        # which is exactly the kind of ordering that breaks when someone adds a lookup here.
+        if reserved_activity_name(request.form.get("name")):
+            flash("\"Boutique\" is reserved — the Financial Report uses it for shop product "
+                  "sales. Please choose a different activity name.", "error")
+            return redirect(url_for("activity_form", activity_id=activity_id) if activity_id
+                            else url_for("list_activities"))
+
         if not activity:
             activity = Activity(created_by=1)  # replace with session-based admin ID if available
             db.session.add(activity)
@@ -10006,21 +10033,29 @@ def activity_form(activity_id=None):
 
     # Financial summary
     if activity:
-        passport_income = sum(p.sold_amt for p in activity.passports if p.paid)
-        other_income = sum(i.amount for i in activity.incomes)
-        total_income = passport_income + other_income
+        # Same source AND same period handling as /edit-activity, which renders this identical
+        # form. It previously summed the raw tables all-time while /edit-activity read the view
+        # for the fiscal year, so the same form reached by two URLs showed two different sets of
+        # numbers for the same activity.
+        from utils import get_financial_data_from_views, get_fiscal_year_range
 
-        cogs = sum(e.amount for e in activity.expenses if e.category == "Cost of Goods Sold")
-        opex = sum(e.amount for e in activity.expenses if e.category != "Cost of Goods Sold")
-        total_expenses = cogs + opex
-        net_income = total_income - total_expenses
+        period = request.args.get('period', 'fy')
+        start_date, end_date = None, None
+        if period == 'fy':
+            fy_start, fy_end = get_fiscal_year_range()
+            start_date = fy_start.strftime('%Y-%m-%d')
+            end_date = fy_end.strftime('%Y-%m-%d')
+
+        financial_data = get_financial_data_from_views(
+            start_date=start_date, end_date=end_date, activity_filter=activity.id
+        )
 
         summary = {
-            "passport_income": passport_income,
-            "other_income": other_income,
-            "total_income": total_income,
-            "total_expenses": total_expenses,
-            "net_income": net_income
+            "passport_income": financial_data['summary']['cash_received'],
+            "other_income": 0,  # the view reports one revenue figure, it does not split sources
+            "total_income": financial_data['summary']['cash_received'],
+            "total_expenses": financial_data['summary']['cash_paid'],
+            "net_income": financial_data['summary']['net_cash_flow'],
         }
     else:
         summary = None
@@ -10299,26 +10334,13 @@ def activity_dashboard(activity_id):
     # Get the 7-day KPI data by default (this will be the initial view)
     current_kpi = kpi_data.get('revenue', {})
 
-    # Calculate all-time revenue for progress bar (cash basis accounting)
-    # Sum all PAID passport revenue + all income for this activity
-    from sqlalchemy import func
-    paid_passport_revenue = db.session.query(func.sum(Passport.sold_amt)).filter(
-        Passport.activity_id == activity_id,
-        Passport.paid == True
-    ).scalar() or 0
-
-    all_passport_revenue = db.session.query(func.sum(Passport.sold_amt)).filter(
-        Passport.activity_id == activity_id
-    ).scalar() or 0
-
-    income_revenue = db.session.query(func.sum(Income.amount)).filter(
-        Income.activity_id == activity_id
-    ).scalar() or 0
-
-    # Total paid revenue (for progress bar - cash basis)
-    total_paid_revenue = paid_passport_revenue + income_revenue
-    # Total sold revenue (for display - shows all sales)
-    total_sold_revenue = all_passport_revenue + income_revenue
+    # All-time revenue for the progress bar, from the SQL view so this figure matches the
+    # Financial Report for the same activity. It previously summed the raw tables directly,
+    # counting every Income row regardless of payment_status, so it could exceed the report.
+    from utils import get_activity_financial_summary
+    activity_financials = get_activity_financial_summary(activity_id)
+    total_paid_revenue = activity_financials['cash_received']
+    total_sold_revenue = activity_financials['total_revenue']
     
     # Calculate additional activity-specific metrics
     now = datetime.now(timezone.utc)
@@ -10370,16 +10392,13 @@ def activity_dashboard(activity_id):
     unpaid_count = len(unpaid_passports)
     overdue_count = len([p for p in unpaid_passports if p.created_dt and not is_recent(p.created_dt, three_days_ago)])
     
-    # Activity profit calculation (combining revenue with expenses/income)
-    try:
-        activity_expenses = sum(e.amount for e in activity.expenses) if hasattr(activity, 'expenses') else 0
-        activity_income = sum(i.amount for i in activity.incomes) if hasattr(activity, 'incomes') else 0
-        total_income = current_kpi.get('revenue', 0) + activity_income
-        profit = total_income - activity_expenses
-        profit_margin = (profit / total_income * 100) if total_income > 0 else 0
-    except:
-        profit = current_kpi.get('revenue', 0)  # Fallback to just revenue if expenses not tracked
-        profit_margin = 100
+    # Activity profit, from the SQL view (activity_financials was read above for the goal bar).
+    # This used to add raw expense/income sums on top of the view-sourced KPI revenue, mixing
+    # two sources in one figure and double-counting income already inside that revenue.
+    total_income = activity_financials['total_revenue']
+    activity_expenses = activity_financials['total_expenses']
+    profit = activity_financials['net_income']
+    profit_margin = (profit / total_income * 100) if total_income > 0 else 0
     
     # Signup statistics
     pending_signups = [s for s in signups if s.status == 'pending']
@@ -11067,18 +11086,29 @@ def get_activity_kpis_api(activity_id):
                 "code": "ACTIVITY_NOT_FOUND"
             }), 404
         
-        # Use the enhanced get_kpi_stats function with activity filtering
-        kpi_stats = get_kpi_data(activity_id=activity_id)
-        
-        # Map period to the correct key
+        # Map period to the key get_kpi_data expects
         period_key = '7d'
         if period == 30:
             period_key = '30d'
         elif period == 90:
             period_key = '90d'
-        
-        # Get the KPI data for the requested period
-        period_data = kpi_stats.get(period_key, {})
+
+        kpi_stats = get_kpi_data(activity_id=activity_id, period=period_key)
+
+        # get_kpi_data returns one metric per top-level key ('revenue', 'active_users', ...)
+        # for the period it was CALLED with — it has never returned period-keyed buckets. The
+        # old `kpi_stats.get(period_key, {})` therefore always produced {}, and this endpoint
+        # reported every figure as zero. Flatten to the shape the response builder below reads.
+        revenue_kpi = kpi_stats.get('revenue', {}) or {}
+        users_kpi = kpi_stats.get('active_users', {}) or {}
+        period_data = {
+            'revenue': revenue_kpi.get('current', 0),
+            'revenue_change': revenue_kpi.get('change', 0),
+            'revenue_trend': revenue_kpi.get('trend_data', []),
+            'active_users': users_kpi.get('current', 0),
+            'passport_change': users_kpi.get('change', 0),
+            'active_users_trend': users_kpi.get('trend_data', []),
+        }
         
         # Helper function to safely validate and clean numeric values
         def safe_float(value, default=0.0):
@@ -11137,18 +11167,21 @@ def get_activity_kpis_api(activity_id):
         
         # Calculate profit (combining revenue with expenses/income)
         try:
-            activity_expenses = sum(safe_float(e.amount) for e in getattr(activity, 'expenses', []))
-            activity_income = sum(safe_float(i.amount) for i in getattr(activity, 'incomes', []))
-            current_revenue = safe_float(period_data.get('revenue', 0))
-            total_income = current_revenue + activity_income
-            profit = total_income - activity_expenses
+            # From the SQL view, so this matches the Financial Report. It used to add raw
+            # expense/income sums on top of the view-sourced revenue, mixing two sources and
+            # double-counting income that revenue already contained.
+            from utils import get_activity_financial_summary
+            fin = get_activity_financial_summary(activity_id)
+            activity_expenses = fin['total_expenses']
+            total_income = fin['total_revenue']
+            profit = fin['net_income']
             profit_margin = (profit / total_income * 100) if total_income > 0 else 0
-            
-            # Previous period profit for comparison
-            previous_revenue = safe_float(period_data.get('revenue_prev', 0))
-            previous_total_income = previous_revenue + activity_income
-            previous_profit = previous_total_income - activity_expenses
-            profit_change = ((profit - previous_profit) / previous_profit * 100) if previous_profit > 0 else 0
+
+            # No period-over-period profit comparison is offered. The figures above are all-time
+            # (the view is queried without date bounds), so subtracting an all-time expense
+            # total from one period's revenue produced a "previous profit" with no accounting
+            # meaning, and a percentage swing off it was noise presented as a trend.
+            profit_change = 0
         except Exception as e:
             print(f"Error calculating profit for activity {activity_id}: {e}")
             profit = safe_float(period_data.get('revenue', 0))
@@ -11496,18 +11529,22 @@ def get_global_kpis_api():
     import math
     
     try:
-        # Get global KPI stats with error handling
-        kpi_stats = get_kpi_data()
-        
-        # Get the requested period data with validation
-        period_data = kpi_stats.get(period, {})
-        if not period_data:
-            logger.warning(f"No KPI data available for period: {period}")
-            return jsonify({
-                "success": False, 
-                "error": f"No data available for period: {period}",
-                "code": "NO_DATA"
-            }), 404
+        # `period` is already one of '7d'/'30d'/'90d', which is exactly what get_kpi_data takes.
+        kpi_stats = get_kpi_data(period=period)
+
+        # get_kpi_data returns one metric per top-level key for the period it was CALLED with;
+        # it has never returned period-keyed buckets. The old `kpi_stats.get(period, {})` always
+        # produced {}, so this endpoint answered 404 "no data" no matter what was in the books.
+        revenue_kpi = kpi_stats.get('revenue', {}) or {}
+        users_kpi = kpi_stats.get('active_users', {}) or {}
+        period_data = {
+            'revenue': revenue_kpi.get('current', 0),
+            'revenue_change': revenue_kpi.get('change', 0),
+            'revenue_trend': revenue_kpi.get('trend_data', []),
+            'active_users': users_kpi.get('current', 0),
+            'passport_change': users_kpi.get('change', 0),
+            'active_users_trend': users_kpi.get('trend_data', []),
+        }
         
         # Helper function to safely validate and clean numeric values
         def safe_float(value, default=0.0):
@@ -11692,6 +11729,21 @@ def accounting_format(value):
             return f"${num:.2f}"
     except (ValueError, TypeError):
         return "$0.00"
+
+@app.template_filter("ca_money")
+def ca_money(value):
+    """Format an amount the way Quebec French writes it: 1 234,50 $ — comma as
+    the decimal mark, non-breaking space before the sign. Used by the public
+    shop and signup pages, which are French; the admin side stays on
+    accounting_format's $1234.50."""
+    try:
+        num = float(value or 0)
+    except (ValueError, TypeError):
+        num = 0.0
+    # Group thousands with a narrow no-break space, per Quebec typography.
+    formatted = f"{num:,.2f}".replace(",", "\u202f").replace(".", ",")
+    return f"{formatted}\u00a0$"
+
 
 @app.template_filter("log_type_color")
 def log_type_color(log_type):
@@ -12105,9 +12157,23 @@ def mark_passport_paid(passport_id):
     passport = db.session.get(Passport, passport_id)
     if not passport:
         flash("Passport not found!", "error")
-        return redirect(url_for("dashboard2"))
+        return redirect(url_for("dashboard"))
 
     return_activity_id = request.form.get("return_activity_id", type=int) or passport.activity_id
+
+    # A card payment is already on the books as an Income row written by the Stripe webhook
+    # (app.py stripe_webhook). The financial views avoid double-counting it by excluding
+    # passports whose marked_paid_by starts with "stripe" — so overwriting that marker with an
+    # admin's email makes the SAME payment count twice, as a passport sale AND as income,
+    # permanently and silently. Refuse instead.
+    if passport.paid:
+        if (passport.marked_paid_by or "").lower().startswith("stripe"):
+            flash("This passport was already paid by credit card — marking it paid again would "
+                  "count the payment twice in your financial reports.", "error")
+        else:
+            flash(f"This passport is already marked as paid"
+                  f"{' by ' + passport.marked_paid_by if passport.marked_paid_by else ''}.", "info")
+        return redirect(url_for("activity_dashboard", activity_id=return_activity_id))
 
     now_utc = datetime.now(timezone.utc)
     payment_method = request.form.get("payment_method", "cash")

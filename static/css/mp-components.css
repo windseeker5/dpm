@@ -67,6 +67,14 @@
      be overridden (e.g. an inline style on <body>) — no component CSS
      changes. Same reasoning as --mp-chart-1 above. */
   --mp-brand-primary: var(--tblr-primary, #066fd1);
+  /* Success/positive color — separate namespace from --mp-primary (neutral
+     button color) and --mp-brand-primary (blue "current thing" accent).
+     Used by the QR Scanner viewport's scan corners/beam. Defaults to
+     Tabler's own success green so nothing changes visually today. */
+  --mp-success: var(--tblr-success, #2fb344);
+  /* Warning/attention color — same namespace reasoning as --mp-success.
+     Used by the Status Mark's warning variant (e.g. "signups closed"). */
+  --mp-warning: var(--tblr-warning, #f59f00);
 }
 
 .mp-btn {
@@ -846,12 +854,14 @@
   flex: 0 0 auto;
 }
 
-/* Every segment uses the "outline" variant (see settings_nav.html) so the border
-   Button Group draws around the whole fused group stays one continuous gray line —
-   mixing in a borderless variant for the active tab broke that. The current section
-   is marked by permanently applying outline's own :hover fill instead, so it reads
-   as selected without ever dropping the shared border. */
-.mp-settings-nav .mp-button-group .mp-btn[aria-current="page"] {
+/* Any Button Group with a selected/active segment (Settings nav, a New/Sent
+   view toggle, etc.): every button keeps the "outline" variant so the border
+   Button Group draws around the whole fused group stays one continuous gray
+   line — mixing in a borderless/solid variant for the active button breaks
+   that. Mark the selected one with aria-current="page" instead; it reads as
+   selected via outline's own :hover fill, without ever dropping the shared
+   border. */
+.mp-button-group .mp-btn[aria-current="page"] {
   background: var(--mp-muted);
   color: var(--mp-foreground);
 }
@@ -973,9 +983,12 @@
     display: block;
   }
 
-  /* The app shell has a fixed mobile navigation bar. Reserve its height so
-     the final Save action never ends beneath it at the end of a long form. */
-  .mp-form-content {
+  /* The admin app shell has a fixed mobile navigation bar. Reserve its height so
+     the final Save action never ends beneath it at the end of a long form.
+     Scoped to shells that actually render that bar (base.html) — the public
+     shop/signup pages have no bottom nav, and the unconditional rule left
+     every one of their cards sitting on 88px of dead space. */
+  body:has(.minipass-mobile-nav) .mp-form-content {
     margin-bottom: 5.5rem;
   }
 }
@@ -2314,11 +2327,23 @@ a.mp-page-btn:hover {
 
 .mp-choice-card__header {
   display: flex;
+  width: 100%;
   min-width: 0;
   min-height: 2rem;
   align-items: center;
   gap: 0.625rem;
   padding-right: 1.75rem;
+}
+
+/* The radio is pinned to the card's top-right corner, so a trailing amount
+   sits inside the header's reserved right padding, left of the control. */
+.mp-choice-card__amount {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .mp-choice-card__icon {
@@ -2342,6 +2367,7 @@ a.mp-page-btn:hover {
 }
 
 .mp-choice-card__title {
+  min-width: 0;
   font-size: 0.875rem;
   font-weight: 600;
   line-height: 1.25rem;
@@ -2803,7 +2829,7 @@ a.mp-page-btn:hover {
   }
 
   .mp-collapsible-section[open]::details-content {
-    max-height: 40rem;
+    max-height: 200rem;
     opacity: 1;
   }
 }
@@ -2902,7 +2928,8 @@ a.mp-page-btn:hover {
   font-size: 0.8125rem;
 }
 
-.mp-location-status[data-tone="error"] {
+.mp-location-status[data-tone="error"],
+.mp-inline-note[data-tone="error"] {
   border-color: color-mix(in oklch, var(--mp-destructive) 35%, var(--mp-border));
   color: var(--mp-destructive);
 }
@@ -3250,4 +3277,237 @@ a.mp-page-btn:hover {
   max-height: 2.25rem;
   object-fit: contain;
   border-radius: var(--mp-radius-sm);
+}
+
+/*
+  QR Scanner viewport — camera preview with a scan-frame overlay (corner
+  brackets, animated scan beam, pulsing "LIVE" recording badge). First
+  consumer is scan_qr.html; kept CSS-only (no macro) since it has a single
+  consumer today — promote to a Jinja macro if a second page needs it.
+*/
+.mp-scanner-viewport {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+}
+
+.mp-scanner-viewport video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mp-scanner-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mp-scanner-corner {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-color: var(--mp-success);
+  border-style: solid;
+}
+
+.mp-scanner-corner--tl { top: 15%; left: 15%; border-width: 3px 0 0 3px; }
+.mp-scanner-corner--tr { top: 15%; right: 15%; border-width: 3px 3px 0 0; }
+.mp-scanner-corner--bl { bottom: 15%; left: 15%; border-width: 0 0 3px 3px; }
+.mp-scanner-corner--br { bottom: 15%; right: 15%; border-width: 0 3px 3px 0; }
+
+.mp-scanner-beam {
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  height: 2px;
+  background: var(--mp-success);
+  opacity: 0.8;
+  animation: mp-scanner-beam-sweep 2.5s ease-in-out infinite;
+}
+
+@keyframes mp-scanner-beam-sweep {
+  0%, 100% { top: 15%; }
+  50% { top: 85%; }
+}
+
+.mp-scanner-live-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: var(--mp-radius-sm);
+  padding: 3px 7px;
+}
+
+.mp-scanner-live-badge #rec-label {
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.mp-scanner-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mp-destructive);
+  flex-shrink: 0;
+  animation: mp-scanner-live-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes mp-scanner-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+/*
+  Status Mark — the large circular icon that opens a confirmation or dead-end
+  page ("order placed", "signups closed"). Tabler's .avatar is a rounded
+  SQUARE by default (border-radius: var(--tblr-border-radius); a circle needs
+  .avatar-rounded), and Tabler's .fs-1 is 1.5rem, not Bootstrap's 2.5rem — so
+  the common `avatar avatar-xl + i.fs-1` recipe rendered a squat square with a
+  tiny glyph rattling around inside it. This owns both dimensions instead.
+*/
+.mp-status-mark {
+  display: inline-flex;
+  width: 4rem;
+  height: 4rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--mp-muted);
+  color: var(--mp-muted-foreground);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.mp-status-mark > i {
+  font-size: inherit;
+  line-height: 1;
+}
+
+/* Mixed in oklab, not oklch, deliberately. These mix a chromatic accent with
+   an achromatic surface, and --mp-background / --mp-foreground are oklch(1 0 0)
+   / oklch(0.145 0 0) — hue 0. oklch interpolates the hue angle, so blending
+   green (hue ~145) into "hue 0" white lands at hue ~23 and renders the success
+   mark PINK. oklab has no hue channel to drag, so the tint stays green.
+   Elsewhere in this file both sides of a mix are achromatic, so oklch is fine. */
+.mp-status-mark--success {
+  background: color-mix(in oklab, var(--mp-success) 16%, var(--mp-background));
+  color: color-mix(in oklab, var(--mp-success) 78%, var(--mp-foreground));
+}
+
+.mp-status-mark--warning {
+  background: color-mix(in oklab, var(--mp-warning) 18%, var(--mp-background));
+  color: color-mix(in oklab, var(--mp-warning) 72%, var(--mp-foreground));
+}
+
+.mp-status-mark--danger {
+  background: color-mix(in oklab, var(--mp-destructive) 14%, var(--mp-background));
+  color: color-mix(in oklab, var(--mp-destructive) 80%, var(--mp-foreground));
+}
+
+.mp-status-mark--sm {
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.5rem;
+}
+
+/*
+  Code Block — a short machine-readable string the reader has to transcribe
+  somewhere else (an e-transfer reference, a pass code). It is the single most
+  important thing on the page that carries it, so it gets full width and its
+  own surface rather than a corner of a grid: MP-CART-0000001 wrapped across
+  three lines at 390px when it shared a 3-column row.
+*/
+.mp-code-block {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  background: var(--mp-muted);
+}
+
+.mp-code-block__label {
+  color: var(--mp-muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.mp-code-block__value {
+  font-family: var(--tblr-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.mp-code-block__copy {
+  align-self: flex-start;
+  margin-top: 0.125rem;
+}
+
+.mp-code-block__hint {
+  margin: 0;
+  color: var(--mp-muted-foreground);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+/*
+  Pair List — label/value rows for a short set of facts the reader scans
+  rather than reads (amount, recipient, session). Replaces hand-built
+  row/col grids, which forced long values like an email address to wrap.
+*/
+.mp-pair-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mp-pair-list > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 0.625rem 0;
+}
+
+.mp-pair-list > div + div {
+  border-top: 1px solid var(--mp-border);
+}
+
+.mp-pair-list dt {
+  min-width: 0;
+  color: var(--mp-muted-foreground);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.mp-pair-list dd {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.mp-pair-list dd.mp-pair-list__amount {
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
 }

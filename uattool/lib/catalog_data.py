@@ -190,16 +190,16 @@ CATALOG = [
     ),
     dict(
         order="90", script="90_production_stripe_live.py", area="[REAL MONEY] Stripe payment",
-        description="Create a $1 product and a $1 activity, drive Stripe Checkout up to the payment form, then PAUSE for Ken to type his own real card number and submit. Resumes to verify the resulting records.",
+        description="Create a $1 product and a $1 activity, drive Stripe Checkout up to the payment form, then PAUSE for Ken to type his own real card number and submit ($2.00 total). Resumes to verify the resulting records AND that the money reached the financial report.",
         credentials="kdresdell@gmail.com (password via UAT_ADMIN_PASSWORD env var) (+ Ken's own card, entered by hand)", email="kdresdell@gmail.com", viewport="desktop",
-        verifies="StripeTransaction + Passport/Order created; Activity Log shows the payment.",
+        verifies="StripeTransaction + Passport/Order created; Activity Log shows the payment. Financial report moves by the exact amounts and nothing else moves: the $1 activity lands in ACCOUNTS RECEIVABLE (Stripe income is booked pending until payout, and the passport itself is excluded from the views), the $1 product lands in CASH RECEIVED on a 'Boutique' row. Report page and CSV export agree on every bucket.",
         money=True, manual=False,
     ),
     dict(
         order="91", script="91_production_interac_live.py", area="[REAL MONEY] Interac payment",
-        description="Ken sends himself a real e-transfer to the inbox kdc.minipass.me monitors; once he confirms it's sent, the script triggers the same matcher behind /test-payment-bot-now and verifies the match.",
-        credentials="kdresdell@gmail.com (password via UAT_ADMIN_PASSWORD env var)", email="kdresdell@gmail.com", viewport="desktop",
-        verifies="EbankPayment result = MATCHED; Activity Log shows 'Marked Paid (interac)'.",
+        description="Buy ONE mixed cart — a $2.00 activity passport plus a $1.00 shop product, $3.00 total — then PAUSE for Ken to send himself a single real e-transfer for that amount to the inbox kdc.minipass.me monitors. Triggers the matcher behind /test-payment-bot-now and verifies the payment splits correctly across the books.",
+        credentials="kdresdell@gmail.com (password via UAT_ADMIN_PASSWORD env var) (+ one real $3.00 e-transfer, sent by hand)", email="kdresdell@gmail.com", viewport="desktop",
+        verifies="EbankPayment result = MATCHED; Activity Log shows the cart code. Before payment the $3.00 sits in ACCOUNTS RECEIVABLE with cash untouched; after payment it MOVES to CASH RECEIVED with the total unchanged (catching double-counting). The split is checked: the activity row gets exactly $2.00 and the product's $1.00 goes to 'Boutique', never to the activity. Product line present in both the report page and the CSV export; report page and CSV agree on every bucket.",
         money=True, manual=False,
     ),
     dict(

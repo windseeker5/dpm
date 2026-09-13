@@ -1581,7 +1581,7 @@ def create_order_line_for_cart(cart_order, product, quantity, size=None, notes="
     from models import Order
 
     if not product or not product.active:
-        return None, f"“{product.name if product else 'This product'}” is no longer available."
+        return None, f"« {product.name if product else 'Ce produit'} » n'est plus disponible."
 
     quantity = max(1, int(quantity or 1))
     amount = round(product.price * quantity, 2)
@@ -1621,16 +1621,16 @@ def create_signup_line_for_cart(cart_order, activity, passport_type_id=None, req
     from datetime import datetime, timezone, timedelta
 
     if not activity or activity.status != "active":
-        return None, f"“{activity.name if activity else 'This activity'}” is no longer available."
+        return None, f"« {activity.name if activity else 'Cette activité'} » n'est plus disponible."
 
     requested_sessions = max(1, int(requested_sessions or 1))
 
     remaining_capacity = get_remaining_capacity(activity.id)
     if remaining_capacity is not None:
         if remaining_capacity <= 0:
-            return None, f"Sorry, “{activity.name}” is sold out."
+            return None, f"« {activity.name} » est complet."
         if requested_sessions > remaining_capacity:
-            return None, f"Only {remaining_capacity} spot(s) remaining for “{activity.name}”."
+            return None, f"Il ne reste que {remaining_capacity} place(s) pour « {activity.name} »."
 
     chosen_slot = None
     if activity.uses_scheduling:
@@ -1642,9 +1642,9 @@ def create_signup_line_for_cart(cart_order, activity, passport_type_id=None, req
                 id=slot_id, activity_id=activity.id, status="active"
             ).first()
             if chosen_slot is None:
-                return None, f"That session for “{activity.name}” is no longer available. Please choose another."
+                return None, f"Cette séance de « {activity.name} » n'est plus disponible. Choisissez-en une autre."
             if chosen_slot.starts_at < datetime.now():
-                return None, f"That session for “{activity.name}” has already passed. Please choose another."
+                return None, f"Cette séance de « {activity.name} » est déjà passée. Choisissez-en une autre."
 
     passport_type = db.session.get(PassportType, passport_type_id) if passport_type_id else None
     unit_price = passport_type.price_per_user if passport_type else 0.0
@@ -1991,14 +1991,18 @@ def get_kpi_data(activity_id=None, period='7d'):
     with current_app.app_context():
         now = datetime.now(timezone.utc)
         
-        # Define time ranges
+        # Define time ranges.
+        # 7d/30d count back N-1 days so the window is exactly the N days the sparkline draws
+        # (its buckets run from now-(N-1) through today inclusive). Counting back a full N days
+        # covered N+1 days, so the headline silently included one day the chart did not — worth
+        # $100 of difference on real data.
         if period == '7d':
-            current_start = now - timedelta(days=7)
-            prev_start = now - timedelta(days=14)
+            current_start = now - timedelta(days=6)
+            prev_start = now - timedelta(days=13)
             prev_end = now - timedelta(days=7)
         elif period == '30d':
-            current_start = now - timedelta(days=30)
-            prev_start = now - timedelta(days=60)
+            current_start = now - timedelta(days=29)
+            prev_start = now - timedelta(days=59)
             prev_end = now - timedelta(days=30)
         elif period == '90d':
             current_start = now - timedelta(days=90)
@@ -2047,26 +2051,30 @@ def get_kpi_data(activity_id=None, period='7d'):
         from sqlalchemy import text
         from models import Activity
 
-        # Convert datetime ranges to date strings for view queries
-        current_start_date = current_start.strftime('%Y-%m-%d')
-        current_end_date = current_end.strftime('%Y-%m-%d')
-        current_start_month = current_start.strftime('%Y-%m')
-        current_end_month = current_end.strftime('%Y-%m')
-
-        # Build query for current period using financial summary view
+        # Read the DETAIL view with exact dates, not the summary view by whole months. The
+        # summary is month-grained, so "last 30 days" used to widen to every month the window
+        # touched — the headline covered more days than the sparkline drawn underneath it and
+        # the two disagreed (measurably: 1,545.00 vs 1,100.00 for 30d on this data).
+        # 'Income' + 'Paid' in the detail view is exactly what cash_received sums in the
+        # summary, so the figure keeps its meaning and both now cover the same window.
         revenue_query = """
-            SELECT COALESCE(SUM(cash_received), 0) as total_revenue
-            FROM monthly_financial_summary
-            WHERE month >= :start_month AND month <= :end_month
+            SELECT COALESCE(SUM(amount), 0) as total_revenue
+            FROM monthly_transactions_detail
+            WHERE transaction_type = 'Income'
+              AND payment_status = 'Paid'
+              AND transaction_date >= :start_date
+              AND transaction_date <= :end_date
         """
-        params = {'start_month': current_start_month, 'end_month': current_end_month}
+        params = {
+            'start_date': current_start.strftime('%Y-%m-%d'),
+            'end_date': current_end.strftime('%Y-%m-%d 23:59:59'),
+        }
 
-        # Add activity filter if specified
+        # Filter on activity_id, not the activity name: names are not unique, so filtering by
+        # name silently merges two same-named activities into one KPI figure.
         if activity_id:
-            activity = Activity.query.get(activity_id)
-            if activity:
-                revenue_query += " AND account = :activity_name"
-                params['activity_name'] = activity.name
+            revenue_query += " AND activity_id = :activity_id"
+            params['activity_id'] = activity_id
 
         # Execute query for current period
         result = db.session.execute(text(revenue_query), params)
@@ -2074,12 +2082,12 @@ def get_kpi_data(activity_id=None, period='7d'):
 
         # Previous period revenue (if not 'all')
         if period != 'all':
-            prev_start_month = prev_start.strftime('%Y-%m')
-            prev_end_month = prev_end.strftime('%Y-%m')
-
-            prev_params = {'start_month': prev_start_month, 'end_month': prev_end_month}
-            if activity_id and activity:
-                prev_params['activity_name'] = activity.name
+            prev_params = {
+                'start_date': prev_start.strftime('%Y-%m-%d'),
+                'end_date': prev_end.strftime('%Y-%m-%d 23:59:59'),
+            }
+            if activity_id:
+                prev_params['activity_id'] = activity_id
 
             result = db.session.execute(text(revenue_query), prev_params)
             prev_revenue = float(result.scalar() or 0)
@@ -2308,36 +2316,38 @@ def get_kpi_data(activity_id=None, period='7d'):
         # Build trend data (optimized - single per-day query, then re-bucketed
         # to the target granularity in Python)
         def build_trend(window_start, granularity):
-            # Single query for passport revenue by day
-            passport_daily = db.session.query(
-                func.date(Passport.created_dt).label('day'),
-                func.sum(Passport.sold_amt).label('revenue')
-            )
-            if activity_id:
-                passport_daily = passport_daily.filter(Passport.activity_id == activity_id)
-            passport_daily = passport_daily.filter(
-                Passport.created_dt >= window_start,
-                Passport.created_dt <= now
-            ).group_by(func.date(Passport.created_dt)).all()
+            # Read the detail view, so the sparkline reconciles with the headline revenue number
+            # printed directly above it. It used to sum passport/income rows straight from the
+            # tables, bucketed by created_dt and counting unpaid passports, so the line could
+            # never add up to the figure above. 'Income' + 'Paid' here is exactly what
+            # cash_received is in the summary view.
+            #
+            # The summary view is month-grained, so the trend has to come from the detail view,
+            # which carries a real transaction_date.
+            from sqlalchemy import text
 
-            # Single query for income revenue by day
-            income_daily = db.session.query(
-                func.date(Income.date).label('day'),
-                func.sum(Income.amount).label('revenue')
-            )
+            trend_sql = """
+                SELECT DATE(transaction_date) AS day, SUM(amount) AS revenue
+                FROM monthly_transactions_detail
+                WHERE transaction_type = 'Income'
+                  AND payment_status = 'Paid'
+                  AND transaction_date >= :window_start
+                  AND transaction_date <= :now
+            """
+            params = {'window_start': window_start, 'now': now}
             if activity_id:
-                income_daily = income_daily.filter(Income.activity_id == activity_id)
-            income_daily = income_daily.filter(
-                Income.date >= window_start,
-                Income.date <= now
-            ).group_by(func.date(Income.date)).all()
+                # activity_id, not the activity name — names are not unique.
+                trend_sql += " AND activity_id = :activity_id"
+                params['activity_id'] = activity_id
+            trend_sql += " GROUP BY DATE(transaction_date)"
+
+            daily = db.session.execute(text(trend_sql), params).all()
 
             # Re-bucket daily rows into the target granularity
             bucket_totals = {}
-            for row in passport_daily:
-                key = bucket_key(datetime.strptime(str(row.day), '%Y-%m-%d').date(), granularity)
-                bucket_totals[key] = bucket_totals.get(key, 0) + float(row.revenue or 0)
-            for row in income_daily:
+            for row in daily:
+                if not row.day:
+                    continue
                 key = bucket_key(datetime.strptime(str(row.day), '%Y-%m-%d').date(), granularity)
                 bucket_totals[key] = bucket_totals.get(key, 0) + float(row.revenue or 0)
 
@@ -4195,7 +4205,18 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
         default_fallbacks = [
             "Minipass Notification",
             "[Minipass]",
-            "Confirmation d'inscription", 
+            "Confirmation d'inscription",
+            "Notification Minipass",
+            # French defaults (config/email_defaults.json and subject_templates below).
+            "Votre passeport est prêt",
+            "Paiement confirmé",
+            "Demande d'inscription reçue",
+            "Pré-inscription reçue",
+            "Présence confirmée",
+            "Rappel de paiement",
+            "Votre avis",
+            # Legacy English defaults, kept so subjects stored before the switch to
+            # French are still recognised as defaults rather than treated as custom.
             "Registration confirmation",
             "Payment confirmed",
             "Pass redeemed",
@@ -4210,13 +4231,13 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
         
         # Only use dynamic templates for default fallback subjects
         subject_templates = {
-            'newPass': 'Your digital pass is ready',
-            'paymentReceived': 'Payment confirmed - Pass activated',
-            'signup': 'Registration confirmation',
-            'signup_payment_first': 'Registration confirmed - Payment instructions',
-            'redeemPass': 'Pass redeemed successfully',
-            'latePayment': 'Payment reminder',
-            'email_survey_invitation': 'We\'d love your feedback'
+            'newPass': 'Votre passeport est prêt',
+            'paymentReceived': 'Paiement confirmé — passeport activé',
+            'signup': "Demande d'inscription reçue",
+            'signup_payment_first': 'Pré-inscription reçue — Prochaine étape',
+            'redeemPass': 'Présence confirmée',
+            'latePayment': 'Rappel de paiement',
+            'email_survey_invitation': 'Votre avis compte'
         }
 
         # Extract template type from template_name
@@ -4832,7 +4853,7 @@ def notify_cart_order_event(app, *, cart_order, event_type):
         items.append({"label": label, "amount": order.amount})
 
     for signup in cart_order.signups:
-        activity_name = signup.activity.name if signup.activity else "Activity Passport"
+        activity_name = signup.activity.name if signup.activity else "Passeport d'activité"
         label = activity_name
         if signup.requested_sessions and signup.requested_sessions > 1:
             label += f" x{signup.requested_sessions}"
@@ -4842,14 +4863,16 @@ def notify_cart_order_event(app, *, cart_order, event_type):
     payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
 
     if event_type == "cart_paid":
-        subject = f"Payment received - Order {cart_order.cart_code}"
+        subject = f"Paiement reçu - Commande {cart_order.cart_code}"
         template_name = "email/cart_order_paid.html"
     else:
-        subject = f"Order received - {cart_order.cart_code}"
+        subject = f"Commande reçue - {cart_order.cart_code}"
         template_name = "email/cart_order_placed.html"
 
-    rows = [{"label": item["label"], "value": "%.2f $" % item["amount"]} for item in items]
-    rows.append({"label": "Total", "value": "%.2f $" % cart_order.total_amount})
+    # _fr_money, not "%.2f $" — the latter renders "35.00 $" with a period, which
+    # disagreed with every other amount in the same email (see _fr_money's docstring).
+    rows = [{"label": item["label"], "value": _fr_money(item["amount"])} for item in items]
+    rows.append({"label": "Total", "value": _fr_money(cart_order.total_amount)})
 
     context = {
         "cart_code": cart_order.cart_code,
@@ -4857,6 +4880,12 @@ def notify_cart_order_event(app, *, cart_order, event_type):
         "total_amount": cart_order.total_amount,
         "payment_method": cart_order.payment_method,
         "payment_email": payment_email,
+        # A cart can hold products, activity passports, or both. The "what happens
+        # next" copy has to name only what the buyer actually bought — saying "tout
+        # passeport d'activité a été envoyé" on a T-shirt-only order tells them to
+        # go looking for an email that will never arrive.
+        "product_count": len(cart_order.orders),
+        "passport_count": len(cart_order.signups),
     }
 
     send_email_async(app, subject=subject, to_email=cart_order.buyer_email,
@@ -5304,9 +5333,9 @@ def get_email_context(activity, template_type, base_context=None):
     """
     # Default email template values (hardcoded fallback)
     defaults = {
-        'subject': 'Minipass Notification',
-        'title': 'Welcome to Minipass',
-        'admin_message': 'Thank you for using our service. We appreciate your business!',
+        'subject': 'Notification Minipass',
+        'title': 'Bienvenue',
+        'admin_message': 'Merci d’utiliser notre service.',
         'hero_image': None,
         'cta_text': None,
         'cta_url': None,
@@ -5683,6 +5712,13 @@ def get_financial_data_from_views(start_date=None, end_date=None, activity_filte
             txn['source_type'] = 'passport'
             txn['type'] = 'Income'
             txn['category'] = 'Passport Sales'
+        elif txn['entered_by'] == 'Shop System':
+            # Shop product sale. Backed by shop_order, not Income, so there is no ledger row to
+            # edit — amounts change by editing the order in the shop admin.
+            txn['editable'] = False
+            txn['source_type'] = 'product'
+            txn['type'] = 'Income'
+            txn['category'] = 'Product Sales'
         elif txn['transaction_type'] in ['Other Income', 'Income']:
             txn['editable'] = True
             txn['source_type'] = 'income'
@@ -5775,9 +5811,15 @@ def get_financial_data_from_views(start_date=None, end_date=None, activity_filte
 
     sum_params = {'start_month': start_month, 'end_month': end_month}
 
-    if activity_filter and activity:
-        summary_query += " AND account = :activity_name"
-        sum_params['activity_name'] = activity.name
+    # Filter on activity_id, not the activity name: names are not unique, so filtering by name
+    # silently merges two same-named activities into one set of totals.
+    if activity_filter:
+        summary_query += " AND activity_id = :activity_id"
+        # Tolerant parse: callers pass an id, but a stale URL must not raise ValueError here.
+        try:
+            sum_params['activity_id'] = int(activity_filter)
+        except (TypeError, ValueError):
+            summary_query = summary_query.rsplit(" AND activity_id = :activity_id", 1)[0]
 
     summary_result = db.session.execute(text(summary_query), sum_params)
     summary_row = summary_result.fetchone()
@@ -5797,7 +5839,10 @@ def get_financial_data_from_views(start_date=None, end_date=None, activity_filte
     activities_dict = {}
 
     for txn in transactions:
-        activity_id = txn.get('activity_id')
+        # Shop product sales have no activity — a t-shirt belongs to the shop, not to an
+        # activity — so they group under their own key. Without this they would be dropped here
+        # while still counting in the summary tiles, making the tiles and this table disagree.
+        activity_id = txn.get('activity_id') or ('boutique' if txn['source_type'] == 'product' else None)
         if not activity_id:
             continue  # Skip if no activity found
 
@@ -5846,9 +5891,11 @@ def get_activity_revenue_from_view():
     """
     from sqlalchemy import text
 
+    # Shop product sales have a NULL activity_id; excluded because callers key this by activity.
     query = """
         SELECT activity_id, SUM(cash_received) as total_revenue
         FROM monthly_financial_summary
+        WHERE activity_id IS NOT NULL
         GROUP BY activity_id
     """
 
@@ -5859,319 +5906,52 @@ def get_activity_revenue_from_view():
         return {}  # Fallback if view doesn't exist
 
 
-def get_financial_data(start_date=None, end_date=None, activity_id=None, basis='cash'):
+ACTIVITY_SUMMARY_FIELDS = (
+    "cash_received", "cash_paid", "net_cash_flow",
+    "accounts_receivable", "accounts_payable",
+    "total_revenue", "total_expenses", "net_income",
+)
+
+
+def get_activity_financial_summary(activity_id):
+    """All-time financial figures for one activity, straight from the SQL view.
+
+    The single place any per-activity money figure should come from, so the activity form, the
+    income and expense pages, the dashboard profit box and the KPI API all agree with the
+    Financial Report instead of each summing the raw tables their own way.
+
+    Returns a dict with every key in ACTIVITY_SUMMARY_FIELDS, all floats, zeroed if the activity
+    has no rows. Product sales are excluded by construction: they carry a NULL activity_id,
+    because a t-shirt is shop revenue, not an activity's.
+
+    Cash vs accrual: cash_received/cash_paid are money actually moved; total_revenue and
+    total_expenses include what is still owed either way.
     """
-    Get financial data for reporting with Cash Flow Accounting support.
+    from sqlalchemy import text
 
-    Args:
-        start_date: datetime object for start of period (UTC, optional)
-        end_date: datetime object for end of period (UTC, optional)
-        activity_id: Optional activity ID to filter by specific activity
-        basis: 'cash' (default) or 'accrual' - accounting basis
-
-    Returns:
-        dict with cash_received, cash_paid, net_cash_flow,
-        accounts_receivable, accounts_payable, transactions
+    query = """
+        SELECT COALESCE(SUM(cash_received), 0)       AS cash_received,
+               COALESCE(SUM(cash_paid), 0)           AS cash_paid,
+               COALESCE(SUM(net_cash_flow), 0)       AS net_cash_flow,
+               COALESCE(SUM(accounts_receivable), 0) AS accounts_receivable,
+               COALESCE(SUM(accounts_payable), 0)    AS accounts_payable,
+               COALESCE(SUM(total_revenue), 0)       AS total_revenue,
+               COALESCE(SUM(total_expenses), 0)      AS total_expenses,
+               COALESCE(SUM(net_income), 0)          AS net_income
+        FROM monthly_financial_summary
+        WHERE activity_id = :activity_id
     """
-    from models import Passport, Income, Expense, Activity, PassportType, User
-    from datetime import datetime, timezone
 
-    # Default to all-time if no dates provided
-    if not start_date:
-        start_date = datetime(2000, 1, 1, tzinfo=timezone.utc)
-    if not end_date:
-        end_date = datetime.now(timezone.utc)
+    from sqlalchemy.exc import OperationalError
 
-    # Ensure dates are timezone-aware
-    if start_date.tzinfo is None:
-        start_date = start_date.replace(tzinfo=timezone.utc)
-    if end_date.tzinfo is None:
-        end_date = end_date.replace(tzinfo=timezone.utc)
-
-    # Initialize totals
-    cash_received = 0.0
-    cash_paid = 0.0
-    accounts_receivable = 0.0
-    accounts_payable = 0.0
-    all_transactions = []
-
-    # PASSPORT SALES (Income)
-    passport_query = db.session.query(Passport).join(Activity).join(PassportType)
-
-    if basis == 'cash':
-        # Cash Basis: Only paid passports, use payment_date for filtering
-        passport_query = passport_query.filter(
-            Passport.paid == True,
-            Passport.paid_date >= start_date,
-            Passport.paid_date <= end_date
-        )
-    else:
-        # Accrual Basis: All passports, use created_dt for filtering
-        passport_query = passport_query.filter(
-            Passport.created_dt >= start_date,
-            Passport.created_dt <= end_date
-        )
-
-    if activity_id:
-        passport_query = passport_query.filter(Passport.activity_id == activity_id)
-
-    passports = passport_query.all()
-
-    for passport in passports:
-        user = db.session.get(User, passport.user_id) if passport.user_id else None
-        if passport.paid:
-            cash_received += passport.sold_amt
-        else:
-            accounts_receivable += passport.sold_amt
-
-        all_transactions.append({
-            'id': None,
-            'date': passport.paid_date.strftime('%Y-%m-%d') if passport.paid_date else passport.created_dt.strftime('%Y-%m-%d'),
-            'datetime': passport.paid_date if passport.paid_date else passport.created_dt,
-            'type': 'Income',
-            'category': 'Passport Sales',
-            'description': f"{passport.passport_type.name if passport.passport_type else 'Passport'} - {user.name if user else 'Unknown'}",
-            'amount': passport.sold_amt,
-            'payment_status': 'received' if passport.paid else 'pending',
-            'payment_date': passport.paid_date.strftime('%Y-%m-%d') if passport.paid_date else '',
-            'payment_method': '',  # Passport sales don't track payment method
-            'due_date': '',  # Passport sales don't have due dates
-            'receipt_filename': None,
-            'activity_id': passport.activity_id,
-            'activity_name': passport.activity.name,
-            'activity_image': passport.activity.image_filename or passport.activity.logo_filename,
-            'editable': False,  # Passport sales not editable from financial report
-            'source_type': 'passport',
-            'created_by': passport.marked_paid_by or 'System'
-        })
-
-    # MANUAL INCOME ENTRIES
-    # Query ALL income transactions (regardless of payment status)
-    # KPIs will be calculated based on payment_status below
-    income_query = db.session.query(Income).join(Activity)
-
-    # Filter by invoice date to get all transactions in the period
-    income_query = income_query.filter(
-        Income.date >= start_date,
-        Income.date <= end_date
-    )
-
-    if activity_id:
-        income_query = income_query.filter(Income.activity_id == activity_id)
-
-    incomes = income_query.all()
-
-    # Calculate KPIs based on payment status (cash basis accounting)
-    for income in incomes:
-        if income.payment_status == 'received':
-            cash_received += income.amount
-        elif income.payment_status == 'pending':
-            accounts_receivable += income.amount
-
-        all_transactions.append({
-            'id': income.id,
-            'date': income.payment_date.strftime('%Y-%m-%d') if income.payment_date else income.date.strftime('%Y-%m-%d'),
-            'datetime': income.payment_date if income.payment_date else income.date,
-            'type': 'Income',
-            'category': income.category,
-            'description': income.note or '',
-            'amount': income.amount,
-            'payment_status': income.payment_status,
-            'payment_date': income.payment_date.strftime('%Y-%m-%d') if income.payment_date else '',
-            'payment_method': income.payment_method or '',
-            'due_date': '',  # Income doesn't have due_date
-            'receipt_filename': income.receipt_filename,
-            'activity_id': income.activity_id,
-            'activity_name': income.activity.name,
-            'activity_image': income.activity.image_filename or income.activity.logo_filename,
-            'editable': True,
-            'source_type': 'income',
-            'created_by': income.created_by or 'Unknown'
-        })
-
-    # EXPENSES
-    # Query expense transactions with proper date filtering:
-    # - Paid expenses: filter by bill date (date field)
-    # - Unpaid expenses: filter by effective date (payment_date > due_date > date)
-    # This ensures unpaid expenses with future payment dates appear in the correct fiscal year
-    from sqlalchemy import func, or_, and_
-
-    # Build effective date expression for unpaid expenses
-    effective_date = func.coalesce(Expense.payment_date, Expense.due_date, Expense.date)
-
-    expense_query = db.session.query(Expense).join(Activity)
-
-    # Filter: paid expenses by bill date OR unpaid expenses by effective date
-    expense_query = expense_query.filter(
-        or_(
-            # Paid expenses: use bill date (current behavior)
-            and_(
-                Expense.payment_status == 'paid',
-                Expense.date >= start_date,
-                Expense.date <= end_date
-            ),
-            # Unpaid expenses: use effective date (payment_date > due_date > date)
-            and_(
-                Expense.payment_status == 'unpaid',
-                effective_date >= start_date,
-                effective_date <= end_date
-            ),
-            # Cancelled expenses: use bill date
-            and_(
-                Expense.payment_status == 'cancelled',
-                Expense.date >= start_date,
-                Expense.date <= end_date
-            )
-        )
-    )
-
-    if activity_id:
-        expense_query = expense_query.filter(Expense.activity_id == activity_id)
-
-    expenses = expense_query.all()
-
-    # Calculate KPIs based on payment status (cash basis accounting)
-    for expense in expenses:
-        if expense.payment_status == 'paid':
-            cash_paid += expense.amount
-        elif expense.payment_status == 'unpaid':
-            accounts_payable += expense.amount
-
-        all_transactions.append({
-            'id': expense.id,
-            'date': expense.payment_date.strftime('%Y-%m-%d') if expense.payment_date else expense.date.strftime('%Y-%m-%d'),
-            'datetime': expense.payment_date if expense.payment_date else expense.date,
-            'type': 'Expense',
-            'category': expense.category,
-            'description': expense.description or '',
-            'amount': expense.amount,
-            'payment_status': expense.payment_status,
-            'payment_date': expense.payment_date.strftime('%Y-%m-%d') if expense.payment_date else '',
-            'payment_method': expense.payment_method or '',
-            'due_date': expense.due_date.strftime('%Y-%m-%d') if expense.due_date else '',
-            'receipt_filename': expense.receipt_filename,
-            'activity_id': expense.activity_id,
-            'activity_name': expense.activity.name,
-            'activity_image': expense.activity.image_filename or expense.activity.logo_filename,
-            'editable': True,
-            'source_type': 'expense',
-            'created_by': expense.created_by or 'Unknown'
-        })
-
-    # Sort transactions by date (newest first)
-    all_transactions.sort(key=lambda x: x['datetime'], reverse=True)
-
-    # Group by activity
-    by_activity = []
-    if activity_id:
-        # Single activity view
-        activity = db.session.get(Activity, activity_id)
-        if activity:
-            activity_transactions = [t for t in all_transactions if t['activity_id'] == activity.id]
-            by_activity.append({
-                'activity_id': activity.id,
-                'activity_name': activity.name,
-                'activity_image': activity.image_filename or activity.logo_filename,
-                'total_revenue': sum(t['amount'] for t in activity_transactions if t['type'] == 'Income' and t['payment_status'] in ['received', 'paid']),
-                'total_expenses': sum(t['amount'] for t in activity_transactions if t['type'] == 'Expense' and t['payment_status'] == 'paid'),
-                'net_income': sum(t['amount'] for t in activity_transactions if t['type'] == 'Income' and t['payment_status'] in ['received', 'paid']) -
-                              sum(t['amount'] for t in activity_transactions if t['type'] == 'Expense' and t['payment_status'] == 'paid'),
-                'transactions': activity_transactions
-            })
-    else:
-        # All activities
-        activities = db.session.query(Activity).all()
-        for activity in activities:
-            activity_transactions = [t for t in all_transactions if t['activity_id'] == activity.id]
-            if activity_transactions:
-                by_activity.append({
-                    'activity_id': activity.id,
-                    'activity_name': activity.name,
-                    'activity_image': activity.image_filename or activity.logo_filename,
-                    'total_revenue': sum(t['amount'] for t in activity_transactions if t['type'] == 'Income' and t['payment_status'] in ['received', 'paid']),
-                    'total_expenses': sum(t['amount'] for t in activity_transactions if t['type'] == 'Expense' and t['payment_status'] == 'paid'),
-                    'net_income': sum(t['amount'] for t in activity_transactions if t['type'] == 'Income' and t['payment_status'] in ['received', 'paid']) -
-                                  sum(t['amount'] for t in activity_transactions if t['type'] == 'Expense' and t['payment_status'] == 'paid'),
-                    'transactions': activity_transactions
-                })
-
-    # Determine period label
-    if start_date.year == 2000 and end_date >= datetime.now(timezone.utc):
-        period_label = 'All Time'
-    else:
-        period_label = f"{start_date.strftime('%b %d, %Y')} - {end_date.strftime('%b %d, %Y')}"
-
-    return {
-        'summary': {
-            'cash_received': cash_received,
-            'cash_paid': cash_paid,
-            'net_cash_flow': cash_received - cash_paid,
-            'accounts_receivable': accounts_receivable,
-            'accounts_payable': accounts_payable,
-            'total_revenue': cash_received + accounts_receivable,  # Accrual total
-            'total_expenses': cash_paid + accounts_payable,  # Accrual total
-            'net_income': (cash_received + accounts_receivable) - (cash_paid + accounts_payable),
-            'period_label': period_label,
-            'start_date': start_date,
-            'end_date': end_date
-        },
-        'by_activity': by_activity,
-        'all_transactions': all_transactions
-    }
-
-
-def export_financial_csv(financial_data):
-    """
-    Export financial data to CSV format compatible with all accounting software.
-
-    Args:
-        financial_data: dict from get_financial_data()
-
-    Returns:
-        str: CSV formatted string
-    """
-    import csv
-    from io import StringIO
-
-    output = StringIO()
-    writer = csv.writer(output)
-
-    # Write header with cash flow accounting fields
-    writer.writerow([
-        'Date',
-        'Activity',
-        'Type',
-        'Category',
-        'Description',
-        'Amount',
-        'Payment Status',
-        'Payment Date',
-        'Payment Method',
-        'Due Date',
-        'Receipt',
-        'Created By'
-    ])
-
-    # Write all transactions (support both old 'all_transactions' and new 'transactions' keys)
-    transactions = financial_data.get('all_transactions') or financial_data.get('transactions', [])
-
-    for transaction in transactions:
-        writer.writerow([
-            transaction.get('date', transaction.get('transaction_date', 'N/A')),
-            transaction.get('activity_name', 'N/A'),
-            transaction.get('type', transaction.get('transaction_type', 'N/A')),
-            transaction.get('category', 'N/A'),
-            transaction.get('description', transaction.get('memo', 'N/A')),
-            f"{transaction.get('amount', 0):.2f}",
-            transaction.get('payment_status', 'N/A').title(),
-            transaction.get('payment_date', 'N/A'),
-            transaction.get('payment_method', 'N/A'),
-            transaction.get('due_date', 'N/A'),
-            transaction.get('receipt_filename', 'N/A'),
-            transaction.get('created_by', transaction.get('entered_by', 'N/A'))
-        ])
-
-    return output.getvalue()
+    try:
+        row = db.session.execute(text(query), {"activity_id": activity_id}).first()
+        return {field: float(getattr(row, field) or 0) for field in ACTIVITY_SUMMARY_FIELDS}
+    except OperationalError:
+        # Only the "view does not exist yet" case (a database that has not run the migration).
+        # Anything else must propagate: silently returning $0.00 is exactly the quiet drift to a
+        # wrong number this helper exists to prevent.
+        return {field: 0.0 for field in ACTIVITY_SUMMARY_FIELDS}
 
 
 # ================================

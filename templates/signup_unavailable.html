@@ -1,28 +1,34 @@
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#ffffff">
-  <title>Inscriptions fermées</title>
-  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet">
-</head>
-<body class="bg-white">
-  <main class="container d-flex align-items-center justify-content-center min-vh-100 py-5">
-    <section class="text-center" style="max-width: 34rem;">
-      <span class="avatar avatar-xl bg-secondary-lt text-secondary mb-4" aria-hidden="true">
-        <i class="ti ti-calendar-x fs-1"></i>
-      </span>
-      <h1 class="mb-3">Les inscriptions sont fermées</h1>
-      {% if activity %}
-      <p class="h3 fw-normal mb-3">{{ activity.name }}</p>
-      {% endif %}
-      <p class="text-secondary fs-3 mb-0">
-        Cette activité n’accepte plus de nouvelles inscriptions. Communiquez avec l’organisation pour obtenir plus d’information.
-      </p>
-    </section>
-  </main>
-</body>
-</html>
+{% extends "_public_base.html" %}
+{% from 'macros/buttons.html' import button %}
+{% from 'macros/status_mark.html' import status_mark %}
+
+{# Not a shop page — no cart. #}
+{% set show_shop_nav = false %}
+
+{% block title %}Inscriptions fermées{% endblock %}
+
+{% block content %}
+{# Someone reaching this page followed a real link that has since closed, so it
+   needs the organization's identity and at least one way forward — it used to
+   be an unbranded dead end with no links at all. #}
+<div class="mp-shop-hero" style="padding-block: 1.5rem;">
+  {{ status_mark("ti-calendar-x", variant="warning") }}
+  <h1 class="h2 mb-0">Les inscriptions sont fermées</h1>
+  <p class="text-secondary">
+    {% if activity %}
+    {{ activity.name }} n'accepte plus de nouvelles inscriptions.
+    {% else %}
+    Ce lien d'inscription n'existe pas ou n'est plus actif.
+    {% endif %}
+  </p>
+
+  <div class="d-flex flex-column align-items-stretch gap-2 mt-2 w-100" style="max-width: 20rem;">
+    {% if shop_enabled %}
+    {{ button("Voir les activités offertes", href=url_for('shop'), attrs={"class": "w-100"}) }}
+    {% endif %}
+    {% if payment_email %}
+    {{ button("Nous joindre", href="mailto:" ~ payment_email, variant="outline", attrs={"class": "w-100"}) }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

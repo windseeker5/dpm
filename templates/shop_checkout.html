@@ -1,67 +1,115 @@
 {% extends "_public_base.html" %}
 {% from 'macros/input.html' import text_input %}
 {% from 'macros/textarea.html' import textarea %}
-{% from 'macros/radio.html' import radio_group %}
 {% from 'macros/buttons.html' import button %}
+{% from 'macros/payment_method_cards.html' import payment_method_cards %}
+{% from 'macros/collapsible_section.html' import collapsible_section %}
 
-{% block title %}Checkout{% endblock %}
+{% block title %}Caisse{% endblock %}
 
 {% block content %}
-<h1 class="h2 mb-4">Checkout</h1>
+<div class="mb-3">
+  <h1 class="h2 mb-1">Caisse</h1>
+  <p class="text-secondary mb-0">
+    {{ lines|length }} {{ "article" if lines|length == 1 else "articles" }} · {{ total | ca_money }}
+  </p>
+</div>
 
-<div class="card mb-3">
-  <div class="card-header">
-    <h2 class="h4 mb-0">Order Summary</h2>
-  </div>
+{# The full list is one tap away rather than a card the buyer scrolls past on
+   the way to the fields. The amount that matters sits above the button below. #}
+{% call collapsible_section(id="order-summary", title="Voir le détail de la commande") %}
   <div class="list-group list-group-flush">
     {% for line in lines %}
-    <div class="list-group-item d-flex align-items-center justify-content-between gap-3">
-      <div>
+    <div class="list-group-item d-flex align-items-start justify-content-between gap-3 px-0">
+      <div class="min-w-0">
         {% if line.type == "product" %}
-        <div class="fw-bold">{{ line.product.name }}{% if line.size %} ({{ line.size }}){% endif %} x{{ line.qty }}</div>
+        <div class="fw-bold">{{ line.product.name }}{% if line.size %} ({{ line.size }}){% endif %}</div>
+        <div class="text-secondary small">Quantité : {{ line.qty }}</div>
         {% else %}
-        <div class="fw-bold">{{ line.activity.name }}{% if line.passport_type %} — {{ line.passport_type.name }}{% endif %}</div>
+        <div class="fw-bold">{{ line.activity.name }}</div>
+        {% if line.passport_type %}<div class="text-secondary small">{{ line.passport_type.name }}</div>{% endif %}
         {% endif %}
       </div>
-      <div class="fw-bold">${{ "%.2f"|format(line.amount) }}</div>
+      <div class="fw-bold text-nowrap">{{ line.amount | ca_money }}</div>
     </div>
     {% endfor %}
   </div>
-  <div class="card-footer d-flex align-items-center justify-content-between">
-    <span class="text-secondary">Total</span>
-    <strong class="fs-3">${{ "%.2f"|format(total) }}</strong>
-  </div>
-</div>
+{% endcall %}
 
-<form method="POST" class="card">
+<form method="POST" class="card mt-3">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="card-body">
     <div class="mp-form-content">
-      <h2 class="h4 mb-3">Your Information</h2>
+      <h2 class="h3 mb-3">Vos coordonnées</h2>
 
-      <div class="mb-3">
-        {{ text_input(id="buyer_name", label="Full name", name="buyer_name", attrs={"required": "required", "autocomplete": "name"}) }}
-      </div>
-      <div class="mb-3">
-        {{ text_input(id="buyer_email", label="Email", name="buyer_email", type="email", attrs={"required": "required", "autocomplete": "email"}) }}
-      </div>
-      <div class="mb-3">
-        {{ text_input(id="buyer_phone", label="Phone (optional)", name="buyer_phone", type="tel", attrs={"autocomplete": "tel"}) }}
-      </div>
-      <div class="mb-3">
-        {{ textarea(id="notes", label="Notes (optional)", name="notes", rows=2) }}
+      {# .mp-form-fields owns the vertical rhythm — no hand-placed mb-3 per field. #}
+      <div class="mp-form-fields">
+        {{ text_input(id="buyer_name", label="Nom complet *", name="buyer_name",
+           attrs={"required": "required", "autocomplete": "name", "aria-required": "true"}) }}
+        {{ text_input(id="buyer_email", label="Adresse courriel *", name="buyer_email", type="email",
+           attrs={"required": "required", "autocomplete": "email", "inputmode": "email", "aria-required": "true"}) }}
+
+        {% call collapsible_section(id="buyer-extras", title="Ajouter une note ou un téléphone") %}
+          <div class="mp-form-fields">
+            {{ text_input(id="buyer_phone", label="Téléphone", name="buyer_phone", type="tel",
+               attrs={"autocomplete": "tel", "inputmode": "tel"}) }}
+            {{ textarea(id="notes", label="Note", name="notes", rows=3,
+               placeholder="Exigences particulières ou informations utiles…") }}
+          </div>
+        {% endcall %}
       </div>
 
-      <h2 class="h4 mb-3 mt-4">Payment</h2>
-      {% set payment_options = [
-        {"value": "interac", "label": "E-transfer (Interac)", "description": "Payment instructions will be emailed to you."}
-      ] + ([{"value": "stripe", "label": "Credit Card", "description": "Secure payment via Stripe."}] if stripe_enabled else []) %}
-      {{ radio_group(name="payment_method", label="Payment method", options=payment_options, selected="interac") }}
+      <hr class="my-4">
+
+      {% if stripe_enabled %}
+      {{ payment_method_cards(
+        name="payment_method",
+        selected="interac",
+        label="Mode de paiement",
+        options=[
+          {
+            "value": "interac",
+            "title": "Virement Interac",
+            "description": "Les instructions vous seront envoyées par courriel.",
+            "image": url_for('static', filename='images/interac-logo.jpg'),
+            "image_alt": ""
+          },
+          {
+            "value": "stripe",
+            "title": "Carte de crédit",
+            "description": "Paiement sécurisé avec Stripe.",
+            "image": url_for('static', filename='tabler/img/payments/mastercard.svg'),
+            "image_alt": "Mastercard"
+          }
+        ]
+      ) }}
+      {% else %}
+      {# Interac is the only method enabled. A radio group with a single option
+         reads as a half-loaded form at the exact moment the buyer decides
+         whether to trust the page, so state the method instead of asking. #}
+      <input type="hidden" name="payment_method" value="interac">
+      <h2 class="h3 mb-3">Mode de paiement</h2>
+      <div class="alert alert-info d-flex align-items-center gap-3 mb-0" role="status">
+        <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt=""
+             width="36" height="36" class="rounded flex-shrink-0">
+        <div>
+          <strong class="d-block">Paiement par virement Interac</strong>
+          <span class="small">
+            Les instructions vous seront envoyées par courriel après la commande.
+          </span>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
+
   <div class="card-footer">
     <div class="mp-form-content">
-      {{ button("Place Order", type="submit") }}
+      <div class="mp-shop-total">
+        <span class="text-secondary">Total</span>
+        <span class="mp-shop-total__amount">{{ total | ca_money }}</span>
+      </div>
+      {{ button("Passer la commande", type="submit", size="lg", attrs={"class": "w-100"}) }}
     </div>
   </div>
 </form>

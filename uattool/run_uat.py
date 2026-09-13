@@ -3,22 +3,63 @@
 
 Usage:
   python run_uat.py                       # everything except money-tier + manual rows
-  python run_uat.py --only 01,01b,02       # just these catalog rows
-  python run_uat.py --confirm-money        # also run rows 90/91 (real Stripe + Interac charges)
+  python run_uat.py --only 01,01b,02      # just these catalog rows
+  python run_uat.py --headed              # watch it in a real Chrome window
+  python run_uat.py --confirm-money       # also run rows 90/91 (real Stripe + Interac charges)
+  python run_uat.py --replay 2026-09-13_142211   # reopen a past run's dashboard
 
 Target is always kdc.minipass.me (override with UAT_BASE_URL env var). See
 CATALOG.md for the full row-by-row description of what each script does.
 
-Runs headed by default — a real Chrome window pops up for each row so you can
-watch it happen — and prints live pass/fail progress per row as it runs, not
-just a final tally.
+Runs headless by default and opens a live dashboard in your browser: the whole
+row grid, a step-by-step log, and each screenshot appearing inline the moment
+it's taken. Pass --headed when you'd rather watch the real clicks happen; rows
+90/91 are always headed regardless, since you have to type a real card number.
+
+Everything a run produces lands in one folder, reports/<run_id>/: events.jsonl,
+report.md, and a directory per row holding its screenshots (plus a Playwright
+trace, kept only for rows that failed unless you pass --keep-traces).
 """
 
 import argparse
+import os
 import sys
+import time
+import webbrowser
 
-from lib import catalog, report
+from lib import catalog, config, dashboard, report
+from lib.events import EventBus, replay_bus
 from lib.runner import run_all
+
+
+def _serve(bus, run_dir, port, open_browser):
+    try:
+        server, url = dashboard.start(bus, run_dir, port)
+    except OSError as exc:
+        print(f"Dashboard could not start on port {port} ({exc}). Continuing without it.")
+        return None, None
+    print(f"Dashboard: {url}")
+    if open_browser:
+        webbrowser.open(url)
+    return server, url
+
+
+def _replay(run_id, port):
+    run_dir = config.run_dir(run_id)
+    events_path = os.path.join(run_dir, "events.jsonl")
+    if not os.path.exists(events_path):
+        print(f"No event log at {events_path} — that run predates the dashboard, or the id is wrong.")
+        return 1
+    server, url = _serve(replay_bus(events_path), run_dir, port, open_browser=True)
+    if not server:
+        return 1
+    print("Replaying a finished run. Ctrl-C to quit.")
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        print()
+    return 0
 
 
 def main():
@@ -29,22 +70,46 @@ def main():
         help="Also run rows 90/91, which move real money. Requires you to be present to enter a real "
              "card number / confirm a real e-transfer when prompted.",
     )
+    parser.add_argument("--headed", action="store_true", help="Run in a visible Chrome window instead of headless.")
+    parser.add_argument("--no-dashboard", action="store_true", help="Don't start or open the live dashboard.")
+    parser.add_argument("--port", type=int, default=config.DASHBOARD_PORT, help="Dashboard port (default %(default)s).")
+    parser.add_argument("--keep-traces", action="store_true", help="Keep Playwright traces for passing rows too.")
+    parser.add_argument("--replay", metavar="RUN_ID", help="Serve a past run's dashboard and exit; runs nothing.")
     args = parser.parse_args()
+
+    if args.replay:
+        sys.exit(_replay(args.replay, args.port))
+
+    if args.headed:
+        config.HEADLESS = False
 
     only = set(args.only.split(",")) if args.only else None
 
-    results, manual_reminders, run_id = run_all(only=only, money_confirmed=args.confirm_money)
+    run_id = time.strftime("%Y-%m-%d_%H%M%S")
+    run_dir = config.run_dir(run_id)
+    os.makedirs(run_dir, exist_ok=True)
+    bus = EventBus(jsonl_path=os.path.join(run_dir, "events.jsonl"))
 
-    run_timestamp = run_id
-    report_path = report.write_report(results, run_timestamp, manual_reminders)
+    server = None
+    if not args.no_dashboard:
+        server, _ = _serve(bus, run_dir, args.port, open_browser=True)
+
+    results, manual_reminders, run_id = run_all(
+        only=only, money_confirmed=args.confirm_money, bus=bus,
+        run_id=run_id, keep_traces=args.keep_traces,
+    )
+
+    report_path = report.write_report(results, run_id, manual_reminders)
 
     status_by_order = {r["order"]: r["status"] for r in results}
-    catalog.save_last_status(status_by_order, run_timestamp, report_path)
-    catalog_path = catalog.write_catalog_md(status_by_order=status_by_order, run_timestamp=run_timestamp)
+    catalog.save_last_status(status_by_order, run_id, report_path)
+    catalog_path = catalog.write_catalog_md(status_by_order=status_by_order, run_timestamp=run_id)
 
     passed = sum(1 for r in results if r["status"] == "pass")
     failed = sum(1 for r in results if r["status"] == "fail")
     skipped = sum(1 for r in results if r["status"] == "skipped")
+
+    bus.emit("run_end", passed=passed, failed=failed, skipped=skipped, report_path=report_path)
 
     print(f"\n{passed} passed, {failed} failed, {skipped} skipped")
     print(f"Report:  {report_path}")
@@ -55,6 +120,15 @@ def main():
         for reminder in manual_reminders:
             print(f"  - {reminder}")
 
+    if server:
+        print(f"\nDashboard still up at http://127.0.0.1:{args.port} — Ctrl-C to quit.")
+        try:
+            while True:
+                time.sleep(3600)
+        except KeyboardInterrupt:
+            print()
+
+    bus.close()
     sys.exit(1 if failed else 0)
 
 

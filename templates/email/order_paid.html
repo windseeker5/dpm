@@ -3,7 +3,7 @@
   no shipping in this phase — so the message just says we'll notify when it's ready.
 #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import rows_block, status_pill %}
+{% from "email/components.html" import rows_block, status_pill, money %}
 
 {% set preheader = 'Paiement reçu — votre commande est confirmée.' %}
 {% set photo_eyebrow = 'Paiement reçu' %}
@@ -13,7 +13,7 @@
   <td class="mp-pad" style="padding:20px 32px 0 32px;">
     {{ rows_block([
       {'label': 'Article', 'value': item_label},
-      {'label': 'Total', 'value': '%.2f $'|format(amount)},
+      {'label': 'Total', 'value': money(amount)},
       {'label': 'Statut', 'value': status_pill(true)},
     ]) }}
   </td>

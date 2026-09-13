@@ -50,11 +50,24 @@ def outstanding_balances(args, language):
     )
     query = activity_filter(query, Activity.name, activity)
     records = query.order_by(Signup.signed_up_at, User.name).limit(MAX_ROWS).all()
-    total = sum(float(record[3] or 0) for record in records)
+
+    # Totalled with their own uncapped aggregate, not by summing `records` — that would count
+    # only the rows that fit under MAX_ROWS and understate the answer without saying so.
+    # Unpaid signups are deliberately NOT in the financial views: a signup is not a sale until
+    # payment creates the passport, so this figure has no view to read.
+    totals = (
+        db.session.query(func.count(Signup.id), func.coalesce(func.sum(Signup.requested_amount), 0))
+        .join(User, User.id == Signup.user_id)
+        .join(Activity, Activity.id == Signup.activity_id)
+        .filter(Signup.paid.is_(False), ~Signup.status.in_(("rejected", "cancelled")))
+    )
+    total_count, total = activity_filter(totals, Activity.name, activity).one()
+    total = float(total or 0)
+
     answer = (
-        f"{len(records)} inscription(s) non payée(s) totalisent {money(total)} pour {activity_label(activity, language)}."
+        f"{total_count} inscription(s) non payée(s) totalisent {money(total)} pour {activity_label(activity, language)}."
         if language == "fr"
-        else f"{len(records)} unpaid signup(s) total {money(total)} for {activity_label(activity, language)}."
+        else f"{total_count} unpaid signup(s) total {money(total)} for {activity_label(activity, language)}."
     )
     columns = (
         ["Participant", "Courriel", "Activité", "Montant dû", "Inscription"]
@@ -74,11 +87,30 @@ def outstanding_expenses(args, language):
     )
     query = activity_filter(query, Activity.name, activity)
     records = query.order_by(Expense.due_date, Activity.name).limit(MAX_ROWS).all()
-    total = sum(float(r[3] or 0) for r in records)
+
+    # The headline total comes from the approved accounting view — unpaid expenses are exactly
+    # its accounts_payable — so it matches the Financial Report. Summing `records` instead would
+    # total only the rows that fit under MAX_ROWS and silently understate the real figure.
+    total_sql = """
+        SELECT COALESCE(SUM(accounts_payable), 0)
+        FROM monthly_financial_summary
+        WHERE (:activity = '' OR account = :activity)
+    """
+    total = float(db.session.execute(
+        text(total_sql), {"activity": activity or ""}
+    ).scalar() or 0)
+
+    count_row = (
+        db.session.query(func.count(Expense.id))
+        .join(Activity, Activity.id == Expense.activity_id)
+        .filter(Expense.payment_status == "unpaid")
+    )
+    total_count = activity_filter(count_row, Activity.name, activity).scalar() or 0
+
     answer = (
-        f"{len(records)} dépense(s) impayée(s) totalisent {money(total)}."
+        f"{total_count} dépense(s) impayée(s) totalisent {money(total)}."
         if language == "fr"
-        else f"{len(records)} unpaid expense(s) total {money(total)}."
+        else f"{total_count} unpaid expense(s) total {money(total)}."
     )
     columns = (
         ["Activité", "Catégorie", "Description", "Montant", "Échéance"]
@@ -91,21 +123,17 @@ def outstanding_expenses(args, language):
 
 def payment_summary(args, language):
     start, end = date_bounds(args)
+    # Reads the approved accounting view rather than re-deriving cash from the raw tables, so
+    # this answer matches the Financial Report and includes shop product sales. The previous
+    # hand-rolled UNION over passport+income reproduced the view's cash logic by hand, and drifted
+    # from it — it could never see a product sale.
     sql = text("""
-        SELECT COALESCE(SUM(amount), 0), COUNT(*) FROM (
-            SELECT sold_amt AS amount
-            FROM passport
-            WHERE paid = 1 AND paid_date IS NOT NULL
-              AND (marked_paid_by IS NULL OR marked_paid_by NOT LIKE 'stripe%')
-              AND (:start IS NULL OR paid_date >= :start)
-              AND (:end IS NULL OR paid_date < :end)
-            UNION ALL
-            SELECT amount
-            FROM income
-            WHERE payment_status = 'received'
-              AND (:start IS NULL OR COALESCE(payment_date, date) >= :start)
-              AND (:end IS NULL OR COALESCE(payment_date, date) < :end)
-        )
+        SELECT COALESCE(SUM(amount), 0), COUNT(*)
+        FROM monthly_transactions_detail
+        WHERE transaction_type = 'Income'
+          AND payment_status = 'Paid'
+          AND (:start IS NULL OR transaction_date >= :start)
+          AND (:end IS NULL OR transaction_date < :end)
     """)
     amount, count = db.session.execute(sql, {"start": start, "end": end}).first()
     period = period_label(args, language)
@@ -290,8 +318,23 @@ def passport_sales_summary(args, language):
         .limit(MAX_ROWS)
         .all()
     )
-    count = sum(int(r[2] or 0) for r in records)
-    amount = sum(float(r[3] or 0) for r in records)
+    # Own uncapped aggregate rather than summing `records`, which is limited to MAX_ROWS.
+    # This counts passport sales broken down by passport type, a dimension the financial views
+    # do not carry, so it reads the passport table directly by design — and it deliberately
+    # excludes shop products, which are not passport sales.
+    totals_query = (
+        db.session.query(func.count(Passport.id), func.coalesce(func.sum(Passport.sold_amt), 0))
+        .join(Activity, Activity.id == Passport.activity_id)
+        .filter(Passport.paid.is_(True))
+    )
+    totals_query = activity_filter(totals_query, Activity.name, activity)
+    if start:
+        totals_query = totals_query.filter(Passport.paid_date >= start)
+    if end:
+        totals_query = totals_query.filter(Passport.paid_date < end)
+    count, amount = totals_query.one()
+    count, amount = int(count or 0), float(amount or 0)
+
     answer = (
         f"{count} passeport(s) vendu(s){period} totalisent {money(amount)}."
         if language == "fr"

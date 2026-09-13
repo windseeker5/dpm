@@ -1,20 +1,24 @@
 {% extends "_public_base.html" %}
-{% block title %}Shop{% endblock %}
+{% from 'macros/status_mark.html' import status_mark %}
+
+{% block title %}Boutique{% endblock %}
 
 {% block content %}
 {% if activities %}
-<section class="mb-5">
-  <h2 class="h3 mb-3">Activities</h2>
+<section class="mb-4">
+  <h2 class="h3 mb-3">Activités</h2>
   <div class="row row-cols-1 row-cols-sm-2 g-3">
     {% for activity in activities %}
     <div class="col">
       <a href="{{ url_for('shop_activity', activity_id=activity.id) }}" class="card card-link h-100 text-reset">
         {% if activity.image_filename %}
         <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
-             class="card-img-top" style="height: 160px; object-fit: cover;" alt="{{ activity.name }}">
+             class="mp-shop-media" alt="{{ activity.name }}">
+        {% else %}
+        <div class="mp-shop-media mp-shop-media-empty" aria-hidden="true"><i class="ti ti-calendar-event"></i></div>
         {% endif %}
         <div class="card-body">
-          <h3 class="card-title h4">{{ activity.name }}</h3>
+          <h3 class="card-title h4 mb-1">{{ activity.name }}</h3>
           {% if activity.description %}
           <p class="text-secondary small mb-0">{{ activity.description|truncate(90) }}</p>
           {% endif %}
@@ -27,23 +31,21 @@
 {% endif %}
 
 {% if products %}
-<section class="mb-5">
-  <h2 class="h3 mb-3">Products</h2>
+<section class="mb-4">
+  <h2 class="h3 mb-3">Produits</h2>
   <div class="row row-cols-1 row-cols-sm-2 g-3">
     {% for product in products %}
     <div class="col">
       <a href="{{ url_for('shop_product', product_id=product.id) }}" class="card card-link h-100 text-reset">
         {% if product.photo_filename %}
         <img src="{{ url_for('static', filename='uploads/product_images/' + product.photo_filename) }}"
-             class="card-img-top" style="height: 160px; object-fit: cover;" alt="{{ product.name }}">
+             class="mp-shop-media" alt="{{ product.name }}">
         {% else %}
-        <div class="card-img-top bg-secondary-lt d-flex align-items-center justify-content-center" style="height: 160px;">
-          <i class="ti ti-photo text-muted fs-1"></i>
-        </div>
+        <div class="mp-shop-media mp-shop-media-empty" aria-hidden="true"><i class="ti ti-photo"></i></div>
         {% endif %}
         <div class="card-body">
-          <h3 class="card-title h4">{{ product.name }}</h3>
-          <div class="fw-bold">${{ "%.2f"|format(product.price) }}</div>
+          <h3 class="card-title h4 mb-1">{{ product.name }}</h3>
+          <div class="fw-bold">{{ product.price | ca_money }}</div>
         </div>
       </a>
     </div>
@@ -53,9 +55,10 @@
 {% endif %}
 
 {% if not activities and not products %}
-<div class="text-center text-secondary py-5">
-  <i class="ti ti-shopping-bag-off fs-1 mb-2 d-block"></i>
-  Nothing to see here yet.
+<div class="text-center py-5">
+  {{ status_mark("ti-shopping-bag", class_="mb-3") }}
+  <h1 class="h3 mb-1">La boutique est vide</h1>
+  <p class="text-secondary mb-0">Aucun article n'est offert pour le moment. Revenez bientôt.</p>
 </div>
 {% endif %}
 {% endblock %}

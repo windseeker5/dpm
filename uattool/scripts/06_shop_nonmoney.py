@@ -9,8 +9,6 @@ the mat, XL leggings, and the Yoga passport and confirms the $320 total. Never t
 any payment step, since this script must not move money.
 """
 
-import os
-
 from lib.browser import login, new_page
 from lib.fixtures import (
     YOGA_ACTIVITY_NAME,
@@ -23,44 +21,18 @@ from lib.fixtures import (
     YOGA_PRICE,
     YOGA_SESSIONS,
     create_minimal_activity,
+    create_product,
+    ensure_shop_enabled,
     scenario_name,
 )
 
-FIXTURE_IMAGE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fixtures", "test_cover_photo.jpg")
-
 
 def _ensure_shop_enabled(page, ctx):
-    page.goto(f"{ctx.base_url}/admin/unified-settings?section=shop")
-    if page.is_checked("#shop_enabled"):
-        ctx.note("SHOP_ENABLED was already on.")
-        return
-    page.check("#shop_enabled")
-    page.locator('button:has-text("Save Shop Settings")').first.click()
-    page.wait_for_load_state("networkidle", timeout=15000)
-    if not page.is_checked("#shop_enabled"):
-        raise AssertionError("SHOP_ENABLED did not persist as checked after saving Shop settings.")
-    ctx.note("SHOP_ENABLED was off — turned it on via Settings > Shop and left it on.")
+    ensure_shop_enabled(page, ctx)
 
 
 def _create_product(page, ctx, name, price, with_photo, sizes=None):
-    page.goto(f"{ctx.base_url}/admin/products")
-    page.click('button[data-bs-target="#productModal"]')
-    page.wait_for_selector("#productModal.show", timeout=5000)
-
-    page.fill("#name", name)
-    page.fill("#price", str(price))
-    if sizes:
-        page.fill("#size_label", sizes)
-    if with_photo:
-        page.set_input_files("#photo", FIXTURE_IMAGE)
-
-    page.locator('#productModal button[type="submit"]').first.click()
-    page.wait_for_load_state("networkidle", timeout=15000)
-
-    if page.locator(".alert-danger, .invalid-feedback").count():
-        raise AssertionError(f"Product form appears to have validation errors creating {name!r}.")
-
-    ctx.note(f"Created product {name!r} (${price:.2f}, photo={'yes' if with_photo else 'no'}).")
+    create_product(page, ctx, name, price, with_photo=with_photo, sizes=sizes)
 
 
 def run(ctx):

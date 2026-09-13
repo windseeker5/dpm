@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#ffffff">
-  <title>{% block title %}Shop{% endblock %} — {{ (settings.get('ORG_NAME') if settings else None) or 'Shop' }}</title>
+  <title>{% block title %}Boutique{% endblock %} — {{ (settings.get('ORG_NAME') if settings else None) or ORG_NAME }}</title>
 
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
@@ -12,47 +12,84 @@
   <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='minipass.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/mp-components.css') }}?v=3.9" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/mp-components.css') }}?v=4.2" rel="stylesheet">
   <style>
     /* minipass.css sets html,body{overflow:hidden;height:100%} for the admin dashboard's
        fixed-sidebar/internal-scroll layout — these public pages are a plain flowing
        document with no such container, so that rule has to be undone here or nothing
        past the first viewport (e.g. the payment section on checkout) is reachable. */
     html, body { height: auto; overflow: visible; }
-    body { background: #fff; }
-    .mp-shop-shell { max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+    /* Flex column + margin-block:auto on the shell centers short pages
+       (activity/cart/confirmation) in the viewport instead of leaving them
+       pinned to the top of a mostly blank desktop canvas. Auto margins
+       absorb only the leftover space, so a page taller than the viewport
+       (e.g. the signup form) collapses back to flush-top with normal
+       scrolling — nothing to opt out of per page. */
+    body { background: #fff; display: flex; flex-direction: column; min-height: 100dvh; margin: 0; }
+    .mp-shop-shell { max-width: 720px; width: 100%; margin-inline: auto; margin-block: auto; padding: 1.5rem 1rem 4rem; }
     .mp-shop-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
     .mp-shop-header__brand { display: flex; align-items: center; gap: .75rem; color: inherit; text-decoration: none; min-width: 0; }
     .mp-shop-header__brand img { width: 48px; height: 48px; object-fit: contain; }
     .mp-shop-header__name { font-weight: 700; font-size: 1.1rem; }
     .mp-shop-header__cart { position: relative; display: inline-flex; align-items: center; justify-content: center;
-      width: 44px; height: 44px; border-radius: 999px; background: #f3f4f6; color: #15192c; flex-shrink: 0; }
+      width: 44px; height: 44px; border-radius: 999px; background: var(--mp-muted); color: var(--mp-foreground); flex-shrink: 0; }
     .mp-shop-header__cart i { font-size: 1.3rem; }
     .mp-shop-header__cart-count { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px;
-      border-radius: 999px; background: #15192c; color: #fff; font-size: .7rem; font-weight: 700;
+      border-radius: 999px; background: var(--mp-primary); color: var(--mp-primary-foreground); font-size: .7rem; font-weight: 700;
       display: flex; align-items: center; justify-content: center; padding: 0 5px; }
     .mp-shop-flashes { margin-bottom: 1.5rem; }
     .mp-shop-flashes .alert:last-child { margin-bottom: 0; }
+    /* Product and activity photos are user-uploaded at any aspect ratio. A fixed
+       pixel height cropped portrait shots to a letterbox strip and ate half the
+       first screen on a phone; a ratio box scales with the column instead. */
+    .mp-shop-media { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+    .mp-shop-media--tall { aspect-ratio: 4 / 3; }
+    .mp-shop-media--thumb { aspect-ratio: 1 / 1; width: 56px; border-radius: var(--mp-radius-sm); }
+    .mp-shop-media-empty { display: flex; align-items: center; justify-content: center;
+      background: var(--mp-muted); color: var(--mp-muted-foreground); font-size: 1.75rem; }
+    /* Total sits directly above the submit button, where the decision is made. */
+    .mp-shop-total { display: flex; align-items: baseline; justify-content: space-between;
+      gap: 1rem; margin-bottom: .75rem; }
+    .mp-shop-total__amount { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .mp-shop-hero { display: flex; flex-direction: column; align-items: center; gap: .5rem;
+      margin-bottom: 1.5rem; text-align: center; }
+    .mp-shop-hero p { max-width: 34ch; margin: 0; }
   </style>
   {% block head %}{% endblock %}
 </head>
 <body style="--mp-brand-primary: {{ PRIMARY_BRAND_COLOR }}; --mp-primary: {{ PRIMARY_BRAND_COLOR }}; --mp-primary-foreground: {{ PRIMARY_BRAND_FOREGROUND }};{% if HAS_CUSTOM_BRAND_COLOR %} --mp-chart-1: {{ PRIMARY_BRAND_COLOR }};{% endif %}">
   <div class="mp-shop-shell">
     {% from 'macros/avatar.html' import avatar_initials %}
+    {# The signup confirmation and "signups closed" pages share this shell but are
+       not part of the shop, so the cart and the shop link only appear when the
+       page is actually a shop page with a shop to go back to. #}
+    {% set org_display_name = (settings.get('ORG_NAME') if settings else None) or ORG_NAME %}
+    {% set show_cart = shop_enabled and show_shop_nav|default(true) %}
     <header class="mp-shop-header">
+      {% if show_cart %}
       <a href="{{ url_for('shop') }}" class="mp-shop-header__brand">
+      {% else %}
+      <span class="mp-shop-header__brand">
+      {% endif %}
         {% if settings and settings.get("LOGO_FILENAME") %}
           <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
-               alt="{{ settings.get('ORG_NAME', 'Shop') }}">
+               alt="{{ org_display_name }}">
         {% else %}
-          {{ avatar_initials((settings.get('ORG_NAME') if settings else None) or 'Shop') }}
+          {{ avatar_initials(org_display_name) }}
         {% endif %}
-        <span class="mp-shop-header__name">{{ (settings.get('ORG_NAME') if settings else None) or 'Shop' }}</span>
+        <span class="mp-shop-header__name">{{ org_display_name }}</span>
+      {% if show_cart %}
       </a>
-      <a href="{{ url_for('shop_cart') }}" class="mp-shop-header__cart" aria-label="View cart">
+      {% else %}
+      </span>
+      {% endif %}
+
+      {% if show_cart %}
+      <a href="{{ url_for('shop_cart') }}" class="mp-shop-header__cart" aria-label="Voir le panier">
         <i class="ti ti-shopping-cart" aria-hidden="true"></i>
         {% if cart_count %}<span class="mp-shop-header__cart-count">{{ cart_count }}</span>{% endif %}
       </a>
+      {% endif %}
     </header>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -69,5 +106,42 @@
 
     {% block content %}{% endblock %}
   </div>
+
+  <script>
+    /* Delegated copy handler for macros/code_block.html — the e-transfer
+       reference code is the one thing a buyer must transcribe exactly, so
+       every page that shows one gets a copy button without its own script. */
+    document.addEventListener('click', function (event) {
+      var trigger = event.target.closest('[data-mp-copy]');
+      if (!trigger) return;
+
+      var value = trigger.getAttribute('data-mp-copy');
+      var done = function () {
+        var original = trigger.dataset.mpOriginalLabel || trigger.innerHTML;
+        trigger.dataset.mpOriginalLabel = original;
+        trigger.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i>' +
+          (trigger.getAttribute('data-mp-copied-label') || 'Copied');
+        window.setTimeout(function () { trigger.innerHTML = original; }, 2000);
+      };
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(value).then(done).catch(function () {});
+        return;
+      }
+
+      /* Shop links get opened over plain http on local networks, where the
+         async Clipboard API is unavailable — fall back to a throwaway
+         textarea so the button still works rather than silently failing. */
+      var scratch = document.createElement('textarea');
+      scratch.value = value;
+      scratch.setAttribute('readonly', '');
+      scratch.style.position = 'fixed';
+      scratch.style.opacity = '0';
+      document.body.appendChild(scratch);
+      scratch.select();
+      try { document.execCommand('copy'); done(); } catch (error) { /* leave the label alone */ }
+      document.body.removeChild(scratch);
+    });
+  </script>
 </body>
 </html>

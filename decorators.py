@@ -129,8 +129,13 @@ def cache_response(timeout=300):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Create cache key
-            cache_key = f"{request.endpoint}:{request.args.to_dict()}"
+            # The cache key MUST include the view's path parameters. Keying on endpoint + query
+            # string alone made every /api/activity-kpis/<activity_id> request share one entry,
+            # so whichever activity was fetched first served its financial KPIs to every other
+            # activity for the whole timeout — one activity's revenue and profit shown under
+            # another's name. Sorted so key order is stable.
+            path_params = tuple(sorted(kwargs.items()))
+            cache_key = f"{request.endpoint}:{path_params}:{sorted(request.args.items(multi=True))}"
             current_time = datetime.now()
             
             # Check if cached response exists and is valid

@@ -1,68 +1,110 @@
 {% extends "_public_base.html" %}
 {% from 'macros/select.html' import select %}
-{% from 'macros/radio.html' import radio_group %}
+{% from 'macros/choice_cards.html' import choice_cards %}
 {% from 'macros/buttons.html' import button %}
-{% from 'macros/badge.html' import badge %}
+{% from 'macros/status_mark.html' import status_mark %}
 
 {% block title %}{{ activity.name }}{% endblock %}
 
 {% block content %}
 <a href="{{ url_for('shop') }}" class="text-secondary small d-inline-flex align-items-center gap-1 mb-3">
-  <i class="ti ti-arrow-left"></i> Back to shop
+  <i class="ti ti-arrow-left"></i> Retour à la boutique
 </a>
 
+{% if is_sold_out %}
 <div class="card">
   {% if activity.image_filename %}
   <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
-       class="card-img-top" style="height: 240px; object-fit: cover;" alt="{{ activity.name }}">
+       class="mp-shop-media" alt="{{ activity.name }}">
   {% endif %}
-  <div class="card-body">
-    <h1 class="h3">{{ activity.name }}</h1>
-    {% if activity.description %}<p class="text-secondary">{{ activity.description }}</p>{% endif %}
-  </div>
-</div>
-
-{% if is_sold_out %}
-<div class="card mt-3">
-  <div class="card-body text-center py-5">
-    {{ badge("Sold out", variant="destructive") }}
-    <p class="text-secondary mt-2 mb-0">All spots for {{ activity.name }} have been taken.</p>
+  <div class="card-body text-center py-4">
+    {{ status_mark("ti-calendar-off", variant="danger", class_="mb-3") }}
+    <h1 class="h3 mb-2">Complet</h1>
+    <p class="text-secondary mb-0">Toutes les places pour {{ activity.name }} ont été réservées.</p>
   </div>
 </div>
 {% else %}
-<form method="POST" class="card mt-3">
+{# One card for the whole decision: photo, what it is, what it costs, and the
+   button. It used to be two stacked cards, so the price sat above a seam and
+   the choice below it. #}
+<form method="POST" class="card" id="shop-activity-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <div class="card-body">
-    <div class="mp-form-content">
-      {% if passport_types|length > 1 %}
-      <div class="mb-3">
-        {{ radio_group(name="passport_type_id", label="Choose a passport type", options=passport_type_options) }}
-      </div>
-      {% elif passport_types|length == 1 %}
-      <input type="hidden" name="passport_type_id" value="{{ passport_types[0].id }}">
-      <div class="mb-3">
-        <div class="fw-bold">{{ passport_types[0].name }}</div>
-        <div class="text-secondary">${{ "%.2f"|format(passport_types[0].price_per_user or 0) }}</div>
-      </div>
-      {% endif %}
 
-      {% if activity.uses_scheduling %}
-      {% set selectable_slots = available_slots | rejectattr('is_full') | list %}
-      <div class="mb-3">
-        {% call select(id="slot_id", label="Session", placeholder="Decide later — I'll pick from my passport") %}
-          {% for slot in selectable_slots %}
-          <option value="{{ slot.id }}">{{ format_slot_label(slot) }} — {{ slot.seats_left }} left</option>
-          {% endfor %}
-        {% endcall %}
-      </div>
-      {% endif %}
+  {% if activity.image_filename %}
+  <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
+       class="mp-shop-media" alt="{{ activity.name }}">
+  {% endif %}
+
+  <div class="card-body">
+    <h1 class="h2 mb-1">{{ activity.name }}</h1>
+    {% if display_location %}
+    <p class="text-secondary d-flex align-items-center gap-1 mb-0">
+      <i class="ti ti-map-pin" aria-hidden="true"></i> {{ display_location }}
+    </p>
+    {% endif %}
+    {% if activity.description %}
+    <p class="text-secondary mt-3 mb-0">{{ activity.description }}</p>
+    {% endif %}
+
+    {% if passport_type_options %}
+    <hr class="my-3">
+    {{ choice_cards(
+      name="passport_type_id",
+      label="Choisissez votre passeport",
+      columns=1,
+      selected=passport_type_options[0].value,
+      options=passport_type_options,
+      required=True
+    ) }}
+    {% endif %}
+
+    {% if activity.uses_scheduling %}
+    {% set selectable_slots = available_slots | rejectattr('is_full') | list %}
+    <hr class="my-3">
+    <div>
+      {% call select(id="slot_id", label="Choisissez votre séance",
+                     placeholder="Décider plus tard — je choisirai depuis mon passeport") %}
+        {% for slot in selectable_slots %}
+        <option value="{{ slot.id }}">
+          {{ format_slot_label(slot) }} — {{ slot.seats_left }} {{ "place restante" if slot.seats_left == 1 else "places restantes" }}
+        </option>
+        {% endfor %}
+      {% endcall %}
+      <p class="text-secondary small mt-2 mb-0">
+        Vous pourrez modifier votre choix plus tard depuis votre passeport.
+      </p>
     </div>
+    {% endif %}
   </div>
+
   <div class="card-footer">
-    <div class="mp-form-content">
-      {{ button("Add to Cart", type="submit") }}
+    <div class="mp-shop-total">
+      <span class="text-secondary">Total</span>
+      <span class="mp-shop-total__amount" id="shop-activity-total">
+        {{ passport_type_options[0].amount if passport_type_options else activity.price_per_user | ca_money }}
+      </span>
     </div>
+    {{ button("Ajouter au panier", type="submit", size="lg", attrs={"class": "w-100"}) }}
   </div>
 </form>
+
+{% if passport_type_options | length > 1 %}
+<script>
+  /* Keep the footer total in step with the selected passport type so the buyer
+     confirms the amount at the button, not only inside the card they picked. */
+  (function () {
+    var prices = {{ passport_type_prices | tojson }};
+    var total = document.getElementById('shop-activity-total');
+    var form = document.getElementById('shop-activity-form');
+    if (!total || !form) return;
+
+    form.addEventListener('change', function (event) {
+      if (event.target.name !== 'passport_type_id') return;
+      var label = prices[event.target.value];
+      if (label) total.textContent = label;
+    });
+  })();
+</script>
+{% endif %}
 {% endif %}
 {% endblock %}

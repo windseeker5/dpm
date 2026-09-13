@@ -1,0 +1,27 @@
+{#
+  Status Mark — the large circular icon that opens a confirmation or dead-end
+  page: order placed, signup recorded, signups closed, shop unavailable.
+
+  Use this instead of `avatar avatar-xl bg-*-lt` + `i.fs-1`: Tabler's .avatar
+  is a rounded SQUARE unless you add .avatar-rounded, and Tabler's .fs-1 is
+  1.5rem (not Bootstrap's 2.5rem), so that recipe renders a squat square with
+  a tiny glyph lost in the middle of it.
+
+  Usage:
+    {% from 'macros/status_mark.html' import status_mark %}
+    {{ status_mark("ti-check", variant="success") }}
+    {{ status_mark("ti-calendar-x", variant="warning", size="sm") }}
+
+  Parameters:
+    - icon: Tabler icon name, e.g. "ti-check"
+    - variant: success | warning | danger | muted (default: muted)
+    - size: default | sm
+    - class_: extra classes (e.g. "mb-3")
+#}
+
+{% macro status_mark(icon, variant='muted', size='default', class_='') %}
+<span class="mp-status-mark{% if variant != 'muted' %} mp-status-mark--{{ variant }}{% endif %}{% if size == 'sm' %} mp-status-mark--sm{% endif %}{% if class_ %} {{ class_ }}{% endif %}"
+      aria-hidden="true">
+  <i class="ti {{ icon }}"></i>
+</span>
+{% endmacro %}

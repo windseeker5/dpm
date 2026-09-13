@@ -97,6 +97,40 @@ class WayneRouterTests(unittest.TestCase):
                 self.assertEqual("fr", decision.language)
                 self.assertEqual("local", decision.source)
 
+    def test_shop_questions_route_to_shop_revenue(self):
+        questions = (
+            "What is my shop revenue?",
+            "How much did I make from the boutique?",
+            "How is my online store doing?",
+            "product sales this month",
+            "Combien la boutique a-t-elle vendu?",
+            "Quelles sont les ventes de produits?",
+        )
+        for question in questions:
+            with self.subTest(question=question):
+                decision = route_question(question)
+                self.assertEqual("shop_revenue", decision.skill)
+                self.assertEqual("local", decision.source)
+
+    def test_shop_wording_does_not_hijack_activity_revenue(self):
+        """The shop rule runs before the generic revenue rule, so guard the other direction:
+        a plain revenue question must still list activities, not the shop."""
+        decision = route_question("Revenue by activity")
+        self.assertEqual("activity_revenue", decision.skill)
+
+    def test_workshop_is_not_treated_as_the_shop(self):
+        """'shop' and 'store' are substrings of ordinary words — most importantly 'workshop',
+        a normal activity name. These must never reach the shop-revenue skill."""
+        questions = (
+            "Who signed up for the pottery workshop?",
+            "list attendees for next workshop",
+            "revenue for the workshop",
+            "How many passports for the workshop?",
+        )
+        for question in questions:
+            with self.subTest(question=question):
+                self.assertNotEqual("shop_revenue", route_question(question).skill)
+
     def test_exact_french_unpaid_passports_question(self):
         decision = route_question("Est-ce qu'il y a des passeports qui n'ont pas été payés encore?")
         self.assertEqual("list_unpaid_passports", decision.skill)

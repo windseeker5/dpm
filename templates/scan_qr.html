@@ -1,107 +1,78 @@
 {% extends "base.html" %}
+{% from 'macros/select.html' import select %}
+{% from 'macros/buttons.html' import button %}
+{% from 'macros/badge.html' import badge %}
+
 {% block title %}Scan QR Code | Minipass{% endblock %}
 
-{% block head %}
-<style>
-  #scan-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
-  .scan-corner { position: absolute; width: 28px; height: 28px; border-color: #2fb344; border-style: solid; }
-  .scan-corner.tl { top: 15%; left: 15%; border-width: 3px 0 0 3px; }
-  .scan-corner.tr { top: 15%; right: 15%; border-width: 3px 3px 0 0; }
-  .scan-corner.bl { bottom: 15%; left: 15%; border-width: 0 0 3px 3px; }
-  .scan-corner.br { bottom: 15%; right: 15%; border-width: 0 3px 3px 0; }
-  #scan-beam {
-    position: absolute; left: 15%; right: 15%; height: 2px;
-    background: #2fb344; opacity: 0.8;
-    animation: scan-beam 2.5s ease-in-out infinite;
-  }
-  @keyframes scan-beam { 0%, 100% { top: 15%; } 50% { top: 85%; } }
-  #rec-indicator {
-    position: absolute; top: 10px; left: 10px;
-    display: flex; align-items: center; gap: 5px;
-    background: rgba(0,0,0,0.45); border-radius: 4px;
-    padding: 3px 7px;
-  }
-  #rec-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #d63939; flex-shrink: 0;
-    animation: rec-pulse 1.5s ease-in-out infinite;
-  }
-  #rec-label { color: #fff; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; }
-  @keyframes rec-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-xl mt-3">
-  <div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title mb-0">
-            <i class="ti ti-scan me-2"></i>Scan Pass QR Code
-          </h3>
+<div class="page-wrapper">
+  <div class="page-header d-print-none" style="padding-top: 2rem;">
+    <div class="dashboard-container">
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <h1 class="page-title">Scan Pass QR Code</h1>
         </div>
+      </div>
+    </div>
+  </div>
 
-        <div class="card-body p-2 p-md-3">
-          <!-- Hidden CSRF token -->
-          <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+  <div class="page-body">
+    <div class="dashboard-container">
+      <div class="mp-form-content">
+        <!-- Hidden CSRF token -->
+        <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
 
-          <!-- Activity context -->
-          <div class="mb-2">
-            {% if activity_id %}
-              <input type="hidden" id="scan_activity_id" value="{{ activity_id }}">
+        <!-- Activity context -->
+        <div class="mb-2">
+          {% if activity_id %}
+            <input type="hidden" id="scan_activity_id" value="{{ activity_id }}">
+            {% for a in activities %}
+              {% if a.id == activity_id %}
+                {{ badge(a.name, variant="secondary") }}
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            {% call select(id="activity_selector", label="Activity", placeholder="— Select activity to scan for —") %}
               {% for a in activities %}
-                {% if a.id == activity_id %}
-                  <span class="badge bg-success-lt text-success fs-4 px-3 py-2">
-                    <i class="ti ti-activity me-1"></i>{{ a.name }}
-                  </span>
-                {% endif %}
+                <option value="{{ a.id }}">{{ a.name }}</option>
               {% endfor %}
-            {% else %}
-              <select class="form-select" id="activity_selector">
-                <option value="">— Select activity to scan for —</option>
-                {% for a in activities %}
-                  <option value="{{ a.id }}">{{ a.name }}</option>
-                {% endfor %}
-              </select>
-              <input type="hidden" id="scan_activity_id" value="">
-            {% endif %}
-          </div>
-
-          <!-- Camera Select -->
-          <div class="mb-2">
-            <select id="camera-select" class="form-select"></select>
-          </div>
-
-          <!-- QR Video with scan overlay -->
-          <div class="ratio ratio-4x3 border rounded overflow-hidden">
-            <video id="qr-video" autoplay playsinline class="w-100 h-100 object-fit-cover"></video>
-            <div id="scan-overlay">
-              <div id="rec-indicator">
-                <span id="rec-dot"></span>
-                <span id="rec-label">LIVE</span>
-              </div>
-              <div class="scan-corner tl"></div>
-              <div class="scan-corner tr"></div>
-              <div class="scan-corner bl"></div>
-              <div class="scan-corner br"></div>
-              <div id="scan-beam"></div>
-            </div>
-          </div>
-
-          <!-- Error message (hidden by default) -->
-          <div id="scan-error" class="small text-danger mt-1" style="display:none"></div>
-
-          <p class="text-muted small text-center mt-2 mb-0">Point your camera at the QR code on the pass</p>
-
-          <div class="mt-3">
-            <a href="{{ url_for('dashboard') }}" class="btn btn-success w-100">
-              <i class="ti ti-arrow-left me-2"></i>Back to Dashboard
-            </a>
-          </div>
-
-          <audio id="beep-sound" src="{{ url_for('static', filename='beep.wav') }}"></audio>
+            {% endcall %}
+            <input type="hidden" id="scan_activity_id" value="">
+          {% endif %}
         </div>
+
+        <!-- Camera select -->
+        <div class="mb-2">
+          {% call select(id="camera-select", label="Camera") %}{% endcall %}
+        </div>
+
+        <!-- QR video with scan overlay -->
+        <div class="mp-scanner-viewport">
+          <video id="qr-video" autoplay playsinline></video>
+          <div id="scan-overlay" class="mp-scanner-overlay">
+            <div id="rec-indicator" class="mp-scanner-live-badge">
+              <span id="rec-dot" class="mp-scanner-live-dot"></span>
+              <span id="rec-label">LIVE</span>
+            </div>
+            <div class="mp-scanner-corner mp-scanner-corner--tl"></div>
+            <div class="mp-scanner-corner mp-scanner-corner--tr"></div>
+            <div class="mp-scanner-corner mp-scanner-corner--bl"></div>
+            <div class="mp-scanner-corner mp-scanner-corner--br"></div>
+            <div id="scan-beam" class="mp-scanner-beam"></div>
+          </div>
+        </div>
+
+        <!-- Error message (hidden by default) -->
+        <div id="scan-error" class="mp-inline-note" data-tone="error" style="display:none"></div>
+
+        <p class="text-muted small text-center mt-2 mb-0">Point your camera at the QR code on the pass</p>
+
+        <div class="mt-3">
+          {{ button("Back to Dashboard", href=url_for('dashboard'), variant="outline", icon="ti-arrow-left", attrs={"class": "w-100"}) }}
+        </div>
+
+        <audio id="beep-sound" src="{{ url_for('static', filename='beep.wav') }}"></audio>
       </div>
     </div>
   </div>
