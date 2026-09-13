@@ -1,265 +1,91 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  {% if signup.payment_method == 'stripe' and signup.paid %}
-  <title>Paiement reçu - {{ activity.name }}</title>
+{% extends "_public_base.html" %}
+{% from 'macros/buttons.html' import button %}
+{% from 'macros/status_mark.html' import status_mark %}
+{% from 'macros/code_block.html' import code_block %}
+
+{# Not a shop page — no cart, and the exit goes back to the organization. #}
+{% set show_shop_nav = false %}
+
+{% block title %}Inscription confirmée{% endblock %}
+
+{% block content %}
+{% set is_paid = signup.paid %}
+{% set awaiting_interac = signup.payment_method != 'stripe' and not signup.paid %}
+
+<div class="mp-shop-hero">
+  {{ status_mark("ti-check", variant="success") }}
+  {% if is_paid %}
+  {# Paid by either method — nothing is owed, so don't promise "next steps". #}
+  <h1 class="h2 mb-0">Paiement reçu</h1>
+  <p class="text-secondary">Votre passeport a été envoyé à {{ signup.user.email }}.</p>
+  {% elif signup.payment_method == 'stripe' %}
+  <h1 class="h2 mb-0">Paiement en traitement</h1>
+  <p class="text-secondary">Vous recevrez une confirmation à {{ signup.user.email }}.</p>
   {% else %}
-  <title>Merci - {{ activity.name }}</title>
+  <h1 class="h2 mb-0">Votre inscription est enregistrée</h1>
+  <p class="text-secondary">Les prochaines étapes ont été envoyées à {{ signup.user.email }}.</p>
   {% endif %}
-
-  <!-- Favicons -->
-  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-
-  <!-- Tabler Icons -->
-  <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet"/>
-
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      background-color: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .thank-you-wrapper {
-      text-align: center;
-      padding: 2rem 1.5rem;
-      max-width: 400px;
-    }
-
-    .logo-container {
-      position: relative;
-      width: 100px;
-      height: 100px;
-      margin: 0 auto 2rem;
-    }
-
-    .organization-logo {
-      width: 100px;
-      height: 100px;
-      object-fit: contain;
-      border-radius: 12px;
-    }
-
-    .organization-logo-fallback {
-      width: 100px;
-      height: 100px;
-      border-radius: 12px;
-      color: #fff;
-      font-weight: 700;
-      font-size: 3.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .success-badge {
-      position: absolute;
-      bottom: -8px;
-      right: -8px;
-      width: 35px;
-      height: 35px;
-      background-color: #22c55e;
-      border-radius: 50%;
-      border: 3px solid #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: badgeFadeIn 0.3s ease 0.4s backwards;
-    }
-
-    .success-badge i {
-      font-size: 1.25rem;
-      color: white;
-    }
-
-    @keyframes badgeFadeIn {
-      0% {
-        transform: scale(0.5);
-        opacity: 0;
-      }
-      100% {
-        transform: scale(1);
-        opacity: 1;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .success-badge {
-        animation: none;
-      }
-    }
-
-    .thank-you-title {
-      font-size: 1.75rem;
-      font-weight: 600;
-      color: #1a1a1a;
-      margin-bottom: 1rem;
-    }
-
-    .thank-you-message {
-      font-size: 1rem;
-      color: #6b7280;
-      line-height: 1.5;
-      margin-bottom: 2rem;
-    }
-
-    /* Reserved session block (activity.uses_scheduling) */
-    .reserved-slot {
-      background: #f6f9fd;
-      border: 1px solid #cfe0f5;
-      border-radius: 10px;
-      padding: 1rem 1.25rem;
-      margin-bottom: 2rem;
-    }
-
-    .reserved-slot-label {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: #6b7280;
-      margin-bottom: 0.35rem;
-    }
-
-    .reserved-slot-when {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: #0054a6;
-      text-transform: capitalize;
-    }
-
-    .thank-you-message strong {
-      color: #374151;
-    }
-
-    .btn-home {
-      display: inline-block;
-      background-color: #22c55e;
-      color: white;
-      padding: 0.75rem 1.5rem;
-      border-radius: 8px;
-      font-weight: 500;
-      font-size: 0.9375rem;
-      text-decoration: none;
-    }
-
-    .btn-home:hover {
-      background-color: #16a34a;
-      color: white;
-    }
-
-    @media (max-width: 480px) {
-      .thank-you-wrapper {
-        padding: 1.5rem 1rem;
-      }
-
-      .logo-container {
-        width: 80px;
-        height: 80px;
-        margin: 0 auto 1.5rem;
-      }
-
-      .organization-logo,
-      .organization-logo-fallback {
-        width: 80px;
-        height: 80px;
-      }
-
-      .organization-logo-fallback {
-        font-size: 2.75rem;
-      }
-
-      .success-badge {
-        width: 30px;
-        height: 30px;
-        bottom: -6px;
-        right: -6px;
-      }
-
-      .success-badge i {
-        font-size: 1rem;
-      }
-
-      .thank-you-title {
-        font-size: 1.5rem;
-      }
-    }
-  </style>
-</head>
-
-<body>
-<div class="thank-you-wrapper">
-  <!-- Organization Logo with Success Badge -->
-  <div class="logo-container">
-    {% if settings.get('LOGO_FILENAME') %}
-    <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
-         alt="{{ settings.get('ORG_NAME', 'Organization') }}"
-         class="organization-logo">
-    {% else %}
-    <div class="organization-logo-fallback" style="background: {{ placeholder_color(settings.get('ORG_NAME', activity.name)) }};">
-      {{ placeholder_letter(settings.get('ORG_NAME', activity.name)) }}
-    </div>
-    {% endif %}
-
-    <div class="success-badge">
-      <i class="ti ti-check"></i>
-    </div>
-  </div>
-
-  {% if signup.payment_method == 'stripe' and signup.paid %}
-  <!-- Stripe: payment confirmed -->
-  <h1 class="thank-you-title">Paiement reçu!</h1>
-  <p class="thank-you-message">
-    Votre passeport a été envoyé à<br>
-    <strong>{{ signup.user.email }}</strong>
-  </p>
-  {% elif signup.payment_method == 'stripe' and not signup.paid %}
-  <!-- Stripe: payment processing -->
-  <h1 class="thank-you-title">Merci!</h1>
-  <p class="thank-you-message">
-    Votre paiement est en cours de traitement.<br>
-    Vous recevrez un courriel de confirmation à<br>
-    <strong>{{ signup.user.email }}</strong>
-  </p>
-  {% else %}
-  <!-- Interac e-transfer -->
-  <h1 class="thank-you-title">Merci!</h1>
-  <p class="thank-you-message">
-    Les prochaines étapes ont été envoyées à<br>
-    <strong>{{ signup.user.email }}</strong>
-  </p>
-  {% endif %}
-
-  <!-- Reserved session (activities that use scheduling) -->
-  {% if signup.slot_booking and signup.slot_booking.status in ('held', 'confirmed') %}
-  <div class="reserved-slot">
-    <div class="reserved-slot-label">Votre séance réservée</div>
-    <div class="reserved-slot-when">{{ format_slot_label(signup.slot_booking.slot) }}</div>
-  </div>
-  {% elif signup.activity.uses_scheduling %}
-  <div class="reserved-slot">
-    <div class="reserved-slot-label">Vous choisirez votre séance plus tard</div>
-    <div class="reserved-slot-when">Un lien pour réserver vous sera envoyé par courriel.</div>
-  </div>
-  {% endif %}
-
-  <!-- Button -->
-  <a href="https://minipass.me" class="btn-home">
-    Retour à l'accueil
-  </a>
 </div>
 
-</body>
-</html>
+<div class="card">
+  <div class="card-body">
+    <h2 class="h3 mb-3">
+      {% if awaiting_interac %}Envoyez votre virement Interac{% else %}Votre inscription{% endif %}
+    </h2>
+
+    <dl class="mp-pair-list {% if awaiting_interac %}mb-3{% else %}mb-0{% endif %}">
+      <div>
+        <dt>Activité</dt>
+        <dd>{{ activity.name }}</dd>
+      </div>
+      {% if signup.passport_type %}
+      <div>
+        <dt>Passeport</dt>
+        <dd>{{ signup.passport_type.name }}</dd>
+      </div>
+      {% endif %}
+      <div>
+        <dt>Montant</dt>
+        <dd class="mp-pair-list__amount">{{ signup.requested_amount | ca_money }}</dd>
+      </div>
+      {% if awaiting_interac and payment_email %}
+      <div>
+        <dt>Destinataire</dt>
+        <dd>{{ payment_email }}</dd>
+      </div>
+      {% endif %}
+      {% if signup.slot_booking and signup.slot_booking.status in ('held', 'confirmed') %}
+      <div>
+        <dt>Séance réservée</dt>
+        <dd>{{ format_slot_label(signup.slot_booking.slot) }}</dd>
+      </div>
+      {% elif activity.uses_scheduling %}
+      <div>
+        <dt>Séance</dt>
+        <dd>À choisir depuis votre passeport</dd>
+      </div>
+      {% endif %}
+    </dl>
+
+    {% if awaiting_interac and signup.signup_code %}
+    {{ code_block(
+      value=signup.signup_code,
+      label="Code de référence",
+      copy_label="Copier le code",
+      copied_label="Copié",
+      hint="Inscrivez ce code dans le champ « Message au destinataire » de votre virement — pas dans la question de sécurité. Votre place sera confirmée dès la réception du paiement."
+    ) }}
+    {% elif activity.uses_scheduling and not signup.slot_booking %}
+    <p class="text-secondary small mb-0">
+      Un lien pour réserver votre séance vous sera envoyé par courriel.
+    </p>
+    {% endif %}
+  </div>
+</div>
+
+{% if shop_enabled %}
+<div class="mt-3">
+  {{ button("Retour à la boutique", href=url_for('shop'), variant="outline") }}
+</div>
+{% endif %}
+{% endblock %}

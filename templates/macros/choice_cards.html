@@ -19,9 +19,22 @@
       ]
     ) }}
 
+  Priced options (shop passport picker) — one column, amount on the title row:
+    {{ choice_cards(
+      name="passport_type_id",
+      label="Choisissez votre passeport",
+      columns=1,
+      selected=passport_types[0].id,
+      options=[
+        {"value": pt.id, "title": pt.name, "amount": "50,00 $",
+         "description": "4 séances incluses"}
+      ]
+    ) }}
+
   Parameters:
     - name: submitted radio-group name
-    - options: list of value, title, optional description/icon/meta/meta_label/disabled
+    - options: list of value, title, optional description/icon/amount/meta/meta_label/disabled
+      (amount renders right-aligned on the title row — prices, durations, counts)
     - selected: selected option value
     - label: accessible group label
     - show_label: display the label above the cards (default True)
@@ -61,6 +74,9 @@
             </span>
           {% endif %}
           <span class="mp-choice-card__title">{{ option.title }}</span>
+          {% if option.amount %}
+            <span class="mp-choice-card__amount">{{ option.amount }}</span>
+          {% endif %}
         </span>
         <span class="mp-choice-card__content">
           {% if option.description %}

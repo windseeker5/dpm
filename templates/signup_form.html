@@ -88,6 +88,7 @@
   {% from 'macros/textarea.html' import textarea %}
   {% from 'macros/payment_method_cards.html' import payment_method_cards %}
   {% from 'macros/progress.html' import progress %}
+  {% from 'macros/status_mark.html' import status_mark %}
 
   {% if selected_passport_type %}
     {% set signup_passport_type = selected_passport_type %}
@@ -120,9 +121,12 @@
               <header class="mb-4">
                 <div class="mb-3 mb-lg-4 text-center text-lg-start">
                   {% if settings and settings["LOGO_FILENAME"] %}
-                  <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
-                       alt="{{ settings.get('ORG_NAME', 'Organisation') }}" width="104" height="80"
-                       class="signup-logo">
+                  <span class="d-inline-flex align-items-center gap-2">
+                    <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
+                         alt="" width="104" height="80"
+                         class="signup-logo">
+                    <span class="fw-bold text-dark">{{ settings.get('ORG_NAME', 'Organisation') }}</span>
+                  </span>
                   {% elif settings and settings.get('ORG_NAME') %}
                   <span class="d-inline-block fw-bold text-dark py-2">{{ settings.get('ORG_NAME') }}</span>
                   {% else %}
@@ -155,9 +159,7 @@
               {% if is_sold_out %}
               <section class="card" aria-labelledby="sold-out-title">
                 <div class="card-body text-center p-4 p-md-5">
-                  <span class="avatar avatar-xl bg-red-lt text-red mb-3" aria-hidden="true">
-                    <i class="ti ti-calendar-off fs-1"></i>
-                  </span>
+                  {{ status_mark("ti-calendar-off", variant="danger", class_="mb-3") }}
                   <h2 class="h2 mb-2" id="sold-out-title">Cette activité est complète</h2>
                   <p class="text-secondary mb-0">Toutes les places pour {{ activity.name }} ont été réservées.</p>
                 </div>
@@ -167,7 +169,7 @@
               <section class="signup-step" id="step-1" aria-labelledby="step-1-title">
                 <h1 class="visually-hidden">Inscription — {{ activity.name }}</h1>
                 <div class="mb-4">
-                  <h2 class="display-6 mb-2" id="step-1-title">Réserver votre place</h2>
+                  <h2 class="h2 mb-2" id="step-1-title">Réserver votre place</h2>
                   <p class="text-secondary mb-0">{{ activity.name }}</p>
                 </div>
 
@@ -335,7 +337,7 @@
               <section class="signup-step d-none" id="step-2" aria-labelledby="step-2-title">
                 <h1 class="visually-hidden">Inscription — {{ activity.name }}</h1>
                 <div class="mb-4">
-                  <h2 class="display-6 mb-2" id="step-2-title">Vos coordonnées</h2>
+                  <h2 class="h2 mb-2" id="step-2-title">Vos coordonnées</h2>
                   <p class="text-secondary mb-0">
                     {% if activity.accept_credit_card %}
                     Vérifiez vos informations et choisissez votre mode de paiement.

@@ -5,38 +5,54 @@ import os
 import time
 import traceback
 
-from . import config
+from . import browser, config
 from .catalog_data import CATALOG
 
 SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts")
 
 
+def row_dir_name(order, script_name):
+    return f"{order}_{os.path.splitext(script_name)[0]}"
+
+
 class Context:
     """Passed to every script's run(ctx). Carries config + report-writing helpers."""
 
-    def __init__(self, order, script_name, money_confirmed, run_id):
+    def __init__(self, order, script_name, money_confirmed, run_id, bus=None):
         self.order = order
         self.script_name = script_name
         self.base_url = config.BASE_URL
         self.money_confirmed = money_confirmed
+        self.run_id = run_id
+        self._bus = bus
         self._notes = []
         self._screenshots = []
-        # Keep every run's visual evidence. The old stable directory was overwritten by
-        # later runs, leaving historical Markdown reports pointing at changed screenshots.
-        self._shot_dir = os.path.join(
-            config.SCREENSHOTS_DIR, run_id, f"{order}_{os.path.splitext(script_name)[0]}"
-        )
+        # One self-contained folder per run (events.jsonl, report.md, a dir per
+        # row) so a report and the screenshots it points at can never drift
+        # apart, and an old run's evidence is never overwritten by a later one.
+        self._shot_dir = os.path.join(config.run_dir(run_id), row_dir_name(order, script_name))
 
     def note(self, message):
         self._notes.append(message)
+        if self._bus:
+            self._bus.emit("note", order=self.order, text=message)
+
+    def step(self, message):
+        """Narrate something the auto-instrumentation can't see (an assertion
+        passing, a wait for an email). Live-log only — not kept in the report."""
+        if self._bus:
+            self._bus.emit("step", order=self.order, text=message)
 
     def screenshot(self, page, label):
         os.makedirs(self._shot_dir, exist_ok=True)
         filename = f"{label}.png"
         full_path = os.path.join(self._shot_dir, filename)
         page.screenshot(path=full_path, full_page=True)
-        rel_path = os.path.relpath(full_path, config.REPORTS_DIR)
+        # Relative to the run dir, which is where report.md now lives too.
+        rel_path = os.path.relpath(full_path, config.run_dir(self.run_id))
         self._screenshots.append(rel_path)
+        if self._bus:
+            self._bus.emit("screenshot", order=self.order, label=label, path=rel_path)
         return full_path
 
 
@@ -49,13 +65,46 @@ def _load_script_module(script_path):
     return module
 
 
-def run_all(only=None, money_confirmed=False):
+def _prune_traces(results, run_id):
+    """Traces are multi-MB apiece and a full run makes ~40. Keep only the ones
+    attached to a failure — that's the only time you go time-travelling."""
+    removed = 0
+    for r in results:
+        if r["status"] == "fail":
+            continue
+        row_dir = os.path.join(config.run_dir(run_id), row_dir_name(r["order"], r["script"]))
+        if not os.path.isdir(row_dir):
+            continue
+        for name in os.listdir(row_dir):
+            if name.startswith("trace_") and name.endswith(".zip"):
+                os.remove(os.path.join(row_dir, name))
+                removed += 1
+    return removed
+
+
+def run_all(only=None, money_confirmed=False, bus=None, run_id=None, keep_traces=False):
     """Run every non-manual catalog row in order (optionally filtered to `only`
-    order values). Returns (results, manual_reminders).
+    order values). Returns (results, manual_reminders, run_id).
     """
     results = []
     manual_reminders = []
-    run_id = time.strftime("%Y-%m-%d_%H%M%S")
+    run_id = run_id or time.strftime("%Y-%m-%d_%H%M%S")
+
+    planned = [
+        row for row in CATALOG
+        if not row["manual"] and not (only and row["order"] not in only)
+    ]
+    if bus:
+        bus.emit(
+            "run_start",
+            run_id=run_id,
+            base_url=config.BASE_URL,
+            headless=config.HEADLESS,
+            rows=[
+                {"order": r["order"], "area": r["area"], "script": r["script"], "money": r["money"]}
+                for r in planned
+            ],
+        )
 
     for row in CATALOG:
         if row["manual"]:
@@ -75,6 +124,9 @@ def run_all(only=None, money_confirmed=False):
             result["status"] = "skipped"
             result["notes"].append("Skipped: money-moving step requires --confirm-money.")
             print(f"[{row['order']}] {row['area']} ... SKIPPED (requires --confirm-money)")
+            if bus:
+                bus.emit("row_end", order=row["order"], status="skipped",
+                         duration_s=0.0, reason="requires --confirm-money")
             results.append(result)
             continue
 
@@ -82,13 +134,20 @@ def run_all(only=None, money_confirmed=False):
             result["status"] = "skipped"
             result["notes"].append(f"Skipped: {row['script']} not implemented yet.")
             print(f"[{row['order']}] {row['area']} ... SKIPPED (not implemented yet)")
+            if bus:
+                bus.emit("row_end", order=row["order"], status="skipped",
+                         duration_s=0.0, reason="not implemented yet")
             results.append(result)
             continue
 
         print(f"[{row['order']}] {row['area']} ... running", flush=True)
-        ctx = Context(row["order"], row["script"], money_confirmed, run_id)
+        ctx = Context(row["order"], row["script"], money_confirmed, run_id, bus=bus)
+        if bus:
+            bus.emit("row_start", order=row["order"], area=row["area"], script=row["script"])
         start = time.monotonic()
         try:
+            # One browser for the whole row; new_page() makes contexts on it.
+            browser.start_row_session(row["order"], ctx._shot_dir, bus)
             module = _load_script_module(script_path)
             module.run(ctx)
             result["status"] = "pass"
@@ -96,6 +155,7 @@ def run_all(only=None, money_confirmed=False):
             result["status"] = "fail"
             result["error"] = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
         finally:
+            browser.stop_row_session()
             result["duration_s"] = time.monotonic() - start
             result["screenshots"] = ctx._screenshots
             result["notes"].extend(ctx._notes)
@@ -107,6 +167,14 @@ def run_all(only=None, money_confirmed=False):
             first_error_line = (result["error"] or "").strip().splitlines()[-1] if result["error"] else "unknown error"
             print(f"[{row['order']}] {row['area']} ... FAIL ({duration:.1f}s): {first_error_line}")
 
+        if bus:
+            bus.emit("row_end", order=row["order"], status=result["status"],
+                     duration_s=result["duration_s"], error=result["error"],
+                     trace_dir=row_dir_name(row["order"], row["script"]))
+
         results.append(result)
+
+    if not keep_traces:
+        _prune_traces(results, run_id)
 
     return results, manual_reminders, run_id

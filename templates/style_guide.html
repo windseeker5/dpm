@@ -129,8 +129,8 @@
             inside the container while the page-header's breadcrumb/title stay flush left, so the
             card ends up looking disconnected from the page above it (a big dead gap on one or
             both sides). Make the card a direct, full-width child of
-            <code>.dashboard-container</code> instead, exactly like <code>edit_signup.html</code>
-            and the redesigned <code>passport_form.html</code> — it then shares the same left
+            <code>.dashboard-container</code> instead, exactly like the redesigned
+            <code>passport_form.html</code> — it then shares the same left
             edge and width as the header on every breakpoint, with no extra width decision to
             get wrong.
           </p>
@@ -705,6 +705,28 @@ document.addEventListener('DOMContentLoaded', function () {
               </div>
             </div>
           </details>
+          <details class="mt-2" id="choice-card-priced">
+            <summary class="sg-code-summary">Show Priced Options (amount)</summary>
+            <div class="border rounded p-3 p-sm-4 mt-2">
+              <p class="text-muted small">
+                Pass <code>amount</code> to put a value on the title row, right-aligned, left of
+                the radio. Built for the shop's passport picker, where the price is the reason the
+                buyer is choosing — a price buried in the description reads as a footnote. Use
+                <code>columns=1</code> so the amounts line up in a single scannable column.
+              </p>
+              {{ choice_cards(
+                name="sg-passport-type",
+                label="Choisissez votre passeport",
+                columns=1,
+                selected="23",
+                options=[
+                  {"value": "23", "title": "Remplacement (4 Parties)", "amount": "50,00 $", "description": "4 séances incluses"},
+                  {"value": "24", "title": "Remplacement (1 Partie)", "amount": "15,00 $", "description": "1 séance incluse"},
+                  {"value": "25", "title": "Remplacement long terme", "amount": "100,00 $", "description": "1 séance incluse"}
+                ]
+              ) }}
+            </div>
+          </details>
           <details class="mt-2">
             <summary class="sg-code-summary">Show Jinja usage</summary>
             <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/choice_cards.html' import choice_cards %}
@@ -733,7 +755,105 @@ document.addEventListener('DOMContentLoaded', function () {
       "meta": "Tryouts, limited spots, selective groups"
     }
   ]
+) }}
+
+{# Priced options — amount rides the title row, one column #}
+{{ choice_cards(
+  name="passport_type_id",
+  label="Choisissez votre passeport",
+  columns=1,
+  selected=passport_type_options[0].value,
+  options=passport_type_options
 ) }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="status-mark">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Status Mark</h3>
+            <div class="text-muted small mt-1">The large circular icon that opens a confirmation or dead-end page: order placed, signup recorded, signups closed. Use this instead of <code>avatar avatar-xl bg-*-lt</code> + <code>i.fs-1</code> — Tabler's <code>.avatar</code> is a rounded <strong>square</strong> unless you add <code>.avatar-rounded</code>, and Tabler's <code>.fs-1</code> is 1.5rem (not Bootstrap's 2.5rem), so that recipe renders a squat square with a tiny glyph lost inside it. That was the live bug on the shop order confirmation page.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="border rounded p-3 p-sm-4 d-flex flex-wrap align-items-center gap-4">
+            {% from 'macros/status_mark.html' import status_mark %}
+            {{ status_mark("ti-check", variant="success") }}
+            {{ status_mark("ti-calendar-x", variant="warning") }}
+            {{ status_mark("ti-alert-triangle", variant="danger") }}
+            {{ status_mark("ti-shopping-bag") }}
+            {{ status_mark("ti-check", variant="success", size="sm") }}
+          </div>
+          <details class="mt-2">
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/status_mark.html' import status_mark %}
+
+{{ status_mark("ti-check", variant="success") }}
+{{ status_mark("ti-calendar-x", variant="warning", size="sm", class_="mb-3") }}
+
+{# variant: success | warning | danger | muted (default)
+   size:    default (4rem) | sm (3rem) #}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="code-block">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Code Block</h3>
+            <div class="text-muted small mt-1">A short machine-readable string the reader has to transcribe somewhere else — an Interac e-transfer reference, a pass code. On the pages that carry one it is the single most important element, so it takes the full width and its own surface instead of a cell in a grid: <code>MP-CART-0000001</code> wrapped across three lines when it shared a 3-column row at 390px. The copy button is wired by the delegated <code>[data-mp-copy]</code> listener in <code>_public_base.html</code>, so pages need no script of their own.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="border rounded p-3 p-sm-4">
+            {% from 'macros/code_block.html' import code_block %}
+            {{ code_block(
+              value="MP-CART-0000001",
+              label="Code de référence",
+              copy_label="Copier le code",
+              copied_label="Copié",
+              hint="Inscrivez ce code dans le champ « Message au destinataire » de votre virement — pas dans la question de sécurité."
+            ) }}
+          </div>
+          <details class="mt-2">
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/code_block.html' import code_block %}
+
+{{ code_block(
+  value=cart_order.cart_code,
+  label="Code de référence",
+  copy_label="Copier le code",
+  copied_label="Copié",
+  hint="Inscrivez ce code dans le champ « Message au destinataire »."
+) }}
+
+{# pass copy_label=none to omit the copy button #}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="pair-list">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Pair List</h3>
+            <div class="text-muted small mt-1">Label/value rows for a short set of facts the reader scans rather than reads — amount, recipient, reserved session. Plain <code>&lt;dl class="mp-pair-list"&gt;</code> markup, no macro. Replaces hand-built <code>row</code>/<code>col</code> grids, which forced long values like an email address to wrap. Add <code>.mp-pair-list__amount</code> to the one value that is money.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="border rounded p-3 p-sm-4">
+            <dl class="mp-pair-list mb-0">
+              <div><dt>Montant</dt><dd class="mp-pair-list__amount">65,00 $</dd></div>
+              <div><dt>Destinataire</dt><dd>paiements@fondationlhgi.org</dd></div>
+              <div><dt>Séance réservée</dt><dd>ven. 3 octobre, 19 h 30</dd></div>
+            </dl>
+          </div>
+          <details class="mt-2">
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}<dl class="mp-pair-list">
+  <div><dt>Montant</dt><dd class="mp-pair-list__amount">{{ total | ca_money }}</dd></div>
+  <div><dt>Destinataire</dt><dd>{{ payment_email }}</dd></div>
+</dl>{% endraw %}</code></pre>
           </details>
         </div>
       </div>
@@ -879,6 +999,52 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
       </div>
 
+      <div class="card mb-4" id="scanner-viewport">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">QR Scanner Viewport</h3>
+            <div class="text-muted small mt-1">Camera preview with a scan-frame overlay (corner brackets, animated scan beam, pulsing "LIVE" badge). CSS-only — no macro yet, since <code>scan_qr.html</code> is its only consumer today. Copy the markup below; wire the video element up with <code>getUserMedia</code> as scan_qr.html does.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview" style="align-items: flex-start;">
+            <div style="width: 280px;">
+              <div class="mp-scanner-viewport">
+                <div style="width:100%;height:100%;background:var(--mp-muted);"></div>
+                <div class="mp-scanner-overlay">
+                  <div class="mp-scanner-live-badge">
+                    <span class="mp-scanner-live-dot"></span>
+                    <span id="rec-label">LIVE</span>
+                  </div>
+                  <div class="mp-scanner-corner mp-scanner-corner--tl"></div>
+                  <div class="mp-scanner-corner mp-scanner-corner--tr"></div>
+                  <div class="mp-scanner-corner mp-scanner-corner--bl"></div>
+                  <div class="mp-scanner-corner mp-scanner-corner--br"></div>
+                  <div class="mp-scanner-beam"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show HTML usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}<div class="mp-scanner-viewport">
+  <video id="qr-video" autoplay playsinline></video>
+  <div id="scan-overlay" class="mp-scanner-overlay">
+    <div id="rec-indicator" class="mp-scanner-live-badge">
+      <span id="rec-dot" class="mp-scanner-live-dot"></span>
+      <span id="rec-label">LIVE</span>
+    </div>
+    <div class="mp-scanner-corner mp-scanner-corner--tl"></div>
+    <div class="mp-scanner-corner mp-scanner-corner--tr"></div>
+    <div class="mp-scanner-corner mp-scanner-corner--bl"></div>
+    <div class="mp-scanner-corner mp-scanner-corner--br"></div>
+    <div id="scan-beam" class="mp-scanner-beam"></div>
+  </div>
+</div>{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
       <div class="card mb-4" id="tooltip">
         <div class="card-header">
           <div>
@@ -953,6 +1119,22 @@ document.addEventListener('DOMContentLoaded', function () {
   {"text": "Week", "variant": "outline"},
   {"text": "Month", "variant": "outline"}
 ], aria_label="View range") }}{% endraw %}</code></pre>
+          </details>
+
+          <div class="text-muted small mt-4 mb-2">With a selected segment (a New/Sent-style toggle):</div>
+          <div class="sg-preview">
+            {{ button_group(buttons=[
+              {"text": "New", "variant": "outline", "attrs": {"aria-current": "page"}},
+              {"text": "Sent", "variant": "outline"}
+            ], aria_label="Example toggle") }}
+          </div>
+          <p class="text-muted small mt-2 mb-0">Mark the selected button with <code>aria-current="page"</code> — every button stays <code>variant="outline"</code>. Never swap the active one to <code>"primary"</code> or another solid variant; that drops its border and breaks the group's continuous outline.</p>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{{ button_group(buttons=[
+  {"text": "New", "variant": "outline", "attrs": {"aria-current": "page"}},
+  {"text": "Sent", "variant": "outline"}
+], aria_label="Example toggle") }}{% endraw %}</code></pre>
           </details>
         </div>
       </div>

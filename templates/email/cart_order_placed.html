@@ -5,10 +5,10 @@
   template is never sent (the buyer goes straight to Stripe Checkout).
 #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import interac_block, rows_block %}
+{% from "email/components.html" import interac_block, rows_block, money %}
 
-{% set preheader = 'Order received — payment instructions inside.' %}
-{% set photo_eyebrow = 'Order received' %}
+{% set preheader = 'Commande reçue — instructions de paiement à l’intérieur.' %}
+{% set photo_eyebrow = 'Commande reçue' %}
 
 {% block content %}
 <tr>
@@ -20,7 +20,7 @@
 {% if payment_method == 'interac' and total_amount and payment_email %}
 <tr>
   <td class="mp-pad" style="padding:0 32px;">
-    {{ interac_block('%.2f $'|format(total_amount), payment_email, base_url) }}
+    {{ interac_block(money(total_amount), payment_email, base_url) }}
   </td>
 </tr>
 <tr>
@@ -30,14 +30,14 @@
       <tr>
         <td style="padding:18px 20px;">
           <div style="font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:#8a6d1f;">
-            Reference code for your transfer
+            Code à inclure au virement
           </div>
           <div style="margin:10px 0; padding:12px; background:#ffffff; border:1px solid #ecd9a8; border-radius:8px; text-align:center; font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size:19px; font-weight:700; letter-spacing:0.04em; color:#15192c;">
             {{ cart_code }}
           </div>
           <div style="font-size:14px; line-height:1.6; color:#6b5518;">
-            Enter it in the <strong>"Message to recipient"</strong> field of your Interac transfer —
-            not the security question.
+            Inscrivez-le dans le champ <strong>« Message au destinataire »</strong> de votre virement Interac —
+            ce n'est pas la question de sécurité.
           </div>
         </td>
       </tr>

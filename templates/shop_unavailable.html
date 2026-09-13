@@ -1,10 +1,14 @@
 {% extends "_public_base.html" %}
-{% block title %}Shop Unavailable{% endblock %}
+{% from 'macros/status_mark.html' import status_mark %}
+
+{% set show_shop_nav = false %}
+
+{% block title %}Boutique indisponible{% endblock %}
 
 {% block content %}
-<div class="text-center py-5">
-  <i class="ti ti-shopping-bag-off fs-1 text-secondary d-block mb-3"></i>
-  <h1 class="h3">This shop isn't available</h1>
-  <p class="text-secondary">This link doesn't exist or is no longer active.</p>
+<div class="mp-shop-hero" style="padding-block: 1.5rem;">
+  {{ status_mark("ti-shopping-bag-off", variant="warning") }}
+  <h1 class="h2 mb-0">Cette boutique n'est pas disponible</h1>
+  <p class="text-secondary">Ce lien n'existe pas ou n'est plus actif.</p>
 </div>
 {% endblock %}

@@ -1,79 +1,117 @@
 {% extends "_public_base.html" %}
 {% from 'macros/buttons.html' import button %}
-{% from 'macros/badge.html' import badge %}
+{% from 'macros/status_mark.html' import status_mark %}
+{% from 'macros/code_block.html' import code_block %}
+{% from 'macros/collapsible_section.html' import collapsible_section %}
 
-{% block title %}Order Confirmation{% endblock %}
+{% block title %}Commande confirmée{% endblock %}
 
 {% block content %}
-<div class="text-center mb-4">
-  <span class="avatar avatar-xl bg-green-lt text-green mb-3" aria-hidden="true">
-    <i class="ti ti-check fs-1"></i>
-  </span>
-  <h1 class="h2 mb-1">Thank you!</h1>
-  <p class="text-secondary mb-0">Order {{ cart_order.cart_code }}</p>
-</div>
-
-<div class="card mb-3">
-  <div class="card-header">
-    <h2 class="h4 mb-0">Order Summary</h2>
-  </div>
-  <div class="list-group list-group-flush">
-    {% for order in cart_order.orders %}
-    <div class="list-group-item d-flex align-items-center justify-content-between gap-3">
-      <div class="fw-bold">{{ order.product_name }}{% if order.size %} ({{ order.size }}){% endif %} x{{ order.quantity }}</div>
-      <div class="fw-bold">${{ "%.2f"|format(order.amount) }}</div>
-    </div>
-    {% endfor %}
-    {% for signup in cart_order.signups %}
-    <div class="list-group-item d-flex align-items-center justify-content-between gap-3">
-      <div class="fw-bold">{{ signup.activity.name if signup.activity else "Activity Passport" }}</div>
-      <div class="fw-bold">${{ "%.2f"|format(signup.requested_amount or 0) }}</div>
-    </div>
-    {% endfor %}
-  </div>
-  <div class="card-footer d-flex align-items-center justify-content-between">
-    <span class="text-secondary">Total</span>
-    <strong class="fs-3">${{ "%.2f"|format(cart_order.total_amount) }}</strong>
-  </div>
+<div class="mp-shop-hero">
+  {{ status_mark("ti-check", variant="success") }}
+  {% if cart_order.status == "paid" %}
+  <h1 class="h2 mb-0">Paiement reçu</h1>
+  <p class="text-secondary">Votre commande {{ cart_order.cart_code }} est confirmée.</p>
+  {% else %}
+  <h1 class="h2 mb-0">Merci, votre commande est enregistrée</h1>
+  <p class="text-secondary">Il reste une étape : envoyer le virement.</p>
+  {% endif %}
 </div>
 
 {% if cart_order.status == "paid" %}
-<div class="alert alert-success d-flex align-items-center gap-2" role="status">
-  <i class="ti ti-circle-check fs-3"></i>
-  <div>
-    <strong class="d-block">Payment received</strong>
-    <span class="small">Any products will be ready for pickup soon. Any activity passport was emailed separately with its QR code.</span>
+{# A cart can hold products, activity passports, or both — name only what this
+   buyer actually bought. Telling someone who bought a T-shirt that "tout passeport
+   d'activité a été envoyé par courriel" sends them looking for an email that will
+   never arrive. #}
+{% set product_count = cart_order.orders | length %}
+{% set passport_count = cart_order.signups | length %}
+<div class="card">
+  <div class="card-body">
+    <h2 class="h3 mb-2">Prochaines étapes</h2>
+    <ul class="text-secondary mb-0 ps-3">
+      {% if product_count %}
+      <li>
+        {{ "Votre produit sera prêt" if product_count == 1 else "Vos produits seront prêts" }}
+        pour la cueillette bientôt. Nous vous aviserons.
+      </li>
+      {% endif %}
+      {% if passport_count %}
+      <li>
+        {% if passport_count == 1 %}
+        Votre passeport d'activité vous a été envoyé par courriel, avec son code QR.
+        {% else %}
+        Vos passeports d'activité vous ont été envoyés par courriel, chacun avec son code QR.
+        {% endif %}
+      </li>
+      {% endif %}
+      {% if not product_count and not passport_count %}
+      <li>Votre paiement a été reçu.</li>
+      {% endif %}
+    </ul>
   </div>
 </div>
 {% elif cart_order.payment_method == "interac" %}
+{# What the buyer still has to do outranks what they bought, so the transfer
+   instructions come first and the reference code gets the whole width — it
+   used to wrap across three lines inside a 3-column box at the page bottom. #}
 <div class="card">
   <div class="card-body">
-    <div class="text-uppercase small fw-bold text-secondary mb-2">Payment instructions</div>
-    <p class="mb-3">Send an Interac e-transfer for the amount below.</p>
-    <div class="row g-3 mb-3">
-      <div class="col-6">
-        <div class="text-secondary small">Amount</div>
-        <div class="fw-bold fs-3">${{ "%.2f"|format(cart_order.total_amount) }}</div>
+    <h2 class="h3 mb-3">Envoyez votre virement Interac</h2>
+    <dl class="mp-pair-list mb-3">
+      <div>
+        <dt>Montant</dt>
+        <dd class="mp-pair-list__amount">{{ cart_order.total_amount | ca_money }}</dd>
       </div>
       {% if payment_email %}
-      <div class="col-6">
-        <div class="text-secondary small">Send to</div>
-        <div class="fw-bold">{{ payment_email }}</div>
+      <div>
+        <dt>Destinataire</dt>
+        <dd>{{ payment_email }}</dd>
       </div>
       {% endif %}
-    </div>
-    <div class="alert alert-warning mb-0">
-      <div class="text-uppercase small fw-bold mb-1">Reference code</div>
-      <div class="fw-bold fs-4 font-monospace">{{ cart_order.cart_code }}</div>
-      <div class="small mt-1">Enter this in the "Message to recipient" field of your transfer — not the security question.</div>
-    </div>
+    </dl>
+    {{ code_block(
+      value=cart_order.cart_code,
+      label="Code de référence",
+      copy_label="Copier le code",
+      copied_label="Copié",
+      hint="Inscrivez ce code dans le champ « Message au destinataire » de votre virement — pas dans la question de sécurité."
+    ) }}
   </div>
 </div>
 {% else %}
-<div class="alert alert-info" role="status">Your payment is being processed.</div>
+<div class="alert alert-info" role="status">Votre paiement est en cours de traitement.</div>
 {% endif %}
 
 <div class="mt-3">
-  {{ button("Back to Shop", href=url_for('shop'), variant="outline") }}
+  {% call collapsible_section(id="order-detail", title="Voir le détail de la commande") %}
+    <div class="list-group list-group-flush">
+      {% for order in cart_order.orders %}
+      <div class="list-group-item d-flex align-items-start justify-content-between gap-3 px-0">
+        <div class="min-w-0">
+          <div class="fw-bold">{{ order.product_name }}{% if order.size %} ({{ order.size }}){% endif %}</div>
+          <div class="text-secondary small">Quantité : {{ order.quantity }}</div>
+        </div>
+        <div class="fw-bold text-nowrap">{{ order.amount | ca_money }}</div>
+      </div>
+      {% endfor %}
+      {% for signup in cart_order.signups %}
+      <div class="list-group-item d-flex align-items-start justify-content-between gap-3 px-0">
+        <div class="min-w-0">
+          <div class="fw-bold">{{ signup.activity.name if signup.activity else "Passeport d'activité" }}</div>
+          {% if signup.passport_type %}<div class="text-secondary small">{{ signup.passport_type.name }}</div>{% endif %}
+        </div>
+        <div class="fw-bold text-nowrap">{{ signup.requested_amount | ca_money }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="mp-shop-total mt-3 mb-0">
+      <span class="text-secondary">Total</span>
+      <span class="mp-shop-total__amount">{{ cart_order.total_amount | ca_money }}</span>
+    </div>
+  {% endcall %}
+</div>
+
+<div class="mt-3">
+  {{ button("Retour à la boutique", href=url_for('shop'), variant="outline") }}
 </div>
 {% endblock %}

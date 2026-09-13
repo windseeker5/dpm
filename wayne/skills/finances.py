@@ -135,7 +135,84 @@ def financial_summary(args, language):
     return SkillResult(answer=answer, columns=columns, rows=rows)
 
 
+# The financial views label every shop product sale with this project name, since a product
+# belongs to the shop rather than to any activity (see task55/task56).
+SHOP_ACCOUNT = "Boutique"
+
+
+def shop_revenue(args, language):
+    """Money from the online store: collected, still owed, and the product lines behind it.
+
+    Reads the same two accounting views as every other financial answer, so this agrees with the
+    Financial Report. Activity passports bought in the same cart are NOT counted here — they
+    belong to their activity, not to the shop.
+    """
+    start, end = date_bounds(args)
+    start_month = start.strftime("%Y-%m") if start else ""
+    end_month = end.strftime("%Y-%m") if end else ""
+
+    totals = db.session.execute(text("""
+        SELECT COALESCE(SUM(product_sales), 0), COALESCE(SUM(product_ar), 0)
+        FROM monthly_financial_summary
+        WHERE account = :shop
+          AND (:start_month = '' OR month >= :start_month)
+          AND (:end_month = '' OR month < :end_month)
+    """), {"shop": SHOP_ACCOUNT, "start_month": start_month, "end_month": end_month}).first()
+    collected, owed = float(totals[0] or 0), float(totals[1] or 0)
+
+    start_date = start.strftime("%Y-%m-%d") if start else ""
+    end_date = end.strftime("%Y-%m-%d") if end else ""
+    records = db.session.execute(text("""
+        SELECT transaction_date, customer, memo, amount, payment_status
+        FROM monthly_transactions_detail
+        WHERE project = :shop
+          AND (:start_date = '' OR transaction_date >= :start_date)
+          AND (:end_date = '' OR transaction_date < :end_date)
+        ORDER BY transaction_date DESC
+        LIMIT 200
+    """), {"shop": SHOP_ACCOUNT, "start_date": start_date, "end_date": end_date}).all()
+
+    period = period_label(args, language)
+    if collected or owed or records:
+        answer = (
+            f"La boutique a encaissé {money(collected)}{period}"
+            + (f", et {money(owed)} reste à recevoir." if owed else ".")
+            if language == "fr"
+            else f"The shop has collected {money(collected)}{period}"
+            + (f", with {money(owed)} still owed." if owed else ".")
+        )
+    else:
+        answer = (
+            f"Aucune vente de produit{period}."
+            if language == "fr"
+            else f"No product sales{period}."
+        )
+
+    columns = (
+        ["Date", "Client", "Produit", "Montant", "Statut"]
+        if language == "fr"
+        else ["Date", "Customer", "Product", "Amount", "Status"]
+    )
+    rows = [
+        [str(r[0])[:10], r[1] or "—", r[2] or "—", money(r[3]), r[4]]
+        for r in records
+    ]
+    return SkillResult(answer=answer, columns=columns, rows=rows)
+
+
 SKILLS = [
+    SkillDefinition(
+        name="shop_revenue",
+        description_en="Show money from the online store (shop/boutique): collected, still owed, and the product sales behind it.",
+        description_fr="Afficher l’argent de la boutique en ligne : encaissé, à recevoir, et les ventes de produits.",
+        examples=(
+            "What is my shop revenue?",
+            "How much did I make from the boutique?",
+            "Combien la boutique a-t-elle vendu ce mois-ci?",
+        ),
+        parameters={"period": "Optional: this_month, this_year, today or this_week"},
+        handler=shop_revenue,
+    ),
     SkillDefinition(
         name="activity_revenue",
         description_en="Show cash revenue received, optionally filtered by activity and calendar year.",

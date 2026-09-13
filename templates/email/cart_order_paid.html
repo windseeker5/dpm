@@ -1,27 +1,43 @@
 {#
   Shop cart checkout payment confirmed (Stripe webhook or Interac auto-match) — one email
-  covering every line item. Pickup-only products; activity passports were already emailed
-  their own QR/passport confirmation by notify_pass_event() at the point each was created,
-  so this email's job is just the order-level receipt, not the passport details again.
+  covering every line item.
+
+  A cart can hold products, activity passports, or both, so the "what happens next" copy is
+  conditional on what the buyer actually bought. Products are pickup-only (no shipping in
+  this phase). Activity passports were already emailed their own QR/passport confirmation by
+  notify_pass_event() when each was created, so this email points at that rather than
+  repeating the passport details.
 #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import rows_block, status_pill %}
+{% from "email/components.html" import rows_block, status_pill, money %}
 
-{% set preheader = 'Payment received — your order is confirmed.' %}
-{% set photo_eyebrow = 'Payment received' %}
+{% set preheader = 'Paiement reçu — votre commande est confirmée.' %}
+{% set photo_eyebrow = 'Paiement reçu' %}
 
 {% block content %}
 <tr>
   <td class="mp-pad" style="padding:20px 32px 0 32px;">
-    {{ rows_block(rows + [{'label': 'Status', 'value': status_pill(true)}]) }}
+    {{ rows_block(rows + [{'label': 'Statut', 'value': status_pill(true)}]) }}
   </td>
 </tr>
+{% if product_count or passport_count %}
 <tr>
   <td class="mp-pad" style="padding:16px 32px 0 32px;">
     <div style="font-size:13.5px; line-height:1.6; color:#4a5568;">
-      Any products in this order will be ready for pickup soon — we'll let you know. Any
-      activity passport was emailed separately with its own QR code.
+      {% if product_count %}
+      {{ "Votre produit sera prêt" if product_count == 1 else "Vos produits seront prêts" }}
+      pour la cueillette bientôt — nous vous aviserons.
+      {% endif %}
+      {% if passport_count %}
+      {% if passport_count == 1 %}
+      Votre passeport d'activité vous a été envoyé par courriel séparément, avec son code QR.
+      {% else %}
+      Vos passeports d'activité vous ont été envoyés par courriel séparément, chacun avec son
+      code QR.
+      {% endif %}
+      {% endif %}
     </div>
   </td>
 </tr>
+{% endif %}
 {% endblock %}

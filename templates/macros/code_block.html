@@ -1,0 +1,42 @@
+{#
+  Code Block — a short machine-readable string the reader has to copy somewhere
+  else: an Interac e-transfer reference code, a pass code. On the pages that
+  carry one it is the single most important element, so it gets full width and
+  its own surface instead of a cell in a grid.
+
+  The copy button is wired by the delegated [data-mp-copy] listener in
+  _public_base.html — no per-page JavaScript.
+
+  Usage:
+    {% from 'macros/code_block.html' import code_block %}
+    {{ code_block(
+      value=cart_order.cart_code,
+      label="Code de référence",
+      hint="Inscrivez ce code dans le champ « Message au destinataire ».",
+      copy_label="Copier le code"
+    ) }}
+
+  Parameters:
+    - value: the code itself
+    - label: uppercase eyebrow above it
+    - hint: explanatory line below (optional)
+    - copy_label: copy button text; pass none to omit the button
+    - copied_label: confirmation text swapped in after a successful copy
+    - class_: extra classes
+#}
+
+{% macro code_block(value, label, hint=None, copy_label="Copier", copied_label="Copié", class_='') %}
+{% from 'macros/buttons.html' import button %}
+<div class="mp-code-block{% if class_ %} {{ class_ }}{% endif %}">
+  <span class="mp-code-block__label">{{ label }}</span>
+  <span class="mp-code-block__value">{{ value }}</span>
+  {% if copy_label %}
+    {{ button(copy_label, variant="outline", size="sm", icon="ti-copy",
+              attrs={"class": "mp-code-block__copy", "data-mp-copy": value,
+                     "data-mp-copied-label": copied_label}) }}
+  {% endif %}
+  {% if hint %}
+  <p class="mp-code-block__hint">{{ hint }}</p>
+  {% endif %}
+</div>
+{% endmacro %}

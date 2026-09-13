@@ -4,6 +4,10 @@
 {% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state, preserve_filters %}
 {% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
 {% from 'macros/buttons.html' import button %}
+{% from 'macros/form_dialog.html' import form_dialog %}
+{% from 'macros/button_group.html' import button_group %}
+{% from 'macros/editable_collection.html' import editable_collection %}
+{% from 'macros/input.html' import text_input %}
 {% from 'macros/action_menu.html' import action_menu, dropdown_menu %}
 {% from 'macros/badge.html' import badge %}
 {% from 'macros/filter_tabs.html' import filter_tabs %}
@@ -87,20 +91,6 @@ div.dropdown-divider {
 .card-footer {
   background-color: #fff !important;
   border-top: 1px solid rgba(98, 105, 118, 0.16);
-}
-
-/* Add proper table padding for alignment with card margins */
-.table-responsive .table td:first-child {
-  padding-left: 1.5rem !important;
-}
-.table-responsive .table td:last-child {
-  padding-right: 1.5rem !important;
-}
-.table-responsive .table th:first-child {
-  padding-left: 1.5rem !important;
-}
-.table-responsive .table th:last-child {
-  padding-right: 1.5rem !important;
 }
 
 
@@ -825,20 +815,21 @@ function confirmSignupDelete(signupId, signupUser) {
 </script>
 
 <!-- Announcement Modal -->
-<div class="modal modal-blur fade" id="announcementModal" tabindex="-1" role="dialog" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="ti ti-speakerphone me-2"></i>Send Announcement</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
+{% call form_dialog(
+  id="announcementModal",
+  title="Send Announcement",
+  size="lg",
+  confirm_label="Send",
+  confirm_id="announcementSendBtn",
+  confirm_attrs={"onclick": "sendAnnouncement(" ~ activity.id ~ ")"}
+) %}
         <!-- Tab switcher -->
+        {% set sent_label %}Sent{% if announcement_history %} ({{ announcement_history|length }}){% endif %}{% endset %}
         <div class="mb-3">
-          <div class="github-filter-group" role="group" style="display:inline-flex;align-items:center;background:#f6f8fa;border:1px solid #d1d5da;border-radius:6px;padding:0;">
-            <a href="#" id="ann-btn-new" onclick="switchAnnouncement('new');return false;" style="background:#fff;color:#24292e;font-weight:600;border:1px solid #d1d5da;margin:-1px;z-index:1;border-radius:6px;box-shadow:0 1px 0 rgba(27,31,35,.04);padding:5px 12px;font-size:14px;line-height:20px;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap;position:relative;">New</a>
-            <a href="#" id="ann-btn-sent" onclick="switchAnnouncement('sent');return false;" style="background:rgba(0,0,0,.03);color:#586069;padding:5px 12px;font-size:14px;line-height:20px;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap;position:relative;">Sent{% if announcement_history %} <span style="opacity:.6;margin-left:4px;">({{ announcement_history|length }})</span>{% endif %}</a>
-          </div>
+          {{ button_group(buttons=[
+            {"text": "New", "variant": "outline", "attrs": {"id": "ann-btn-new", "aria-current": "page", "onclick": "switchAnnouncement('new');return false;"}},
+            {"text": sent_label, "variant": "outline", "attrs": {"id": "ann-btn-sent", "onclick": "switchAnnouncement('sent');return false;"}}
+          ], aria_label="Announcement view") }}
         </div>
         <!-- NEW panel -->
         <div id="ann-panel-new">
@@ -901,55 +892,27 @@ function confirmSignupDelete(signupId, signupUser) {
           <input type="hidden" id="ann-subj-{{ ann.id }}" value="{{ ann.subject | e }}">
           {% endfor %}
           {% if announcement_history %}
-          <div class="input-icon mb-3">
-            <span class="input-icon-addon"><i class="ti ti-search"></i></span>
-            <input type="text" class="form-control" placeholder="Search by subject…" oninput="filterAnnouncements(this.value)">
-          </div>
-          <div class="table-responsive">
-            <table class="table table-vcenter table-hover card-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Subject</th>
-                  <th class="text-center">Recipients</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="ann-tbody">
-                {% for ann in announcement_history %}
-                <tr data-subject="{{ ann.subject | lower | e }}">
-                  <td class="text-muted text-nowrap">{{ ann.sent_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                  <td>{{ ann.subject }}</td>
-                  <td class="text-center text-muted">{{ ann.recipient_count }}</td>
-                  <td class="text-end">
-                    <a href="#" class="btn btn-outline-secondary btn-sm" onclick="useAnnouncement({{ ann.id }});return false;">
-                      <i class="ti ti-arrow-back-up me-1"></i>Use
-                    </a>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          {% if announcement_history|length >= 20 %}
-          <p class="text-center text-muted small mt-1">Showing most recent 20 announcements</p>
-          {% endif %}
-          {% else %}
-          <div class="empty">
-            <div class="empty-icon"><i class="ti ti-speakerphone"></i></div>
-            <p class="empty-title">No announcements yet</p>
-            <p class="empty-subtitle text-muted">Announcements you send will appear here.</p>
+          <div class="mb-3">
+            {{ text_input(id="ann-search", placeholder="Search by subject…", attrs={"oninput": "filterAnnouncements(this.value)"}) }}
           </div>
           {% endif %}
+          {% call editable_collection(id="ann-collection", body_id="ann-tbody",
+               columns=[{"label": "Date"}, {"label": "Subject"}, {"label": "Recipients", "class": "text-center"}, {"label": "Actions", "class": "text-end"}],
+               empty_icon="ti-speakerphone", empty_title="No announcements yet",
+               empty_description="Announcements you send will appear here.") %}
+            {% for ann in announcement_history %}
+            <tr data-id="{{ ann.id }}" data-subject="{{ ann.subject | lower | e }}">
+              <td data-label="Date" data-primary>{{ ann.sent_at.strftime('%Y-%m-%d %H:%M') }}</td>
+              <td data-label="Subject">{{ ann.subject }}</td>
+              <td data-label="Recipients" class="text-center">{{ ann.recipient_count }}</td>
+              <td data-label="Actions" data-actions class="text-end">{{ action_menu(id="ann-actions-" ~ ann.id, items=[
+                {"label": "Use", "icon": '<i class="ti ti-arrow-back-up"></i>'|safe, "attrs": {"onclick": "useAnnouncement(" ~ ann.id ~ ");return false;"}}
+              ]) }}</td>
+            </tr>
+            {% endfor %}
+          {% endcall %}
         </div>
-      </div>
-      <div class="modal-footer" id="ann-footer">
-        <button type="button" class="btn btn-link" data-bs-dismiss="modal">Cancel</button>
-        {{ button("Send", id="announcementSendBtn", icon="ti-send", attrs={"onclick": "sendAnnouncement(" ~ activity.id ~ ")"}) }}
-      </div>
-    </div>
-  </div>
-</div>
+{% endcall %}
 
 <!-- Activity Delete Confirmation Modal -->
 <div class="modal modal-blur fade" id="activityDeleteModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -1287,15 +1250,14 @@ if (announcementModal) {
   });
 }
 
-var ANN_ACTIVE_STYLE   = 'background:#fff;color:#24292e;font-weight:600;border:1px solid #d1d5da;margin:-1px;z-index:1;border-radius:6px;box-shadow:0 1px 0 rgba(27,31,35,.04);padding:5px 12px;font-size:14px;line-height:20px;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap;position:relative;';
-var ANN_INACTIVE_STYLE = 'background:rgba(0,0,0,.03);color:#586069;padding:5px 12px;font-size:14px;line-height:20px;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap;position:relative;';
-
 function switchAnnouncement(tab) {
   document.getElementById('ann-panel-new').style.display  = tab === 'new'  ? '' : 'none';
   document.getElementById('ann-panel-sent').style.display = tab === 'sent' ? '' : 'none';
-  document.getElementById('ann-footer').style.display     = tab === 'new'  ? '' : 'none';
-  document.getElementById('ann-btn-new').style.cssText  = tab === 'new'  ? ANN_ACTIVE_STYLE  : ANN_INACTIVE_STYLE;
-  document.getElementById('ann-btn-sent').style.cssText = tab === 'sent' ? ANN_ACTIVE_STYLE : ANN_INACTIVE_STYLE;
+  document.querySelector('#announcementModal .mp-form-dialog__actions').style.display = tab === 'new' ? '' : 'none';
+  var newBtn = document.getElementById('ann-btn-new');
+  var sentBtn = document.getElementById('ann-btn-sent');
+  if (tab === 'new') { newBtn.setAttribute('aria-current', 'page'); sentBtn.removeAttribute('aria-current'); }
+  else { sentBtn.setAttribute('aria-current', 'page'); newBtn.removeAttribute('aria-current'); }
 }
 
 function filterAnnouncements(q) {
@@ -1359,6 +1321,8 @@ function sendAnnouncement(activityId) {
       document.getElementById('announcementSubject').value = '';
       if (ed) { ed.setContent(''); }
       showFlash('success', msg);
+      // Reload so the modal's Sent tab picks up the announcement_history just written server-side.
+      setTimeout(function() { window.location.reload(); }, 2000);
     } else {
       showFlash('error', data.error || 'Failed to send announcement.');
     }

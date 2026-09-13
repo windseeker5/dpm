@@ -45,6 +45,16 @@ IMAP_PASSWORD = os.environ.get("UAT_IMAP_PASSWORD", "")
 IMAP_FOLDER = os.environ.get("UAT_IMAP_FOLDER", "INBOX")
 IMAP_WAIT_SECONDS = int(os.environ.get("UAT_IMAP_WAIT_SECONDS", "90"))
 
+# Headless by default: a full run is faster, and the live dashboard
+# (lib/dashboard.py) is what you actually watch. `run_uat.py --headed` flips
+# this back to a real visible Chrome window when you want to see the clicks.
+# Rows 90/91 launch their own headed browser regardless — a human has to type a
+# real card number into those.
+HEADLESS = os.environ.get("UAT_HEADLESS", "1").lower() not in ("0", "false", "no")
+
+# Local-only live dashboard. Never bound to anything but localhost.
+DASHBOARD_PORT = int(os.environ.get("UAT_DASHBOARD_PORT", "8899"))
+
 VIEWPORTS = {
     "desktop": {"width": 1440, "height": 900},
     # Below Tabler's 768px breakpoint on purpose.
@@ -56,4 +66,13 @@ VIEWPORTS = {
 CONFIRM_MONEY_FLAG = "--confirm-money"
 
 REPORTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "reports")
+
+# Legacy layout (runs before the dashboard existed) put screenshots here, away
+# from their report. Kept only so old reports' relative paths still resolve;
+# new runs write everything under reports/<run_id>/ via run_dir() below.
 SCREENSHOTS_DIR = os.path.join(REPORTS_DIR, "screenshots")
+
+
+def run_dir(run_id):
+    """Self-contained folder for one run: events.jsonl, report.md, per-row dirs."""
+    return os.path.join(REPORTS_DIR, run_id)

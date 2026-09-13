@@ -4,7 +4,7 @@
   this template is never sent (the buyer goes straight to Stripe Checkout).
 #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import interac_block, rows_block %}
+{% from "email/components.html" import interac_block, rows_block, money %}
 
 {% set preheader = 'Commande reçue — instructions de paiement à l’intérieur.' %}
 {% set photo_eyebrow = 'Commande reçue' %}
@@ -14,7 +14,7 @@
   <td class="mp-pad" style="padding:20px 32px 0 32px;">
     {{ rows_block([
       {'label': 'Article', 'value': item_label},
-      {'label': 'Total', 'value': '%.2f $'|format(amount)},
+      {'label': 'Total', 'value': money(amount)},
     ]) }}
   </td>
 </tr>
@@ -22,7 +22,7 @@
 {% if payment_method == 'interac' and amount and payment_email %}
 <tr>
   <td class="mp-pad" style="padding:0 32px;">
-    {{ interac_block(amount, payment_email, base_url) }}
+    {{ interac_block(money(amount), payment_email, base_url) }}
   </td>
 </tr>
 <tr>

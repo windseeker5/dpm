@@ -20,6 +20,20 @@ FRENCH_MARKERS = {
     "tresorerie", "sondage", "présence", "presence", "places", "reste", "liste",
 }
 
+# Online-store vocabulary, matched on WORD BOUNDARIES rather than as substrings like the rest of
+# this file. "shop" and "store" sit inside ordinary words — most importantly "workshop", which is
+# a perfectly normal activity name — so a substring match would send "who signed up for the
+# pottery workshop?" to the shop-revenue skill.
+SHOP_TERMS_RE = re.compile(
+    r"\b("
+    r"shops?|boutiques?|magasins?|merch|merchandise"
+    r"|online\s+(?:store|shop)"
+    r"|store\s+(?:revenue|sales)"
+    r"|products?\s+(?:sale|sales|sold)"
+    r"|ventes?\s+de\s+produits?|produits?\s+vendus?"
+    r")\b"
+)
+
 SCOPE_TERMS = (
     "activit", "participant", "personne", "signup", "registration", "inscription",
     "passport", "passeport", "payment", "paiement", "paid", "paye", "revenue",
@@ -257,6 +271,16 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
         if year or period:
             return RouteDecision(status="unsupported", language=language)
         return RouteDecision(status="skill", language=language, skill="financial_summary", arguments={})
+    # Shop questions must be matched BEFORE the generic revenue rule below, or "what is my shop
+    # revenue" falls through to activity_revenue and answers with every activity instead.
+    #
+    # Word-boundary matching, unlike most rules in this file, because "shop" and "store" are
+    # substrings of ordinary words: plain `"shop" in q` routes "who signed up for the pottery
+    # WORKshop?" to shop revenue. An activity legitimately named "... Workshop" must keep
+    # falling through to the activity rules below.
+    if SHOP_TERMS_RE.search(q):
+        return RouteDecision(status="skill", language=language, skill="shop_revenue", arguments=time_args)
+
     if any(term in q for term in ("revenue", "revenu", "revenus")):
         if any(term in q for term in ("compared", "compare to", "versus", "vs ", "par rapport")):
             return RouteDecision(status="unsupported", language=language)

@@ -7,45 +7,51 @@
 
 {% block content %}
 <a href="{{ url_for('shop') }}" class="text-secondary small d-inline-flex align-items-center gap-1 mb-3">
-  <i class="ti ti-arrow-left"></i> Back to shop
+  <i class="ti ti-arrow-left"></i> Retour à la boutique
 </a>
 
-<div class="card">
+{# Single card, same shape as the activity page: photo, what it is, what it
+   costs, how many, button. #}
+<form method="POST" class="card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
   {% if product.photo_filename %}
   <img src="{{ url_for('static', filename='uploads/product_images/' + product.photo_filename) }}"
-       class="card-img-top" style="height: 240px; object-fit: cover;" alt="{{ product.name }}">
+       class="mp-shop-media" alt="{{ product.name }}">
+  {% else %}
+  <div class="mp-shop-media mp-shop-media-empty" aria-hidden="true"><i class="ti ti-photo"></i></div>
   {% endif %}
-  <div class="card-body">
-    <h1 class="h3">{{ product.name }}</h1>
-    {% if product.description %}<p class="text-secondary">{{ product.description }}</p>{% endif %}
-    <div class="h2 mb-0">${{ "%.2f"|format(product.price) }}</div>
-  </div>
-</div>
 
-<form method="POST" class="card mt-3">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="card-body">
-    <div class="mp-form-content">
+    <h1 class="h2 mb-1">{{ product.name }}</h1>
+    {% if product.description %}
+    <p class="text-secondary mb-0">{{ product.description }}</p>
+    {% endif %}
+
+    <hr class="my-3">
+    <div class="row g-3">
       {% if product.size_label %}
-      <div class="mb-3">
-        {% call select(id="size", label="Size") %}
+      <div class="col-12 col-sm-7">
+        {% call select(id="size", label="Taille") %}
           {% for size in product.size_label.split(',') %}
           <option value="{{ size.strip() }}">{{ size.strip() }}</option>
           {% endfor %}
         {% endcall %}
       </div>
       {% endif %}
-
-      <div class="mb-3" style="max-width: 140px;">
-        {{ text_input(id="quantity", label="Quantity", name="quantity", type="number",
-           value="1", attrs={"min": "1", "required": "required"}) }}
+      <div class="col-12 col-sm-5">
+        {{ text_input(id="quantity", label="Quantité", name="quantity", type="number",
+           value="1", attrs={"min": "1", "step": "1", "required": "required", "inputmode": "numeric"}) }}
       </div>
     </div>
   </div>
+
   <div class="card-footer">
-    <div class="mp-form-content">
-      {{ button("Add to Cart", type="submit") }}
+    <div class="mp-shop-total">
+      <span class="text-secondary">Prix unitaire</span>
+      <span class="mp-shop-total__amount">{{ product.price | ca_money }}</span>
     </div>
+    {{ button("Ajouter au panier", type="submit", size="lg", attrs={"class": "w-100"}) }}
   </div>
 </form>
 {% endblock %}
