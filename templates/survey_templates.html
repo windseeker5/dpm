@@ -1,9 +1,9 @@
 {% extends "base.html" %}
+{% from 'macros/buttons.html' import button %}
 {% block title %}Survey Templates{% endblock %}
 
 {% block content %}
 {% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state, preserve_filters %}
-{% from 'macros/buttons.html' import button %}
 
 <div class="page-wrapper">
   <!-- Page Header -->
@@ -86,10 +86,10 @@
         <p class="text-muted">This action cannot be undone.</p>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        {{ button("Cancel", variant="outline", attrs={"data-bs-dismiss": "modal"}) }}
         <form method="POST" id="deleteForm" class="d-inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-danger">Delete Template</button>
+          {{ button("Delete Template", variant="destructive", type="submit") }}
         </form>
       </div>
     </div>

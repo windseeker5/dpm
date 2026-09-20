@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'macros/buttons.html' import button %}
 {% block title %}Email Parser Payment Bot | Minipass{% endblock %}
 {% block content %}
 
@@ -11,10 +12,7 @@
           <h1 class="page-title mb-0">Settings</h1>
         </div>
         <div class="d-flex align-items-center">
-          <button type="submit" class="btn btn-success" form="payment-bot-form">
-            <i class="ti ti-device-floppy me-2"></i>
-            Save Settings
-          </button>
+          {{ button("Save Settings", type="submit", attrs={"form": "payment-bot-form"}) }}
         </div>
       </div>
     </div>

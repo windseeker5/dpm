@@ -162,7 +162,7 @@
             <div class="col-sm-3 text-muted"><i class="ti ti-circle-check me-1" style="color: #667085;"></i>Status</div>
             <div class="col-sm-9">
               <span class="badge bg-danger-lt">Expired</span>
-              <a href="https://minipass.me" class="btn btn-sm btn-primary ms-2">Subscribe</a>
+              {{ button("Subscribe", size="sm", href="https://minipass.me", attrs={"class": "ms-2"}) }}
             </div>
           </div>
           {% endif %}
@@ -193,12 +193,8 @@
         <!-- Billing toggle -->
         <div class="d-flex justify-content-center align-items-center gap-2 mb-3">
           <div class="d-inline-flex rounded-pill p-1" style="background:var(--tblr-bg-surface-secondary, #f1f5f9);">
-            <button type="button" id="btn-monthly"
-                    class="btn rounded-pill px-4 py-1 {% if current_billing_freq == 'monthly' %}btn-primary{% else %}btn-ghost-secondary{% endif %}"
-                    onclick="setBilling('monthly')">Monthly</button>
-            <button type="button" id="btn-annual"
-                    class="btn rounded-pill px-4 py-1 {% if current_billing_freq == 'annual' %}btn-primary{% else %}btn-ghost-secondary{% endif %}"
-                    onclick="setBilling('annual')">Annual</button>
+            {{ button("Monthly", variant=("primary" if current_billing_freq == 'monthly' else "ghost"), id="btn-monthly", attrs={"class": "rounded-pill px-4 py-1", "onclick": "setBilling('monthly')"}) }}
+            {{ button("Annual", variant=("primary" if current_billing_freq == 'annual' else "ghost"), id="btn-annual", attrs={"class": "rounded-pill px-4 py-1", "onclick": "setBilling('annual')"}) }}
           </div>
           <span id="save-badge" class="badge bg-success-lt text-success fw-semibold"
                 {% if current_billing_freq != 'annual' %}style="visibility:hidden;"{% endif %}>Save 50%</span>
@@ -263,11 +259,11 @@
 
                   <div class="mt-auto">
                     {% if is_current %}
-                      <button type="button" class="btn btn-secondary w-100 plan-cta-btn" disabled>Current plan</button>
+                      {{ button("Current plan", variant="outline", attrs={"class": "w-100 plan-cta-btn", "disabled": "disabled"}) }}
                     {% elif plan.tier > tier_info.tier %}
-                      <button type="button" class="btn btn-primary w-100 plan-cta-btn plan-select-btn">Upgrade to {{ plan.name }}</button>
+                      {{ button("Upgrade to " ~ (plan.name), attrs={"class": "w-100 plan-cta-btn plan-select-btn"}) }}
                     {% else %}
-                      <button type="button" class="btn btn-outline-secondary w-100 plan-cta-btn plan-select-btn">Downgrade to {{ plan.name }}</button>
+                      {{ button("Downgrade to " ~ (plan.name), variant="outline", attrs={"class": "w-100 plan-cta-btn plan-select-btn"}) }}
                     {% endif %}
                   </div>
 
@@ -295,10 +291,8 @@
         <div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" id="prorateConfirmBtn" disabled>
-          <i class="ti ti-check me-1"></i>Confirm
-        </button>
+        {{ button("Cancel", variant="link", attrs={"data-bs-dismiss": "modal"}) }}
+        {{ button("Confirm", id="prorateConfirmBtn", attrs={"disabled": "disabled"}) }}
       </div>
     </div>
   </div>
@@ -309,6 +303,12 @@
   var currentPriceId = {{ (subscription_details.current_price_id or '')|tojson }};
   var pendingForm = null;
 
+  // Restyle a button built with the button() macro (variant lives in data-variant)
+  function setBtnStyle(el, variant, extraClasses) {
+    el.className = 'mp-btn ' + extraClasses;
+    el.setAttribute('data-variant', variant);
+  }
+
   function setBilling(freq) {
     document.querySelectorAll('.billing-freq-input').forEach(function (el) {
       el.value = freq;
@@ -318,12 +318,12 @@
     var btnAnnual  = document.getElementById('btn-annual');
     var saveBadge  = document.getElementById('save-badge');
     if (freq === 'monthly') {
-      btnMonthly.className = 'btn rounded-pill px-4 py-1 btn-primary';
-      btnAnnual.className  = 'btn rounded-pill px-4 py-1 btn-ghost-secondary';
+      setBtnStyle(btnMonthly, 'primary', 'rounded-pill px-4 py-1');
+      setBtnStyle(btnAnnual, 'ghost', 'rounded-pill px-4 py-1');
       saveBadge.style.visibility = 'hidden';
     } else {
-      btnMonthly.className = 'btn rounded-pill px-4 py-1 btn-ghost-secondary';
-      btnAnnual.className  = 'btn rounded-pill px-4 py-1 btn-primary';
+      setBtnStyle(btnMonthly, 'ghost', 'rounded-pill px-4 py-1');
+      setBtnStyle(btnAnnual, 'primary', 'rounded-pill px-4 py-1');
       saveBadge.style.visibility = 'visible';
     }
 
@@ -343,7 +343,7 @@
       var btn = card.querySelector('.plan-cta-btn');
       if (isCurrent) {
         btn.disabled = true;
-        btn.className = 'btn btn-secondary w-100 plan-cta-btn plan-select-btn';
+        setBtnStyle(btn, 'outline', 'w-100 plan-cta-btn plan-select-btn');
         btn.textContent = 'Current plan';
       } else {
         btn.disabled = false;
@@ -353,10 +353,10 @@
         var tierMap  = { 'basic': 1, 'pro': 2, 'ultimate': 3 };
         var planTier = tierMap[tierEl ? tierEl.value : ''] || 0;
         if (planTier > currentTier) {
-          btn.className = 'btn btn-primary w-100 plan-cta-btn plan-select-btn';
+          setBtnStyle(btn, 'primary', 'w-100 plan-cta-btn plan-select-btn');
           btn.textContent = 'Upgrade to ' + planName;
         } else {
-          btn.className = 'btn btn-outline-secondary w-100 plan-cta-btn plan-select-btn';
+          setBtnStyle(btn, 'outline', 'w-100 plan-cta-btn plan-select-btn');
           btn.textContent = 'Downgrade to ' + planName;
         }
       }

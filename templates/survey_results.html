@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'macros/buttons.html' import button %}
 {% from 'macros/avatar.html' import avatar_initials %}
 {% block title %}Survey Results - {{ survey.name }}{% endblock %}
 
@@ -392,9 +393,7 @@
         </p>
         <div class="empty-action">
           {% if survey.status == 'active' %}
-          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#sendInvitationsModal">
-            <i class="ti ti-mail"></i> Send Invitations
-          </button>
+          {{ button("Send Invitations", attrs={"data-bs-toggle": "modal", "data-bs-target": "#sendInvitationsModal"}) }}
           {% endif %}
         </div>
       </div>
@@ -593,7 +592,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        {{ button("Close", variant="outline", attrs={"data-bs-dismiss": "modal"}) }}
       </div>
     </div>
   </div>
@@ -610,10 +609,10 @@
         <div class="text-muted">This will email all participants.</div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        {{ button("Cancel", variant="link", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
         <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" class="w-100">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-primary w-100">Yes, Send</button>
+          {{ button("Yes, Send", type="submit", attrs={"class": "w-100"}) }}
         </form>
       </div>
     </div>

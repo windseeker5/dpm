@@ -103,14 +103,14 @@
         <div class="w-100">
           <div class="row">
             <div class="col">
-              <button class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+              {{ button("Cancel", variant="outline", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
             </div>
             <div class="col">
               <form method="POST" id="passportDeleteForm" class="d-inline w-100">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="selected_passports" id="deletePassportId">
-                <button type="submit" class="btn btn-danger w-100">Delete</button>
+                {{ button("Delete", variant="destructive", type="submit", attrs={"class": "w-100"}) }}
               </form>
             </div>
           </div>
@@ -131,10 +131,10 @@
         <div class="text-muted" id="send-reminder-modal-body"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        {{ button("Cancel", variant="link", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
         <form method="POST" id="send-reminder-modal-form" action="" class="w-100">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-warning w-100">Yes, Send Reminder</button>
+          {{ button("Yes, Send Reminder", type="submit", attrs={"class": "w-100"}) }}
         </form>
       </div>
     </div>
@@ -155,7 +155,7 @@
         <div class="text-muted" id="redeem-modal-body"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        {{ button("Cancel", variant="link", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
         <form method="POST" id="redeem-modal-form" action="" class="w-100">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           {{ button("Yes, Check In", type="submit", attrs={"class": "w-100"}) }}

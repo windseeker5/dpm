@@ -29,7 +29,7 @@
   <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet"/>
   
   <!-- Custom Styles -->
-  <link href="{{ url_for('static', filename='minipass.css') }}?v={{ range(1000000, 9999999) | random }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='minipass.css') }}?v={{ minipass_css_v }}" rel="stylesheet">
   
   <!-- Global Dropdown Fix -->
   <link href="{{ url_for('static', filename='css/dropdown-fix.css') }}?v=4.2" rel="stylesheet">
@@ -727,24 +727,10 @@
   <!-- Modal Container (outside .minipass-app for proper z-index stacking) -->
   {% block modals %}{% endblock %}
 
-  <!-- TinyMCE Editor -->
-  <script src="{{ url_for('static', filename='tinymce/tinymce.min.js') }}"></script>
+  {# TinyMCE (446 KB) is not loaded here: only the pages that use it include it
+     (activity_dashboard announcements, email_template_customization). #}
   <script>
     document.addEventListener("DOMContentLoaded", function () {
-      // Initialize TinyMCE
-      if (document.querySelector('textarea.tinymce')) {
-        tinymce.init({
-          selector: 'textarea.tinymce',
-          height: 200,
-          plugins: 'link lists code preview',
-          toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist | link | code preview',
-          menubar: false,
-          branding: false,
-          skin: "oxide",
-          content_css: "default"
-        });
-      }
-      
       // Enhanced modern flash alert system
       const flashOverlay = document.getElementById('flashAlertOverlay');
       if (flashOverlay) {
@@ -885,10 +871,6 @@
   <!-- Tabler Core JS -->
   <script src="{{ url_for('static', filename='tabler/js/tabler.min.js') }}"></script>
 
-  <!-- Global Dropdown Fix -->
-  <!-- DISABLED: This was interfering with simple Bootstrap dropdowns -->
-  <!-- <script src="{{ url_for('static', filename='js/dropdown-fix.js') }}?v=3.1"></script> -->
-  
   <!-- Reusable Components -->
   <script src="{{ url_for('static', filename='js/search-component.js') }}?v=1.0"></script>
   <script src="{{ url_for('static', filename='js/filter-component.js') }}?v=1.0"></script>

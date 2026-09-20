@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'macros/buttons.html' import button %}
 {% block title %}Income Ledger - {{ activity.name }}{% endblock %}
 
 {% block content %}
@@ -50,9 +51,7 @@
             </div>
 
             <div class="text-end">
-              <button type="submit" class="btn btn-success">
-                <i class="ti ti-check me-1"></i> {{ "Update Income" if income else "Add Income" }}
-              </button>
+              {{ button("Update Income" if income else "Add Income", type="submit") }}
             </div>
           </form>
         </div>
@@ -94,9 +93,7 @@
                     <i class="ti ti-edit"></i>
                   </a>
 
-                  <button type="button" class="text-danger btn btn-link p-0 ms-2" data-bs-toggle="modal" data-bs-target="#delete-income-modal-{{ i.id }}">
-                    <i class="ti ti-trash"></i>
-                  </button>
+                  {{ button('<i class="ti ti-trash" aria-hidden="true"></i>' | safe, variant="ghost", size="icon-sm", attrs={"class": "text-danger ms-2", "data-bs-toggle": "modal", "data-bs-target": "#delete-income-modal-" ~ i.id, "aria-label": "Delete"}) }}
 
                   <!-- Delete Modal -->
 
@@ -116,8 +113,8 @@
         <form method="POST" action="{{ url_for('delete_income', income_id=i.id) }}" class="w-100">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="d-flex justify-content-between">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-danger">Delete</button>
+            {{ button("Cancel", variant="outline", attrs={"data-bs-dismiss": "modal"}) }}
+            {{ button("Delete", variant="destructive", type="submit") }}
           </div>
         </form>
       </div>

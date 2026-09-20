@@ -277,7 +277,7 @@ div.dropdown-divider {
 
 
       <!-- KPI Cards Section - style-guide kpi_card_desktop / kpi_card_mobile -->
-      <script src="https://cdn.jsdelivr.net/npm/apexcharts@latest"></script>
+      <script src="https://cdn.jsdelivr.net/npm/apexcharts@7.5.0"></script>
 
       <!-- Desktop Version -->
       <div class="row row-cols-md-2 row-cols-xl-4 mb-4 d-none d-md-flex">
@@ -404,10 +404,10 @@ div.dropdown-divider {
               <div class="text-muted">Checks in {{ open_passports_count }} passport(s) as fully used and emails each participant, same as a normal QR check-in.</div>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+              {{ button("Cancel", variant="link", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
               <form method="POST" action="{{ url_for('bulk_close_passports', activity_id=activity.id) }}" class="w-100">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-warning w-100">Yes, Close All</button>
+                {{ button("Yes, Close All", type="submit", attrs={"class": "w-100"}) }}
               </form>
             </div>
           </div>
@@ -424,7 +424,7 @@ div.dropdown-divider {
               <div class="text-muted" id="redeem-modal-body"></div>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+              {{ button("Cancel", variant="link", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
               <form method="POST" id="redeem-modal-form" action="" class="w-100">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="return_activity_id" value="{{ activity.id }}">
@@ -449,11 +449,11 @@ div.dropdown-divider {
               <div class="text-muted" id="send-reminder-modal-body"></div>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+              {{ button("Cancel", variant="link", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
               <form method="POST" id="send-reminder-modal-form" action="" class="w-100">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="return_activity_id" value="{{ activity.id }}">
-                <button type="submit" class="btn btn-warning w-100">Yes, Send Reminder</button>
+                {{ button("Yes, Send Reminder", type="submit", attrs={"class": "w-100"}) }}
               </form>
             </div>
           </div>
@@ -482,7 +482,7 @@ div.dropdown-divider {
               <div class="w-100">
                 <div class="row">
                   <div class="col">
-                    <button class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+                    {{ button("Cancel", variant="outline", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
                   </div>
                   <div class="col">
                     <form method="POST" id="passportDeleteForm" class="d-inline w-100">
@@ -490,7 +490,7 @@ div.dropdown-divider {
                       <input type="hidden" name="action" value="delete">
                       <input type="hidden" name="activity_id" value="{{ activity.id }}">
                       <input type="hidden" name="selected_passports" id="deletePassportId">
-                      <button type="submit" class="btn btn-danger w-100">Delete</button>
+                      {{ button("Delete", variant="destructive", type="submit", attrs={"class": "w-100"}) }}
                     </form>
                   </div>
                 </div>
@@ -514,9 +514,9 @@ div.dropdown-divider {
               </div>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+              {{ button("Cancel", variant="link", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
               <form method="GET" id="approveSignupModalForm" action="" class="w-100">
-                <button type="submit" id="approveSignupModalBtn" class="btn w-100"></button>
+                {{ button("", type="submit", id="approveSignupModalBtn", attrs={"class": "w-100"}) }}
               </form>
             </div>
           </div>
@@ -545,7 +545,7 @@ div.dropdown-divider {
               <div class="w-100">
                 <div class="row">
                   <div class="col">
-                    <button class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+                    {{ button("Cancel", variant="outline", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
                   </div>
                   <div class="col">
                     <form method="POST" id="signupDeleteForm" class="d-inline w-100">
@@ -553,7 +553,7 @@ div.dropdown-divider {
                       <input type="hidden" name="action" value="delete">
                       <input type="hidden" name="activity_id" value="{{ activity.id }}">
                       <input type="hidden" name="selected_signups" id="deleteSignupId">
-                      <button type="submit" class="btn btn-danger w-100">Delete</button>
+                      {{ button("Delete", variant="destructive", type="submit", attrs={"class": "w-100"}) }}
                     </form>
                   </div>
                 </div>
@@ -740,7 +740,6 @@ function animateProgressBar() {
 </script>
 
 <!-- Scroll Preservation Script - DISABLED to prevent conflicts -->
-<!-- <script src="{{ url_for('static', filename='js/scroll-preservation.js') }}"></script> -->
 
 
 <script>
@@ -779,7 +778,8 @@ document.getElementById('approveSignupModal').addEventListener('show.bs.modal', 
     : 'Approve signup and create passport for ' + userName + '?';
   document.getElementById('approveSignupModalNote').style.display = isPaymentFirst ? 'block' : 'none';
   const submitBtn = document.getElementById('approveSignupModalBtn');
-  submitBtn.className = 'btn w-100 ' + (isPaymentFirst ? 'btn-azure' : 'btn-primary');
+  submitBtn.className = 'mp-btn w-100';
+  submitBtn.setAttribute('data-variant', 'primary');
   submitBtn.textContent = isPaymentFirst ? 'Yes, Mark Paid & Create' : 'Yes, Approve & Create';
 });
 
@@ -936,13 +936,13 @@ function confirmSignupDelete(signupId, signupUser) {
         <div class="w-100">
           <div class="row">
             <div class="col">
-              <button class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+              {{ button("Cancel", variant="outline", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
             </div>
             <div class="col">
               <form method="POST" id="activityDeleteForm" class="d-inline w-100" action="">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="activity_id" id="deleteActivityId">
-                <button type="submit" class="btn btn-danger w-100">Delete</button>
+                {{ button("Delete", variant="destructive", type="submit", attrs={"class": "w-100"}) }}
               </form>
             </div>
           </div>
@@ -1076,11 +1076,11 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="mt-2 text-muted">Create a new passport?</div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">No Thanks</button>
+        {{ button("No Thanks", variant="link", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
         <form method="POST" action="{{ url_for('renew_passport', pass_code=renewal.pass_code) }}" class="w-100">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="return_activity_id" value="{{ activity.id }}">
-          <button type="submit" class="btn btn-info w-100">Create New Passport</button>
+          {{ button("Create New Passport", type="submit", attrs={"class": "w-100"}) }}
         </form>
       </div>
     </div>
@@ -1100,6 +1100,7 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='tinymce/tinymce.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mp-kpi-card.js') }}?v=1.0"></script>
 <script src="{{ url_for('static', filename='js/mp-table-toolbar.js') }}?v=1.0"></script>
 <script>

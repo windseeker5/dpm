@@ -1,3 +1,4 @@
+{% from 'macros/buttons.html' import button %}
 {% from 'partials/mark_paid_modal.html' import mark_paid_modal %}
 <!DOCTYPE html>
 <html lang="fr">
@@ -525,10 +526,7 @@
               {# No cancelling once they've been checked in — the session was used, so
                  refunding the credit would give it away. #}
               {% if not booking.is_past and not booking.attended_dt %}
-              <button type="button" class="btn btn-sm btn-link text-danger"
-                      data-bs-toggle="modal" data-bs-target="#cancel-booking-modal-{{ booking.id }}">
-                Annuler
-              </button>
+              {{ button("Annuler", variant="link", size="sm", attrs={"class": "text-danger", "data-bs-toggle": "modal", "data-bs-target": "#cancel-booking-modal-" ~ booking.id}) }}
               {% endif %}
             </div>
             {% endfor %}
@@ -557,7 +555,7 @@
                   </option>
                   {% endfor %}
                 </select>
-                <button type="submit" class="btn btn-primary">Réserver</button>
+                {{ button("Réserver", type="submit") }}
               </div>
             </form>
             {% endif %}
@@ -650,12 +648,12 @@
             <div class="text-muted mt-2">Votre crédit vous sera remis.</div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Garder</button>
+            {{ button("Garder", variant="link", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
             <form method="POST"
                   action="{{ url_for('cancel_slot_booking', pass_code=hockey_pass.pass_code, booking_id=booking.id) }}"
                   class="w-100">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit" class="btn btn-danger w-100">Oui, annuler</button>
+              {{ button("Oui, annuler", variant="destructive", type="submit", attrs={"class": "w-100"}) }}
             </form>
           </div>
         </div>
@@ -683,10 +681,10 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        {{ button("Cancel", variant="link", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
         <form id="redeem-form" method="POST" action="{{ url_for('redeem_passport', pass_code=hockey_pass.pass_code) }}" class="w-100">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-primary w-100">Yes, Check In</button>
+          {{ button("Yes, Check In", type="submit", attrs={"class": "w-100"}) }}
         </form>
       </div>
     </div>

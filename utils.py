@@ -2,7 +2,6 @@ import smtplib
 import qrcode
 import base64
 import io
-import socket
 import traceback
 from functools import lru_cache
 
@@ -454,8 +453,7 @@ def utc_to_local(dt_utc):
 
 def get_setting(key, default=""):
     """
-    Legacy function for backwards compatibility.
-    New code should use SettingsManager.get() instead.
+    Read a setting.
 
     Priority order:
     1. Environment variable (from docker-compose) — EXCEPT for DB-only keys
@@ -500,48 +498,22 @@ def get_setting(key, default=""):
         if cached not in [None, ""]:
             return cached
 
-        # Fall back to SettingsManager for any key not in the simple setting table
-        try:
-            from models.settings import SettingsManager
-            return SettingsManager.get(key, default)
-        except ImportError:
-            return default
+        # Not set anywhere: use the caller's default
+        return default
 
 
 
 def save_setting(key, value, changed_by=None, change_reason=None):
-    """
-    Legacy function for backwards compatibility.
-    New code should use SettingsManager.set() instead.
-    """
+    """Save a setting to the database (creates the row if it does not exist)."""
     with current_app.app_context():
-        try:
-            from models.settings import SettingsManager
-            from flask import request
-            
-            request_info = None
-            if request:
-                request_info = {
-                    'ip': request.remote_addr,
-                    'user_agent': request.headers.get('User-Agent')
-                }
-            
-            return SettingsManager.set(
-                key, value, 
-                changed_by=changed_by or 'legacy_function',
-                change_reason=change_reason or 'Legacy save_setting call',
-                request_info=request_info
-            )
-        except ImportError:
-            # Fallback to old method if new settings system not available
-            setting = Setting.query.filter_by(key=key).first()
-            if setting:
-                setting.value = value
-            else:
-                setting = Setting(key=key, value=value)
-                db.session.add(setting)
-            db.session.commit()
-            return value
+        setting = Setting.query.filter_by(key=key).first()
+        if setting:
+            setting.value = value
+        else:
+            setting = Setting(key=key, value=value)
+            db.session.add(setting)
+        db.session.commit()
+        return value
 
 
 def get_remaining_capacity(activity_id):
@@ -1115,43 +1087,6 @@ def _build_history_rows(history):
     return rows
 
 
-def reconcile_slot_seat_counts(activity_id=None, fix=False):
-    """Compare ActivitySlot.seats_taken against the live booking ledger.
-
-    seats_taken is the admission gate; bookings are the ledger. Any drift is a bug, not an
-    expected state. Read-only unless fix=True.
-
-    Returns a list of {slot_id, activity_id, seats_taken, actual} for drifting slots.
-    """
-    from sqlalchemy import text as _sql_text
-
-    where_activity = "WHERE s.activity_id = :aid" if activity_id else ""
-    rows = db.session.execute(_sql_text(f"""
-        SELECT s.id, s.activity_id, s.seats_taken,
-               COALESCE(COUNT(b.id), 0) AS actual
-          FROM activity_slot s
-          LEFT JOIN slot_booking b
-                 ON b.slot_id = s.id AND b.status IN ('held','confirmed')
-          {where_activity}
-         GROUP BY s.id, s.activity_id, s.seats_taken
-        HAVING s.seats_taken != COALESCE(COUNT(b.id), 0)
-    """), ({"aid": activity_id} if activity_id else {})).fetchall()
-
-    drift = [{"slot_id": r[0], "activity_id": r[1], "seats_taken": r[2], "actual": r[3]}
-             for r in rows]
-
-    if fix and drift:
-        for d in drift:
-            db.session.execute(_sql_text("""
-                UPDATE activity_slot SET seats_taken = :actual WHERE id = :sid
-            """), {"actual": d["actual"], "sid": d["slot_id"]})
-        db.session.commit()
-        logging.warning("Reconciled %s slot(s) with drifting seat counts: %s",
-                        len(drift), drift)
-
-    return drift
-
-
 def get_fiscal_year_range(reference_date=None):
     """
     Get the start and end dates for the fiscal year containing the reference date.
@@ -1390,6 +1325,7 @@ def generate_qr_code(pass_code):
 
 
 @lru_cache(maxsize=512)
+@lru_cache(maxsize=256)
 def generate_qr_code_image(pass_code: str, box_size: int = 10) -> bytes:
     """Return PNG bytes for the given pass_code QR. Result is cached — same code always returns same bytes."""
     qr = qrcode.make(pass_code, box_size=box_size)
@@ -1978,8 +1914,6 @@ def get_active_passports_query(activity_id=None):
         query = query.filter(Passport.activity_id == activity_id)
     return query
 
-
-# OBSOLETE - Use get_kpi_data() instead. This function will be removed in future version.
 
 def get_kpi_data(activity_id=None, period='7d'):
     """
@@ -3313,13 +3247,6 @@ def match_gmail_payments_to_passes():
                     admin_email="minipass-bot@system",
                     timestamp=now_utc
                 )
-
-                # Emit SSE notification for payment
-                try:
-                    from api.notifications import emit_payment_notification
-                    emit_payment_notification(best_passport)
-                except Exception as e:
-                    print(f"⚠️ Failed to emit payment notification: {e}")
 
                 # Send push notification for successful payment match
                 try:
@@ -6067,57 +5994,6 @@ def get_user_contact_report(search_query="", status_filter="", show_all=False):
     }
 
 
-def export_user_contacts_csv(user_data):
-    """
-    Export user contact data to CSV format.
-
-    Args:
-        user_data: dict from get_user_contact_report()
-
-    Returns:
-        str: CSV formatted string
-    """
-    import csv
-    from io import StringIO
-    from datetime import datetime, timezone
-
-    output = StringIO()
-    writer = csv.writer(output)
-
-    # Write metadata header
-    writer.writerow([f"# User Contact List - Exported: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"])
-    writer.writerow([f"# Total Users: {user_data['summary']['total_users']}"])
-    writer.writerow([f"# Active Users: {user_data['summary']['active_users']}"])
-    writer.writerow([])  # Blank line
-
-    # Write column headers
-    writer.writerow([
-        'Name',
-        'Email',
-        'Phone',
-        'Passports',
-        'Total Revenue',
-        'Activities',
-        'Last Activity',
-        'Email Opt-Out'
-    ])
-
-    # Write user data
-    for user in user_data['users']:
-        writer.writerow([
-            user['name'],
-            user['email'],
-            user['phone'],
-            user['passport_count'],
-            f"{user['total_revenue']:.2f}",
-            ', '.join(user['activities']) if user['activities'] else 'None',
-            user['last_activity_date'],
-            'Yes' if user['email_opt_out'] else 'No'
-        ])
-
-    return output.getvalue()
-
-
 def export_user_contacts_raw_csv(search_query="", status_filter="", show_all=False):
     """
     Export RAW passport data to CSV format - one row per passport, no aggregation.
@@ -6357,100 +6233,6 @@ def send_push_notification_to_admins(title, body, url=None, tag=None):
 
     if success_count > 0:
         print(f"📱 Sent push notification to {success_count} device(s): {title}")
-
-    return success_count
-
-
-def send_push_notification_to_admin(admin_id, title, body, url=None, tag=None):
-    """
-    Send push notification to a specific admin's subscribed devices.
-
-    Args:
-        admin_id: ID of the admin to send notification to
-        title: Notification title
-        body: Notification body text
-        url: URL to open when notification is clicked
-        tag: Optional tag to replace previous notifications with same tag
-
-    Returns:
-        int: Number of notifications successfully sent
-    """
-    from pywebpush import webpush, WebPushException
-    from models import PushSubscription
-    from datetime import datetime, timezone
-    import json
-
-    try:
-        vapid_keys = get_or_create_vapid_keys()
-    except Exception as e:
-        print(f"❌ Failed to get VAPID keys: {e}")
-        raise Exception(f"Failed to get VAPID keys: {e}")
-
-    # Get VAPID claims email from settings, or use default
-    claims_email_setting = Setting.query.filter_by(key="VAPID_CLAIMS_EMAIL").first()
-    vapid_claims_email = claims_email_setting.value if claims_email_setting else "mailto:admin@minipass.me"
-
-    subscriptions = PushSubscription.query.filter_by(admin_id=admin_id).all()
-
-    if not subscriptions:
-        raise Exception("No push subscriptions found for this admin")
-
-    payload = json.dumps({
-        'title': title,
-        'body': body,
-        'url': url or '/',
-        'tag': tag,
-        'icon': '/static/icons/icon-192x192.png',
-        'badge': '/static/favicon.png'
-    })
-
-    failed_subscriptions = []
-    success_count = 0
-    errors = []
-
-    for sub in subscriptions:
-        subscription_info = {
-            'endpoint': sub.endpoint,
-            'keys': {
-                'p256dh': sub.p256dh_key,
-                'auth': sub.auth_key
-            }
-        }
-
-        try:
-            webpush(
-                subscription_info=subscription_info,
-                data=payload,
-                vapid_private_key=vapid_keys['private_key'],
-                vapid_claims={'sub': vapid_claims_email}
-            )
-            # Update last_used timestamp
-            sub.last_used_dt = datetime.now(timezone.utc)
-            success_count += 1
-            print(f"✅ Push sent to subscription {sub.id}")
-        except WebPushException as e:
-            error_msg = str(e)
-            print(f"⚠️ Push notification failed for subscription {sub.id}: {error_msg}")
-            errors.append(error_msg)
-            # If subscription is expired or invalid (404, 410), mark for removal
-            if e.response and e.response.status_code in [404, 410]:
-                failed_subscriptions.append(sub.id)
-        except Exception as e:
-            error_msg = str(e)
-            print(f"⚠️ Unexpected push error for subscription {sub.id}: {error_msg}")
-            errors.append(error_msg)
-
-    # Clean up invalid subscriptions
-    if failed_subscriptions:
-        PushSubscription.query.filter(
-            PushSubscription.id.in_(failed_subscriptions)
-        ).delete(synchronize_session=False)
-        print(f"🗑️ Removed {len(failed_subscriptions)} expired push subscription(s)")
-
-    db.session.commit()
-
-    if success_count == 0 and errors:
-        raise Exception(f"All push notifications failed: {'; '.join(errors)}")
 
     return success_count
 
