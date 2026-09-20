@@ -1,5 +1,4 @@
 # models.py (UPDATED - TIMEZONE AWARE)
-import uuid
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone   
  

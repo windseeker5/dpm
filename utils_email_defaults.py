@@ -68,28 +68,3 @@ def get_default_email_templates():
         # Return the minimal defaults if there's an error
         return get_default_email_templates.__defaults__[0] if hasattr(get_default_email_templates, '__defaults__') else {}
 
-
-def update_default_email_templates(new_defaults):
-    """
-    Update the default email templates in the config file.
-    
-    Args:
-        new_defaults (dict): New default templates to save
-    
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    config_path = os.path.join(os.path.dirname(__file__), 'config', 'email_defaults.json')
-    
-    try:
-        # Ensure config directory exists
-        os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        
-        # Save the new defaults
-        with open(config_path, 'w', encoding='utf-8') as f:
-            json.dump(new_defaults, f, ensure_ascii=False, indent=4)
-        
-        return True
-    except Exception as e:
-        print(f"Error saving email defaults: {e}")
-        return False
