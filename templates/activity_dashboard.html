@@ -277,7 +277,7 @@ div.dropdown-divider {
 
 
       <!-- KPI Cards Section - style-guide kpi_card_desktop / kpi_card_mobile -->
-      <script src="https://cdn.jsdelivr.net/npm/apexcharts@latest"></script>
+      <script src="https://cdn.jsdelivr.net/npm/apexcharts@7.5.0"></script>
 
       <!-- Desktop Version -->
       <div class="row row-cols-md-2 row-cols-xl-4 mb-4 d-none d-md-flex">
@@ -1100,6 +1100,7 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='tinymce/tinymce.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mp-kpi-card.js') }}?v=1.0"></script>
 <script src="{{ url_for('static', filename='js/mp-table-toolbar.js') }}?v=1.0"></script>
 <script>

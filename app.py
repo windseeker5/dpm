@@ -12,6 +12,7 @@ import qrcode
 import secrets
 import string
 import subprocess
+from functools import lru_cache
 import logging
 import traceback
 import shutil
@@ -1007,8 +1008,19 @@ def initialize_background_tasks():
     init_scheduler(app)
 
 
+def _static_file_version(filename):
+    """Cache-busting token for a static file: its last-modified time (0 if missing)."""
+    try:
+        return int(os.path.getmtime(os.path.join(app.static_folder, filename)))
+    except OSError:
+        return 0
+
+
+@lru_cache(maxsize=1)
 def get_git_version():
-    """Get git version from version.txt file (created during deployment) or git command (dev)"""
+    """Get git version from version.txt file (created during deployment) or git command (dev).
+
+    Cached: the version cannot change while the process is running, and this runs on every render."""
     # Try version.txt first (production Docker)
     try:
         version_file = os.path.join(os.path.dirname(__file__), 'version.txt')
@@ -1144,6 +1156,7 @@ def inject_globals_and_csrf():
         'PRIMARY_BRAND_FOREGROUND': brand_primary_foreground,
         'HAS_CUSTOM_BRAND_COLOR': has_custom_brand_color,
         'git_version': get_git_version(),
+        'minipass_css_v': _static_file_version('minipass.css'),
         'csrf_token': generate_csrf,  # returns the raw CSRF token
         'pending_signups_count': pending_signups_count,
         'active_passport_count': active_passport_count,
@@ -10361,12 +10374,9 @@ def activity_dashboard(activity_id):
     _actual = float(total_paid_revenue or 0)
     revenue_progress_pct = min(round((_actual / _target * 100) if _target > 0 else 0), 100)
     
-    # Activity log entries (recent activity)
-    # Use get_all_activity_logs to get properly formatted logs like dashboard does
-    from utils import get_all_activity_logs
-    all_activity_logs = get_all_activity_logs()
-    # Filter for this activity
-    activity_logs = [log for log in all_activity_logs if activity.name in log.get('action', '')][:10]
+    # Not shown on this page. This used to load every log table and filter on a key
+    # ('action') that log entries do not have, so the result was always empty.
+    activity_logs = []
 
     # KPI data structure for the dashboard template
     # Using the same structure from get_kpi_data() as dashboard does - no transformation

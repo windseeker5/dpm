@@ -1325,6 +1325,7 @@ def generate_qr_code(pass_code):
 
 
 @lru_cache(maxsize=512)
+@lru_cache(maxsize=256)
 def generate_qr_code_image(pass_code: str, box_size: int = 10) -> bytes:
     """Return PNG bytes for the given pass_code QR. Result is cached — same code always returns same bytes."""
     qr = qrcode.make(pass_code, box_size=box_size)
