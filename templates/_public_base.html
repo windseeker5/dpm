@@ -19,24 +19,49 @@
        document with no such container, so that rule has to be undone here or nothing
        past the first viewport (e.g. the payment section on checkout) is reachable. */
     html, body { height: auto; overflow: visible; }
+    /* The sticky bar is ~68px tall: keep keyboard focus and #anchors from landing underneath it. */
+    html { scroll-padding-top: 5rem; }
     /* Flex column + margin-block:auto on the shell centers short pages
        (activity/cart/confirmation) in the viewport instead of leaving them
        pinned to the top of a mostly blank desktop canvas. Auto margins
        absorb only the leftover space, so a page taller than the viewport
        (e.g. the signup form) collapses back to flush-top with normal
        scrolling — nothing to opt out of per page. */
-    body { background: #fff; display: flex; flex-direction: column; min-height: 100dvh; margin: 0; }
+    body { background: var(--mp-background); display: flex; flex-direction: column; min-height: 100dvh; margin: 0; padding-top: 0; /* minipass.css reserves 80px for the admin navbar, which these pages don't have */ }
     .mp-shop-shell { max-width: 720px; width: 100%; margin-inline: auto; margin-block: auto; padding: 1.5rem 1rem 4rem; }
-    .mp-shop-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
+    /* The sticky bar is a full-width element of its own (white edge to edge), with an inner
+       box that lines up with the shell below. The hairline only shows once the page has
+       scrolled under it (class toggled by the script at the bottom). */
+    .mp-shop-header { position: sticky; top: 0; z-index: 20; background: var(--mp-background); box-shadow: 0 1px 0 transparent; transition: box-shadow .2s; }
+    .mp-shop-header.is-stuck { box-shadow: 0 1px 0 var(--mp-border); }
+    @media (prefers-reduced-motion: reduce) { .mp-shop-header { transition: none; } }
+    .mp-shop-header__in { display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      max-width: 720px; margin-inline: auto; padding: .75rem 1rem; }
     .mp-shop-header__brand { display: flex; align-items: center; gap: .75rem; color: inherit; text-decoration: none; min-width: 0; }
-    .mp-shop-header__brand img { width: 48px; height: 48px; object-fit: contain; }
-    .mp-shop-header__name { font-weight: 700; font-size: 1.1rem; }
-    .mp-shop-header__cart { position: relative; display: inline-flex; align-items: center; justify-content: center;
-      width: 44px; height: 44px; border-radius: 999px; background: var(--mp-muted); color: var(--mp-foreground); flex-shrink: 0; }
+    .mp-shop-header__brand:hover { text-decoration: none; }
+    .mp-shop-header__brand > img { width: 44px; height: 44px; object-fit: contain; border-radius: 50%; box-shadow: 0 0 0 1px var(--mp-border); background: var(--mp-background); flex-shrink: 0; }
+    .mp-shop-header__who { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+    .mp-shop-header__name { font-weight: 650; font-size: 1.1rem; overflow-wrap: anywhere; }
+    .mp-shop-header__sub { color: var(--mp-muted-foreground); font-size: .8rem; }
+    .mp-shop-header__cart { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+      min-width: 44px; height: 44px; border-radius: 999px; background: var(--mp-muted); color: var(--mp-foreground);
+      text-decoration: none; font-weight: 600; font-size: .9rem; flex-shrink: 0; }
+    .mp-shop-header__cart:hover { color: var(--mp-foreground); background: var(--mp-accent, var(--mp-muted)); }
     .mp-shop-header__cart i { font-size: 1.3rem; }
+    .mp-shop-header__cart-label { display: none; }
     .mp-shop-header__cart-count { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px;
       border-radius: 999px; background: var(--mp-primary); color: var(--mp-primary-foreground); font-size: .7rem; font-weight: 700;
       display: flex; align-items: center; justify-content: center; padding: 0 5px; }
+    @media (min-width: 576px) {
+      /* On desktop the cart becomes a labelled pill and the count sits inside it. */
+      .mp-shop-header__cart { padding: 0 .5rem 0 1rem; }
+      .mp-shop-header__cart-label { display: inline; }
+      .mp-shop-header__cart-count { position: static; }
+      .mp-shop-header__cart:not(:has(.mp-shop-header__cart-count)) { padding-right: 1rem; }
+    }
+    /* Listing pages (the shop home) use the full width and start at the top, unlike the
+       narrow centered form pages. Also applied to the header's inner box so both line up. */
+    .mp-shop-shell--wide { max-width: 1080px; margin-block: 0 auto; }
     .mp-shop-flashes { margin-bottom: 1.5rem; }
     .mp-shop-flashes .alert:last-child { margin-bottom: 0; }
     /* Product and activity photos are user-uploaded at any aspect ratio. A fixed
@@ -58,40 +83,47 @@
   {% block head %}{% endblock %}
 </head>
 <body style="--mp-brand-primary: {{ PRIMARY_BRAND_COLOR }}; --mp-primary: {{ PRIMARY_BRAND_COLOR }}; --mp-primary-foreground: {{ PRIMARY_BRAND_FOREGROUND }};{% if HAS_CUSTOM_BRAND_COLOR %} --mp-chart-1: {{ PRIMARY_BRAND_COLOR }};{% endif %}">
-  <div class="mp-shop-shell">
-    {% from 'macros/avatar.html' import avatar_initials %}
-    {# The signup confirmation and "signups closed" pages share this shell but are
-       not part of the shop, so the cart and the shop link only appear when the
-       page is actually a shop page with a shop to go back to. #}
-    {% set org_display_name = (settings.get('ORG_NAME') if settings else None) or ORG_NAME %}
-    {% set show_cart = shop_enabled and show_shop_nav|default(true) %}
-    <header class="mp-shop-header">
-      {% if show_cart %}
-      <a href="{{ url_for('shop') }}" class="mp-shop-header__brand">
-      {% else %}
-      <span class="mp-shop-header__brand">
-      {% endif %}
-        {% if settings and settings.get("LOGO_FILENAME") %}
-          <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
-               alt="{{ org_display_name }}">
+  {% from 'macros/avatar.html' import avatar_initials %}
+  {# The signup confirmation and "signups closed" pages share this shell but are
+     not part of the shop, so the cart and the shop link only appear when the
+     page is actually a shop page with a shop to go back to. #}
+  {% set org_display_name = (settings.get('ORG_NAME') if settings else None) or ORG_NAME %}
+  {% set show_cart = shop_enabled and show_shop_nav|default(true) %}
+  <header class="mp-shop-header">
+    <div class="mp-shop-header__in{{ self.shell_class() }}">
+        {% if show_cart %}
+        <a href="{{ url_for('shop') }}" class="mp-shop-header__brand">
         {% else %}
-          {{ avatar_initials(org_display_name) }}
+        <span class="mp-shop-header__brand">
         {% endif %}
-        <span class="mp-shop-header__name">{{ org_display_name }}</span>
-      {% if show_cart %}
-      </a>
-      {% else %}
-      </span>
-      {% endif %}
+          {% if settings and settings.get("LOGO_FILENAME") %}
+            <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
+                 alt="{{ org_display_name }}">
+          {% else %}
+            {{ avatar_initials(org_display_name) }}
+          {% endif %}
+          <span class="mp-shop-header__who">
+            <span class="mp-shop-header__name">{{ org_display_name }}</span>
+            {% if show_cart %}<span class="mp-shop-header__sub">Boutique</span>{% endif %}
+          </span>
+        {% if show_cart %}
+        </a>
+        {% else %}
+        </span>
+        {% endif %}
 
-      {% if show_cart %}
-      <a href="{{ url_for('shop_cart') }}" class="mp-shop-header__cart" aria-label="Voir le panier">
-        <i class="ti ti-shopping-cart" aria-hidden="true"></i>
-        {% if cart_count %}<span class="mp-shop-header__cart-count">{{ cart_count }}</span>{% endif %}
-      </a>
-      {% endif %}
-    </header>
+        {% if show_cart %}
+        <a href="{{ url_for('shop_cart') }}" class="mp-shop-header__cart" aria-label="Voir le panier">
+          <i class="ti ti-shopping-cart" aria-hidden="true"></i>
+          <span class="mp-shop-header__cart-label">Panier</span>
+          {% if cart_count %}<span class="mp-shop-header__cart-count">{{ cart_count }}</span>{% endif %}
+        </a>
+        {% endif %}
+    </div>
+  </header>
 
+  <div class="mp-shop-shell{% block shell_class %}{% endblock %}">
+    <main id="main">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
       <div class="mp-shop-flashes">
@@ -105,8 +137,20 @@
     {% endwith %}
 
     {% block content %}{% endblock %}
+    </main>
   </div>
+  {% block after_shell %}{% endblock %}
 
+  <script>
+    /* Hairline under the sticky header, only once content has scrolled beneath it. */
+    (function () {
+      var header = document.querySelector('.mp-shop-header');
+      if (!header) return;
+      var update = function () { header.classList.toggle('is-stuck', window.scrollY > 4); };
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+  </script>
   <script>
     /* Delegated copy handler for macros/code_block.html — the e-transfer
        reference code is the one thing a buyer must transcribe exactly, so

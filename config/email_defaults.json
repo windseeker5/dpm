@@ -44,7 +44,7 @@
   "survey_invitation": {
     "subject": "Votre avis sur {{ activity_name }}",
     "title": "Votre avis compte",
-    "admin_message": "<p>Bonjour,</p><p>Vous avez participé à <strong>{{ activity_name }}</strong>. Un court formulaire — deux minutes — nous aide à améliorer l'expérience.</p><p>Merci du temps que vous y consacrez.</p><p>À bientôt,<br><strong>L'équipe {{ organization_name }}</strong></p>",
+    "admin_message": "<p>Bonjour <strong>{{ user_name }}</strong>,</p><p>Vous avez participé à <strong>{{ activity_name }}</strong>. Un court formulaire — deux minutes — nous aide à améliorer l'expérience.</p><p>Merci du temps que vous y consacrez.</p><p>À bientôt,<br><strong>L'équipe {{ organization_name }}</strong></p>",
     "cta_text": "Compléter le formulaire",
     "cta_url": "{survey_url}"
   }

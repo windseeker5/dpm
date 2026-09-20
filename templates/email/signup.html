@@ -1,13 +1,27 @@
 {#
-  Signup received, awaiting approval. Accent: brand blue.
+  Signup received, awaiting approval.
 
-  There is no passport yet, so no pass block and no QR — the copy carries the whole message.
+  There is no passport yet, so no QR and no button. A short recap list ("Votre demande") sits
+  under the message, like "Votre passeport" in the pass-style emails, so the reader can confirm
+  what was received. Only fields a real send always has: name, email, activity name. Values are
+  escaped (`| e`) because rows_block() renders them with |safe.
 #}
 {% extends "email/_base.html" %}
+{% from "email/components.html" import rows_block, well %}
 
-{% set accent = '#206bc4' %}
 {% set preheader = 'Votre demande est reçue. Nous revenons vers vous après approbation.' %}
 {% set photo_eyebrow = 'Demande reçue' %}
 
 {% block content %}
+<tr>
+  <td class="mp-pad" style="padding:24px 32px 0 32px;">
+    {% call well('Votre demande') %}
+      {{ rows_block([
+        {'label': 'Participant', 'value': user_name | e, 'sub': user_email | e},
+        {'label': 'Activité', 'value': activity_name | e},
+        {'label': 'Statut', 'value': "En attente d'approbation"},
+      ], outer_border=False, top_margin=0) }}
+    {% endcall %}
+  </td>
+</tr>
 {% endblock %}

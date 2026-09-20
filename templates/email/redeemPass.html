@@ -1,6 +1,6 @@
 {# Attendance recorded — this email doubles as the pass for the next visit. #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import identity_block, rows_block, status_pill, qr_block, section_card, well, button, money, credit_line %}
+{% from "email/components.html" import rows_block, status_pill, qr_block, section_card, well, button, money, credit_line %}
 
 {% set preheader = 'Votre présence est enregistrée.' %}
 {% set photo_eyebrow = 'Présence enregistrée' %}
@@ -12,6 +12,7 @@
 {% set location = (activity.location_address_formatted or activity.location_address_raw) if activity else None %}
 
 {% set facts = [
+  {'label': 'Participant', 'value': pass_data.user.name, 'sub': pass_data.user.email},
   {'label': 'Montant', 'value': money(pass_data.sold_amt)},
   {'label': 'Statut', 'value': status_pill(pass_data.paid)},
   {'label': 'Crédits', 'value': credit_line(pass_data.uses_remaining, total)},
@@ -20,9 +21,8 @@
 
 <tr>
   <td class="mp-pad" style="padding:24px 32px 0 32px;">
-    {% call well('Participant') %}
-      {{ identity_block(None, pass_data.user.name, pass_data.user.email) }}
-      {{ rows_block(facts, outer_border=False, top_margin=12) }}
+    {% call well('Votre passeport') %}
+      {{ rows_block(facts, outer_border=False, top_margin=0) }}
     {% endcall %}
   </td>
 </tr>
@@ -33,6 +33,16 @@
     {% call well("Code d'accès") %}
       {{ qr_block('cid:qr_code', pass_data.pass_code, "Présentez ce code ou la référence à l'accueil") }}
     {% endcall %}
+  </td>
+</tr>
+{% endif %}
+
+{% if pass_url %}
+<tr>
+  <td class="mp-pad" style="padding:0 32px 16px 32px;">
+    {# href is deliberately pass_url (the real per-passport link), not cta_url — cta_url's
+       defaults are generic marketing pages (e.g. /my-passes), not recipient-specific. #}
+    {{ button(pass_url, cta_text or 'Voir mon passeport en ligne') }}
   </td>
 </tr>
 {% endif %}
@@ -56,17 +66,7 @@
     {% for e in history_rows %}
       {% set _ = history_items.append({'label': e.label, 'value': e.date, 'sub': e.by}) %}
     {% endfor %}
-    {{ section_card('Historique', history_items) }}
-  </td>
-</tr>
-{% endif %}
-
-{% if pass_url %}
-<tr>
-  <td class="mp-pad" style="padding:8px 32px 0 32px;">
-    {# href is deliberately pass_url (the real per-passport link), not cta_url — cta_url's
-       defaults are generic marketing pages (e.g. /my-passes), not recipient-specific. #}
-    {{ button(pass_url, cta_text or 'Voir mon passeport en ligne') }}
+    {{ section_card('Historique', history_items, muted=True) }}
   </td>
 </tr>
 {% endif %}

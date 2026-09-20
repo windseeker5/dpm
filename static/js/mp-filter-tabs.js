@@ -46,7 +46,21 @@
     document.querySelectorAll('.mp-filter-tabs').forEach((root) => position(root, animate));
   };
 
-  document.addEventListener('DOMContentLoaded', () => positionAll(false));
+  // On a narrow toolbar the tab row scrolls sideways (mp-components.css); land
+  // it with the active tab in view so a selected tab is never hidden off-edge.
+  const revealActive = () => {
+    document.querySelectorAll('.mp-filter-tabs').forEach((root) => {
+      const active = root.querySelector('.mp-filter-btn.active');
+      if (!active || root.scrollWidth <= root.clientWidth) return;
+      const overflow = active.offsetLeft + active.offsetWidth - root.clientWidth;
+      if (overflow > 0) root.scrollLeft = overflow;
+    });
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    positionAll(false);
+    revealActive();
+  });
   window.addEventListener('resize', () => positionAll(false));
 
   window.mpFilterTabs = {

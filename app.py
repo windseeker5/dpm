@@ -1156,6 +1156,7 @@ def inject_globals_and_csrf():
         'subscription': subscription_info,  # Subscription tier info
         'payment_email': payment_email,  # For displaying payment instructions (uses display email if set)
         'shop_enabled': shop_enabled,  # Hides the Shop sidebar nav item when the public shop is off
+        'shop_url': _shop_public_url() if has_request_context() else "",  # Public storefront link shown to admins
         'placeholder_css': get_placeholder_css,
         'placeholder_letter': get_placeholder_letter,
         'placeholder_color': get_placeholder_color,
@@ -1187,6 +1188,13 @@ def combine_dicts(dict1, dict2):
 def check_first_run():
     if request.endpoint != 'setup' and not Admin.query.first():
         return redirect(url_for('setup'))
+
+
+@app.template_filter("fr_history_date")
+def fr_history_date(value):
+    """"2026-08-25 09:19" -> "25 août, 09:19" — same as the email's Historique."""
+    from utils import format_history_date
+    return format_history_date(value)
 
 
 @app.template_filter("trim_email")
@@ -2566,8 +2574,9 @@ def create_activity():
                 uploaded_file.stream.seek(0)
                 upload_folder = os.path.join("static", "uploads", "activity_images")
                 try:
+                    # 2000px wide: the shop hero shows this photo ~1050 CSS px wide, which needs ~2100 px to stay sharp on high-density screens.
                     image_filename = _save_optimized_image(
-                        uploaded_file.stream, upload_folder, prefix="upload"
+                        uploaded_file.stream, upload_folder, prefix="upload", max_size=(2000, 1333)
                     )
                 except Exception as e:
                     app.logger.error(f"Image optimization failed: {e}")
@@ -2860,8 +2869,9 @@ def edit_activity(activity_id):
                 uploaded_file.stream.seek(0)
                 upload_folder = os.path.join("static", "uploads", "activity_images")
                 try:
+                    # Same 2000px cap as activity creation, for the shop hero on high-density screens.
                     activity.image_filename = _save_optimized_image(
-                        uploaded_file.stream, upload_folder, prefix="upload"
+                        uploaded_file.stream, upload_folder, prefix="upload", max_size=(2000, 1333)
                     )
                 except Exception as e:
                     app.logger.error(f"Image optimization failed: {e}")
@@ -3122,13 +3132,21 @@ def edit_activity(activity_id):
                           other_activities=other_activities)
 
 
-def _passport_type_signup_url(passport_type):
-    """Return the configured public signup URL, never an internal proxy hostname."""
+def _public_base_url():
+    """Return the configured public base URL, never an internal proxy hostname."""
     base_url = (get_setting("SITE_URL", "") or "").strip().rstrip("/")
     if not re.match(r"^https?://", base_url, re.IGNORECASE):
         base_url = request.url_root.rstrip("/")
+    return base_url
+
+
+def _shop_public_url():
+    return f"{_public_base_url()}{url_for('shop')}"
+
+
+def _passport_type_signup_url(passport_type):
     signup_path = url_for("signup", activity_id=passport_type.activity_id)
-    return f"{base_url}{signup_path}?passport_type_id={passport_type.id}"
+    return f"{_public_base_url()}{signup_path}?passport_type_id={passport_type.id}"
 
 
 def _shareable_passport_type(passport_type_id):
@@ -3375,11 +3393,20 @@ def signup_thank_you(signup_id):
     
     activity = signup.activity
     settings = {s.key: s.value for s in Setting.query.all()}
-    
+
+    # The reference code is only for the rare case where another unpaid signup has the same
+    # name AND amount — the same rule the signup email uses (utils.notify_signup_event).
+    from utils import has_conflicting_unpaid_signup
+    needs_signup_code = (
+        activity.workflow_type == 'payment_first'
+        and has_conflicting_unpaid_signup(signup, activity, earlier_only=True)
+    )
+
     return render_template("signup_confirmation.html",
                           signup=signup,
                           activity=activity,
                           settings=settings,
+                          needs_signup_code=needs_signup_code,
                           format_slot_label=format_slot_label)
 
 
@@ -3476,8 +3503,25 @@ def shop():
     activities = Activity.query.filter_by(show_in_shop=True, status="active").order_by(Activity.name).all()
     products = Product.query.filter_by(active=True).order_by(Product.name).all()
 
+    # Place and starting price shown on each activity card, so a buyer can tell at a
+    # glance whether it's for them without opening the page. One query for all activities.
+    prices_by_activity = {}
+    if activities:
+        for passport_type in PassportType.query.filter(
+                PassportType.activity_id.in_([a.id for a in activities]),
+                PassportType.status == "active").all():
+            prices_by_activity.setdefault(passport_type.activity_id, []).append(passport_type.price_per_user or 0.0)
+    activity_meta = {}
+    for activity in activities:
+        prices = prices_by_activity.get(activity.id, [])
+        activity_meta[activity.id] = {
+            "location": _short_location(activity),
+            "from_price": min(prices) if prices else None,
+            "price_varies": len(set(prices)) > 1,
+        }
+
     return render_template("shop.html", settings=settings, activities=activities, products=products,
-                            cart_count=_shop_cart_item_count())
+                            activity_meta=activity_meta, cart_count=_shop_cart_item_count())
 
 
 @app.route("/shop/product/<int:product_id>", methods=["GET", "POST"])
@@ -3871,7 +3915,7 @@ def list_orders():
         {"label": "Awaiting Payment", "url": tab_url("list_orders", current_filters, status="awaiting_payment", show_all=None),
          "count": counts["awaiting_payment"], "active": status_filter == "awaiting_payment" and not show_all},
         {"label": "Ready", "url": tab_url("list_orders", current_filters, status="ready", show_all=None),
-         "count": counts["ready"], "active": status_filter == "ready" and not show_all, "hide_on_mobile": True},
+         "count": counts["ready"], "active": status_filter == "ready" and not show_all},
         {"label": "All", "url": tab_url("list_orders", current_filters, status=None, show_all="true"),
          "count": counts["all"], "active": show_all},
     ]
@@ -14694,19 +14738,24 @@ def email_preview(activity_id):
         # Live-passport link shown below the QR. Included here so the preview shows what
         # the customer actually receives — it was previously missing from all preview paths.
         from utils import _get_pass_url
-        base_context['pass_url'] = _get_pass_url(pass_data)
+        # Preview only: a dev DB without SITE_URL makes _get_pass_url() return "", which hides
+        # the CTA button entirely and looks like a template bug. Real sends never take this path.
+        base_context['pass_url'] = _get_pass_url(pass_data) or f"{request.host_url.rstrip('/')}/pass/{pass_data.pass_code}"
         base_context['uses_scheduling'] = bool(activity and activity.uses_scheduling)
 
         # Sample history, in the {label, date, by} shape utils._build_history_rows() produces
         # for real sends, so the preview shows the same table customers receive.
         base_context['history_rows'] = [
-            {'label': 'Création', 'date': '2026-01-09 09:14', 'by': 'kdresdell'},
-            {'label': 'Paiement', 'date': '2026-01-10 11:02', 'by': 'minipass-bot'},
+            {'label': 'Création', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
+            {'label': 'Paiement', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
         ]
         if template_type == 'redeemPass':
             base_context['history_rows'].append(
-                {'label': 'Participation 1', 'date': '2026-01-11 18:30', 'by': 'kdresdell'}
+                {'label': 'Participation 1', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
             )
+        if template_type == 'latePayment':
+            # Real history for an unpaid pass has no Paiement row (utils._build_history_rows).
+            base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement']
 
     # Get merged context with activity customizations (preserves email blocks)
     context = get_email_context(activity, template_type, base_context)
@@ -14890,18 +14939,23 @@ def email_preview_live(activity_id):
         base_context['owner_logo_url'] = _owner_logo_url
         # Live-passport link shown below the QR (see static preview above).
         from utils import _get_pass_url
-        base_context['pass_url'] = _get_pass_url(pass_data)
+        # Preview only: a dev DB without SITE_URL makes _get_pass_url() return "", which hides
+        # the CTA button entirely and looks like a template bug. Real sends never take this path.
+        base_context['pass_url'] = _get_pass_url(pass_data) or f"{request.host_url.rstrip('/')}/pass/{pass_data.pass_code}"
         base_context['uses_scheduling'] = bool(activity and activity.uses_scheduling)
 
         # Same {label, date, by} shape as a real send (utils._build_history_rows).
         base_context['history_rows'] = [
-            {'label': 'Création', 'date': '2026-01-09 09:14', 'by': 'kdresdell'},
-            {'label': 'Paiement', 'date': '2026-01-10 11:02', 'by': 'minipass-bot'},
+            {'label': 'Création', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
+            {'label': 'Paiement', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
         ]
         if template_type == 'redeemPass':
             base_context['history_rows'].append(
-                {'label': 'Participation 1', 'date': '2026-01-11 18:30', 'by': 'kdresdell'}
+                {'label': 'Participation 1', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
             )
+        if template_type == 'latePayment':
+            # Real history for an unpaid pass has no Paiement row (utils._build_history_rows).
+            base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement']
 
     # Add special context for signup_payment_first template
     elif template_type == 'signup_payment_first':
@@ -15253,13 +15307,16 @@ def test_email_template(activity_id):
             # Every pass template carries the history table, in the same {label, date, by}
             # shape a real send builds (utils._build_history_rows).
             base_context['history_rows'] = [
-                {'label': 'Création', 'date': '2026-01-09 09:14', 'by': 'kdresdell'},
-                {'label': 'Paiement', 'date': '2026-01-10 11:02', 'by': 'minipass-bot'},
+                {'label': 'Création', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
+                {'label': 'Paiement', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
             ]
             if template_type == 'redeemPass':
                 base_context['history_rows'].append(
-                    {'label': 'Participation 1', 'date': '2026-01-11 18:30', 'by': 'kdresdell'}
+                    {'label': 'Participation 1', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
                 )
+            if template_type == 'latePayment':
+                # Real history for an unpaid pass has no Paiement row (utils._build_history_rows).
+                base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement']
             
             print(f"Added email blocks for {template_type}")
             print(f"   owner_html: {len(base_context.get('owner_html', ''))} chars")

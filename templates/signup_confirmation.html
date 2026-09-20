@@ -67,7 +67,9 @@
       {% endif %}
     </dl>
 
-    {% if awaiting_interac and signup.signup_code %}
+    {# The code is only for the rare case of another unpaid signup with the same name AND amount
+       (same rule as the signup email). Everyone else is matched by name and amount alone. #}
+    {% if awaiting_interac and needs_signup_code and signup.signup_code %}
     {{ code_block(
       value=signup.signup_code,
       label="Code de référence",
@@ -75,6 +77,8 @@
       copied_label="Copié",
       hint="Inscrivez ce code dans le champ « Message au destinataire » de votre virement — pas dans la question de sécurité. Votre place sera confirmée dès la réception du paiement."
     ) }}
+    {% elif awaiting_interac %}
+    <p class="text-secondary small mb-0">Votre place sera confirmée dès la réception du paiement.</p>
     {% elif activity.uses_scheduling and not signup.slot_booking %}
     <p class="text-secondary small mb-0">
       Un lien pour réserver votre séance vous sera envoyé par courriel.
