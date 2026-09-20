@@ -66,6 +66,22 @@ def replay_bus(jsonl_path):
                 event = json.loads(line)
             except json.JSONDecodeError:
                 continue  # a run killed mid-write can leave one torn last line
+            if event.get("kind") == "run_start":
+                _fill_from_catalog(event)
             bus._events.append(event)
             bus._seq = max(bus._seq, event.get("seq", 0))
     return bus
+
+
+def _fill_from_catalog(run_start):
+    """Runs recorded before the dashboard showed catalog text have no title /
+    description / verifies on their rows. Fill them from the current catalog so
+    old runs open in the same layout as new ones."""
+    from .catalog_data import CATALOG
+    from .runner import row_title
+    by_order = {c["order"]: c for c in CATALOG}
+    for row in run_start.get("rows", []):
+        c = by_order.get(row.get("order"))
+        if c and not row.get("summary"):
+            row.update(title=row_title(c), summary=c.get("summary", ""), description=c["description"],
+                       verifies=c["verifies"], viewport=c["viewport"])

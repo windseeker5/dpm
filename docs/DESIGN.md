@@ -238,6 +238,19 @@ The shared shape behind every list page: a toolbar (centered filter tabs, a sear
 ### KPI Card (signature component)
 Desktop: label, a period dropdown, the value, a trend badge, and an edge-to-edge sparkline (Tenant Blue series) — narrow enough that five sit across a row, forced to equal width/height via a grid track regardless of content. Mobile: a deliberately simpler, centered-value card with no dropdown and no chart — not a shrunk desktop card, a different composition for a swipeable context.
 
+## Public Shop Surface
+
+The public storefront (`/shop`, built in `templates/shop.html` on `_public_base.html`) is a **different surface** from the admin. Everything above describes the operations tool; the shop is what a customer browses on their phone, so it is deliberately less flat. This section is the documented exception — the rules above still govern every admin page.
+
+- **Depth.** White cards sit on a page tinted 4% toward the tenant's brand color (`color-mix(in oklab, var(--mp-primary) 4%, var(--mp-background))`). Three shadow tokens, declared at the top of `shop.html`: `--shop-shadow-card`, `--shop-shadow-card-hover` (cards lift 3px on hover) and `--shop-shadow-hero`. They never leave the shop.
+- **Shape.** `--shop-radius-card: 1rem`, `--shop-radius-hero: 1.25rem`. Pills stay `999px`.
+- **Featured activity.** The first activity is a full-width photo with white text over a `--shop-scrim` fade (strong enough that the text stays at 4.5:1 or better even on a pure-white photo, plus a soft text shadow), the place, the starting price ("à partir de" only when passports differ in price) and a white pill button. With no photo it falls back to a brand-color gradient. On a phone the photo runs edge to edge under the header. Other activities and products are cards below it.
+- **Type.** Page-local sizes are allowed here (hero title `clamp(1.75rem, 4vw, 2.5rem)`, section heads `1.25rem`, card titles `1.05rem`), because the shop's headings are not the admin's global scale. The detector's `design-system-font-size` rule is switched off for `shop.html` and `_public_base.html` only, in `.impeccable/config.json`; it stays active everywhere else.
+- **Header.** A full-width white sticky bar (`.mp-shop-header`) with an inner box that lines up with the page; a hairline appears only once content scrolls beneath it. It shows the logo, the shop name with "Boutique" beneath, and the cart — a labelled "Panier" pill on desktop, icon-only on phones, with the item count. `html { scroll-padding-top: 5rem }` keeps keyboard focus from landing under it.
+- **Photos.** New activity photos are saved up to 2000px wide (older ones stay at 1200px) so the hero stays sharp on high-density screens.
+- **Structure.** `_public_base.html` provides the `<main id="main">` landmark; `shop.html` adds a visually hidden `<h1>`.
+- **Still applies.** No dark mode, no purple gradients, no glassmorphism, colors from tokens (`--mp-background`, `--mp-primary`) rather than literals, and `prefers-reduced-motion` removes the hover movement and the header's line fade.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -251,7 +264,7 @@ Desktop: label, a period dropdown, the value, a trend badge, and an edge-to-edge
 - **Don't** use `.container-xl` for page content — it is force-zeroed app-wide and will silently render edge-to-edge.
 - **Don't** center a single-card page in a Bootstrap `row.justify-content-center > col-lg-*` — it detaches the card from a flush-left page header.
 - **Don't** add a decorative icon in front of an ordinary button label — icons are for icon-only buttons or well-established idioms only.
-- **Don't** introduce a second gray scale, a zero-chroma neutral, or a competing shadow/radius value outside the `--mp-*` tokens.
+- **Don't** introduce a second gray scale, a zero-chroma neutral, or a competing shadow/radius value outside the `--mp-*` tokens — the only exception is the `--shop-*` set on the public shop (see Public Shop Surface).
 - **Don't** reach for purple/violet gradients, glassmorphism, or an oversized "rounded-everything" treatment — this system reads as an operations tool, not a marketing surface.
 - **Don't** build a real dark mode from the Style Guide's theme-switcher demo — it is an isolated interaction pattern only, wired to nothing global.
 

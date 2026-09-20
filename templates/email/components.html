@@ -12,12 +12,12 @@
 
 {% set C_INK      = '#15192c' %}
 {% set C_BODY     = '#4a5568' %}
-{% set C_LABEL    = '#8892a4' %}
+{% set C_LABEL    = '#5f6779' %}
 {% set C_LINE     = '#e4e8f0' %}
 {% set C_WELL     = '#f6f6f7' %}
 {% set C_PAID     = '#1a7f4b' %}
 {% set C_PAID_BG  = '#eaf6ef' %}
-{% set C_UNPAID   = '#8a6d1f' %}
+{% set C_UNPAID   = '#7a5f17' %}
 {% set C_UNPAID_BG = '#fff3d6' %}
 
 
@@ -49,9 +49,9 @@
 
 
 {#
-  Payment instructions — a dedicated, self-contained section, same light-grey card and section
-  label convention as section_card() (Séances/Historique): a plain black title above the card,
-  not inside it. The amount and destination are the whole point of a payment-first signup
+  Payment instructions — a dedicated, self-contained section with a plain black title above a
+  light-grey card. It keeps the card, unlike the list sections, because it is a self-contained
+  payment card with the Interac logo, not a list of rows. The amount and destination are the whole point of a payment-first signup
   email, so they get their own titled section, not prose.
 #}
 {% macro interac_block(requested_amount, payment_email, base_url='') -%}
@@ -61,7 +61,7 @@
   <tr>
     <td style="padding:16px 20px 20px 20px;">
       <div style="font-size:13.5px; line-height:1.6; color:{{ C_BODY }}; padding-bottom:12px;">
-        Effectuez un virement Interac avec les détails ci-dessous.
+        Effectuez un virement Interac avec les détails <span style="white-space:nowrap;">ci-dessous</span>.
       </div>
       {% if base_url %}
       <img src="{{ base_url }}/static/images/email/interac-logo.jpg" width="40" height="40" alt="Interac"
@@ -89,14 +89,15 @@
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
        style="width:100%; background-color:#fff8e6; border:1px solid #f0d9a0; border-radius:8px; margin-top:16px;">
   <tr>
-    <td style="padding:18px 20px;">
-      <div style="font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:#8a6d1f;">
+    <td style="padding:16px 20px;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#7a5f17;">
         Code à inclure au virement
       </div>
-      <div style="margin:10px 0; padding:12px; background:#ffffff; border:1px solid #ecd9a8; border-radius:8px; text-align:center; font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size:19px; font-weight:700; letter-spacing:0.04em; color:{{ C_INK }};">
+      {# The code sits directly on the amber card — no white box inside it (no card in a card). #}
+      <div style="margin:8px 0 10px 0; font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size:16px; font-weight:700; letter-spacing:0.04em; color:{{ C_INK }};">
         {{ signup_code }}
       </div>
-      <div style="font-size:14px; line-height:1.6; color:#6b5518;">
+      <div style="font-size:13.5px; line-height:1.6; color:#6b5518;">
         Inscrivez-le dans le champ <strong>« Message au destinataire »</strong> de votre virement —
         ce n'est pas la question de sécurité. Une autre inscription porte le même nom et le même
         montant, ce code nous permet de reconnaître le vôtre.
@@ -130,8 +131,8 @@
 
   One continuous flowing document per email, no boxed "hero" card, no colored accent
   borders. These macros implement it: a single reusable row component (facts, séances,
-  historique all share it), a tight QR frame instead of a well, and section cards that
-  are white with a 1px border rather than filled grey boxes.
+  historique all share it), one outlined QR box, and sections that are a title above hairline
+  rows rather than filled grey boxes.
 
   All four pass-style templates (newPass, redeemPass, latePayment, paymentReceived) now use
   these. The old pass_card()/session_list()/next_session()/history_table() macros were deleted
@@ -192,18 +193,6 @@
 {%- endmacro %}
 
 
-{# Participant identity. `label` is optional — when the caller wraps this in well() (the
-   normal case now), the well's own title already says "Participant" above the card, so
-   rendering it again here would double it up. Kept as a param, not deleted, for a caller
-   that ever needs identity_block() unwrapped. #}
-{% macro identity_block(label, name, email=None, phone=None) -%}
-{% if label %}<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_INK }}; margin:0 0 16px 0;">{{ label }}</div>{% endif %}
-<div style="font-size:22px; font-weight:700; color:{{ C_INK }}; letter-spacing:-0.01em; margin:0 0 3px 0;">{{ name }}</div>
-{% if email %}<div style="font-size:13.5px; color:{{ C_BODY }}; line-height:1.5;">{{ email }}</div>{% endif %}
-{% if phone %}<div style="font-size:13.5px; color:{{ C_BODY }}; line-height:1.5;">{{ phone }}</div>{% endif %}
-{%- endmacro %}
-
-
 {#
   The one row component, reused everywhere: facts, séances, historique — single column
   throughout, never three-across. `items` is a list of {label, value, sub} dicts; `value`
@@ -214,14 +203,14 @@
   section_card() the white card's own border and padding already do both jobs, so that
   block passes outer_border=False, top_margin=0.
 #}
-{% macro rows_block(items, outer_border=True, top_margin=18) -%}
+{% macro rows_block(items, outer_border=True, top_margin=18, muted=False) -%}
 {% if items %}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
        style="width:100%; margin-top:{{ top_margin }}px; {% if outer_border %}border-bottom:1px solid {{ C_LINE }};{% endif %}">
   {% for item in items %}
   <tr>
     <td style="padding:8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} font-size:13.5px; color:{{ C_BODY }}; vertical-align:baseline;">{{ item.label }}</td>
-    <td align="right" style="padding:8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} font-size:13.5px; font-weight:700; color:{{ C_INK }}; text-align:right; vertical-align:baseline; font-variant-numeric:tabular-nums;">
+    <td align="right" style="padding:8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} font-size:13.5px; font-weight:{{ 400 if muted else 700 }}; color:{{ C_BODY if muted else C_INK }}; text-align:right; vertical-align:baseline; font-variant-numeric:tabular-nums;">
       {{ item.value | safe }}
       {% if item.sub %}<div style="font-size:11px; font-weight:400; color:{{ C_LABEL }}; margin-top:2px;">{{ item.sub }}</div>{% endif %}
     </td>
@@ -243,76 +232,48 @@
 
 
 {#
-  QR: a plain white rounded card around only the code itself. Matches templates/pass.html's
-  .pass-qr-frame exactly (background:#fff, border-radius, no border) — a deliberate, explicit
-  choice to match the passport page 1:1, accepting the tradeoff that an email client blocking
-  images by default now shows nothing where the QR should be, instead of a visible empty
-  bordered frame. See docs/EMAIL.md for the decision.
+  QR: one outlined white box — QR centered, pass code beneath it, caption under that. Matches
+  templates/pass.html's .pass-qr-frame. No fill and no inner card.
 
-  qr_src's box_size must stay in step with the frame's display size — see
-  utils.EMAIL_QR_BOX_SIZE — or the browser has to rescale the PNG and it looks muddy.
+  qr_src's box_size must stay in step with the display size (165px) — see
+  utils.EMAIL_QR_BOX_SIZE — or the client has to rescale the PNG and it looks muddy.
 
-  No top margin: this is always called wrapped in well() now (see below), whose own td
-  padding supplies the spacing. A caller must wrap it — this macro no longer renders its own
-  section title (that was removed in favor of well()'s single title-above-card mechanism,
-  used uniformly for Participant/Code d'accès/Séances/Historique so none of them can drift
-  out of sync with each other again).
-
-  Order and alignment match templates/pass.html exactly: caption ABOVE the QR (not below —
-  this was wrong for a full round before being caught), everything left-aligned (not centered
-  — same reason), pass_code below the QR.
+  Always called inside well(), which supplies the section title.
 #}
 {% macro qr_block(qr_src, ref_code=None, caption=None) -%}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
-  {% if caption %}
-  <tr><td align="left" style="padding-bottom:8px; font-size:11px; color:{{ C_BODY }};">{{ caption }}</td></tr>
-  {% endif %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; border:1px solid {{ C_LINE }}; border-radius:10px;">
   <tr>
-    <td align="left" style="padding-bottom:16px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="background-color:#ffffff; border-radius:10px;">
-        <tr>
-          <td style="padding:8px;">
-            <img src="{{ qr_src }}" width="165" height="165" alt="Code QR du passeport" style="display:block; width:165px; height:165px; border:0;">
-          </td>
-        </tr>
-      </table>
+    <td align="center" style="padding:20px 16px;">
+      <img src="{{ qr_src }}" width="165" height="165" alt="Code QR du passeport" style="display:block; width:165px; height:165px; border:0; margin:0 auto;">
+      {% if ref_code %}
+      <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size:16px; font-weight:700; letter-spacing:0.02em; color:{{ C_INK }}; padding-top:14px; text-align:center;">{{ ref_code }}</div>
+      {% endif %}
+      {% if caption %}
+      <div style="font-size:11px; color:{{ C_LABEL }}; padding-top:4px; text-align:center;">{{ caption }}</div>
+      {% endif %}
     </td>
   </tr>
-  {% if ref_code %}
-  <tr><td align="left" style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size:16px; font-weight:700; letter-spacing:0.02em; color:{{ C_INK }};">{{ ref_code }}</td></tr>
-  {% endif %}
 </table>
 {%- endmacro %}
 
 
 {#
-  A titled grey well — content-agnostic version of the pattern below, built via {% call %} so
-  it can hold anything (Participant's identity_block()+rows_block() together, or qr_block()),
-  not just a rows_block() items list. Used uniformly now for every section in a pass-style
-  email — Participant, Code d'accès, Séances, Historique — so none of them can drift out of
-  sync with each other or with templates/pass.html's .pass-well, which this mirrors exactly
-  (same background/radius/padding).
+  A titled section, built via {% call %} so it can hold anything (a rows_block() list or a
+  qr_block()). Used for every section in a pass-style email — Votre passeport, Code d'accès,
+  Séances, Historique — so none can drift apart, or from templates/pass.html's .pass-well.
 
-  The label sits above the card, not inside it — same convention as identity_block()'s old
-  internal "PARTICIPANT" label (now superseded by this), and matches the reference emails
-  (OpenRouter): a plain black section title governs the content below it, the grey box is just
-  where the content happens to live, not where the title lives.
+  The title sits above the content, not inside a box. No fill and no padding: hairlines and
+  spacing do the separating. Filled grey wells and cards-inside-cards were tried and rejected.
 #}
 {% macro well(label) -%}
 <div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_INK }}; margin:16px 0 8px 0;">{{ label }}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{{ C_WELL }}"
-       style="width:100%; background-color:{{ C_WELL }}; border-radius:8px; margin-bottom:16px;">
-  <tr>
-    <td style="padding:16px 20px;">
-      {{ caller() }}
-    </td>
-  </tr>
-</table>
+<div style="margin-bottom:16px;">{{ caller() }}</div>
 {%- endmacro %}
 
-{# Séances/Historique: the items-list-shaped special case of well() above. #}
-{% macro section_card(label, items) -%}
+{# Séances/Historique: the items-list-shaped special case of well() above. `muted` is the quiet
+   Historique style (regular weight, grey). #}
+{% macro section_card(label, items, muted=False) -%}
 {% if items %}
-{% call well(label) %}{{ rows_block(items, outer_border=False, top_margin=0) }}{% endcall %}
+{% call well(label) %}{{ rows_block(items, outer_border=False, top_margin=0, muted=muted) }}{% endcall %}
 {% endif %}
 {%- endmacro %}

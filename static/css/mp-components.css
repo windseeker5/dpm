@@ -1169,12 +1169,8 @@
 @container (max-width: 767.98px) {
   /* Narrow container: collapse to icon-only by default; [data-search-open]
      (toggled by mp-table-toolbar.js) replaces the tabs with the input. The
-     wrapper's box (border/background) collapses along with the input, so
-     the default state reads as a plain icon button, not an empty box. */
-  .mp-table-toolbar__search {
-    border-color: transparent;
-    background: transparent;
-  }
+     wrapper keeps its border/background while collapsed so the icon reads
+     as a tappable button, not a stray glyph. */
   .mp-table-toolbar__search-input {
     width: 0;
     min-width: 0;
@@ -1194,11 +1190,12 @@
      Deliberately NOT flex-grow:1 — a tab set that already fits (the
      common case) must stay at its own natural width and stay centered,
      not get stretched into a big empty box just because it *could* grow. */
-  .mp-table-toolbar {
-    padding-left: 2.25rem;
-  }
+  /* margin-left on the tabs (not padding on .mp-table-toolbar): a container
+     query can't style its own container, so a rule for .mp-table-toolbar in
+     here never matched and wide tab sets slid under the search icon. */
   .mp-filter-tabs {
-    max-width: 100%;
+    margin-left: 2.25rem;
+    max-width: calc(100% - 2.25rem);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;

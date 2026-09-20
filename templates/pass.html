@@ -90,8 +90,8 @@
     }
 
     /* Shared visual language with the email templates (email/components.html) — same object,
-       two surfaces. Section titles (Participant / Séances / Historique) sit above their
-       content, near-black, same treatment as identity_block()/section_card() in the email. */
+       two surfaces. Section titles (Votre passeport / Séances / Historique) sit above their
+       content, near-black, same treatment as well()/section_card() in the email. */
     .pass-section-title {
       margin: 0 0 0.5rem 0;
       font-size: 0.6875rem;
@@ -209,7 +209,7 @@
     }
     .pass-row-sub {
       font-size: 0.6875rem;
-      color: #8892a4;
+      color: #5f6779;
       margin-top: 2px;
     }
     .pass-status-pill {
@@ -227,18 +227,26 @@
       background-color: #eaf6ef;
     }
     .pass-status-pill--unpaid {
-      color: #8a6d1f;
+      color: #7a5f17;
       background-color: #fff3d6;
     }
 
-    /* QR — a plain white card, no border. This is a deliberate divergence from qr_block() in
-       the email, which keeps its tight black-bordered frame — see components.html. */
+    /* QR — one outlined box, code centered, same as qr_block() in the email (components.html).
+       No fill and no card-inside-a-card. */
     .pass-qr-frame {
-      display: inline-block;
-      background-color: #fff;
+      border: 1px solid #e4e8f0;
       border-radius: 10px;
-      padding: 8px;
-      line-height: 0;
+      padding: 1.25rem 1rem;
+      text-align: center;
+    }
+    .pass-qr-frame img {
+      display: block;
+      margin: 0 auto;
+    }
+    .pass-qr-caption {
+      font-size: 0.6875rem;
+      color: #5f6779;
+      margin-top: 0.25rem;
     }
     .pass-qr-code {
       font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
@@ -246,19 +254,24 @@
       font-weight: 700;
       letter-spacing: 0.02em;
       color: #15192c;
-      margin-top: 0.75rem;
+      margin-top: 0.875rem;
     }
 
-    /* Séances / Historique — same light neutral-grey well as section_card() in the email, no
-       border, title sits above the box rather than inside it. */
+    /* Sections — no grey fill, just a title above and hairline rows, same as well() /
+       section_card() in the email. The list-group rows carry px-3 (!important), so it is reset
+       here to keep them flush with the section title. */
     .pass-well {
-      background-color: #f6f6f7;
-      border-radius: 8px;
-      padding: 0.25rem 1rem;
+      padding: 0;
     }
     .pass-well .list-group-item {
       background-color: transparent;
-      border-color: rgba(0, 0, 0, 0.06);
+      border-color: #e4e8f0;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+    .pass-well--quiet .list-group-item .fw-semibold {
+      font-weight: 400 !important;
+      color: #4a5568;
     }
     .pass-well form,
     .pass-well p {
@@ -405,18 +418,22 @@
              Mes séances below), but the count is still worth surfacing next to Crédits. #}
           {% set upcoming = my_bookings | rejectattr('is_past') | rejectattr('attended_dt') | list %}
 
-          {# Participant identity, then a grey card holding Facts + QR together — same
-             content and order as identity_block() / rows_block() / qr_block() in the email,
-             laid out left-aligned in one card instead of the email's separate rows. #}
-          <h3 class="pass-section-title">Participant</h3>
+          {# One list, hairline rows, participant first — same content and order as the email's
+             "Votre passeport" section (rows_block()). The name is not repeated as a heading. #}
+          <h3 class="pass-section-title">Votre passeport</h3>
           <div class="pass-well">
-            <div class="pass-value" style="font-size: 1.375rem;">{{ hockey_pass.user.name }}</div>
-            {% if hockey_pass.user.email %}<div class="text-muted small">{{ hockey_pass.user.email }}</div>{% endif %}
-            {% if hockey_pass.user.phone_number %}<div class="text-muted small">{{ hockey_pass.user.phone_number }}</div>{% endif %}
 
             {% set total_credits = hockey_pass.passport_type.sessions_included if hockey_pass.passport_type else None %}
             {% set location = (activity.location_address_formatted or activity.location_address_raw) if activity else None %}
-            <div class="pass-rows">
+            <div class="pass-rows" style="margin-top: 0;">
+              <div class="pass-row">
+                <span class="pass-row-label">Participant</span>
+                <span class="pass-row-value-group">
+                  <span class="pass-row-value">{{ hockey_pass.user.name }}</span>
+                  {% if hockey_pass.user.email %}<span class="pass-row-sub">{{ hockey_pass.user.email }}</span>{% endif %}
+                  {% if hockey_pass.user.phone_number %}<span class="pass-row-sub">{{ hockey_pass.user.phone_number }}</span>{% endif %}
+                </span>
+              </div>
               <div class="pass-row">
                 <span class="pass-row-label">Montant</span>
                 {# French formatting, matching utils._fr_money and the email's money() macro —
@@ -472,15 +489,15 @@
              section on the page (title above, well below), matching Séances/Historique. #}
           <h3 class="pass-section-title mt-4">Code d'accès</h3>
           <div class="pass-well">
-            <div class="text-muted small mb-2">Présentez ce code ou la référence à l'accueil</div>
             {# One image, sized by CSS at the breakpoint. Two <img> tags meant the browser
                decoded the same QR twice. #}
             <div class="pass-qr-frame">
               <img src="data:image/png;base64,{{ qr_data }}"
                    alt="Code QR du passeport"
                    width="140" height="140" />
+              <div class="pass-qr-code">{{ hockey_pass.pass_code }}</div>
+              <div class="pass-qr-caption">Présentez ce code ou la référence à l'accueil</div>
             </div>
-            <div class="pass-qr-code">{{ hockey_pass.pass_code }}</div>
           </div>
 
           {# Séances (activities that use scheduling) — nested inside this same continuous
@@ -494,7 +511,7 @@
           {% if my_bookings %}
           <div class="list-group list-group-flush mb-3">
             {% for booking in my_bookings %}
-            <div class="list-group-item d-flex align-items-center justify-content-between px-3">
+            <div class="list-group-item d-flex align-items-center justify-content-between">
               <div>
                 <div class="fw-bold">{{ format_slot_label(booking.slot) }}</div>
                 {% if booking.attended_dt %}
@@ -517,12 +534,12 @@
             {% endfor %}
           </div>
           {% else %}
-          <p class="text-muted px-3">Aucune séance réservée pour le moment.</p>
+          <p class="text-muted">Aucune séance réservée pour le moment.</p>
           {% endif %}
 
           {% if hockey_pass.uses_remaining > 0 %}
             {% if bookable_slots %}
-            <form method="POST" class="px-3"
+            <form method="POST"
                   action="{{ url_for('book_slot_from_pass', pass_code=hockey_pass.pass_code) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <label class="form-label" for="slotSelect">
@@ -545,7 +562,7 @@
             </form>
             {% endif %}
           {% else %}
-          <p class="text-muted mb-0 px-3">
+          <p class="text-muted mb-0">
             Vous avez utilisé tous vos crédits. Contactez l'organisateur pour en obtenir d'autres.
           </p>
           {% endif %}
@@ -555,7 +572,7 @@
 
           {% if history %}
           <h3 class="pass-section-title mt-4">Historique</h3>
-          <div class="pass-well">
+          <div class="pass-well pass-well--quiet">
 
         {# Two lines per row, not a three-column table: event and date on one line with the
            operator beneath. A 3-column table is unreadable at 320px, and this matches the
@@ -565,7 +582,7 @@
           <div class="list-group-item px-3">
             <div class="d-flex justify-content-between align-items-start gap-2">
               <span class="fw-semibold">Création</span>
-              <span class="text-muted small text-nowrap">{{ history.created }}</span>
+              <span class="text-muted small text-nowrap">{{ history.created | fr_history_date }}</span>
             </div>
             {% if history.created_by %}<div class="text-muted small">par {{ history.created_by | trim_email }}</div>{% endif %}
           </div>
@@ -575,7 +592,7 @@
             <div class="d-flex justify-content-between align-items-start gap-2">
               <span class="fw-semibold">Paiement</span>
               <span class="text-muted small text-nowrap">
-                {%- if history.paid %}{{ history.paid }}{% else %}En attente{% endif -%}
+                {%- if history.paid %}{{ history.paid | fr_history_date }}{% else %}En attente{% endif -%}
               </span>
             </div>
             {% if history.paid and history.paid_by %}<div class="text-muted small">par {{ history.paid_by | trim_email }}</div>{% endif %}
@@ -587,7 +604,7 @@
               {# "Participation N", matching the email. "Activité #N" named nothing the
                  customer recognises. #}
               <span class="fw-semibold">Participation {{ loop.index }}</span>
-              <span class="text-muted small text-nowrap">{{ r.date }}</span>
+              <span class="text-muted small text-nowrap">{{ r.date | fr_history_date }}</span>
             </div>
             {% if r.by %}<div class="text-muted small">par {{ r.by | trim_email }}</div>{% endif %}
           </div>
@@ -597,7 +614,7 @@
           <div class="list-group-item px-3">
             <div class="d-flex justify-content-between align-items-start gap-2">
               <span class="fw-semibold">Expiré</span>
-              <span class="text-muted small text-nowrap">{{ history.expired }}</span>
+              <span class="text-muted small text-nowrap">{{ history.expired | fr_history_date }}</span>
             </div>
           </div>
           {% endif %}

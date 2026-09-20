@@ -11,6 +11,18 @@ from .catalog_data import CATALOG
 SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts")
 
 
+def row_title(row):
+    """Short plain name for the dashboard. Add `title="..."` to a catalog row to
+    choose it yourself; otherwise it is derived from the script filename
+    ('02_signup_payment_first.py' -> 'Signup payment first')."""
+    if row.get("title"):
+        return row["title"]
+    stem = os.path.splitext(row["script"] or "")[0]
+    words = stem.split("_", 1)[1] if "_" in stem else stem
+    words = words.replace("_", " ").strip()
+    return (words[:1].upper() + words[1:]) if words else row["area"]
+
+
 def row_dir_name(order, script_name):
     return f"{order}_{os.path.splitext(script_name)[0]}"
 
@@ -101,7 +113,11 @@ def run_all(only=None, money_confirmed=False, bus=None, run_id=None, keep_traces
             base_url=config.BASE_URL,
             headless=config.HEADLESS,
             rows=[
-                {"order": r["order"], "area": r["area"], "script": r["script"], "money": r["money"]}
+                {
+                    "order": r["order"], "area": r["area"], "script": r["script"], "money": r["money"],
+                    "title": row_title(r), "summary": r.get("summary", ""), "description": r["description"],
+                    "verifies": r["verifies"], "viewport": r["viewport"],
+                }
                 for r in planned
             ],
         )

@@ -29,7 +29,7 @@
 {% set accent = accent | default('#206bc4') %}
 {% set c_ink = '#15192c' %}
 {% set c_body = '#4a5568' %}
-{% set c_label = '#8892a4' %}
+{% set c_label = '#5f6779' %}
 {% set c_line = '#e4e8f0' %}
 {% set c_page = '#f1f4f9' %}
 <!DOCTYPE html>
@@ -59,7 +59,7 @@
        the pass block is single-column by construction rather than a grid that has to
        collapse at a breakpoint. */
     @media only screen and (max-width: 600px) {
-      .mp-shell    { width: 100% !important; margin: 12px auto !important; border-radius: 0 !important; }
+      .mp-shell    { width: 100% !important; margin: 12px auto !important; border-radius: 0 !important; border-left: 0 !important; border-right: 0 !important; }
       .mp-pad      { padding-left: 20px !important; padding-right: 20px !important; }
       .mp-btn a    { display: block !important; }
     }
@@ -147,7 +147,7 @@
                 {% if privacy_url %}<a href="{{ privacy_url }}" style="color:{{ c_label }}; text-decoration:underline;">Confidentialité</a>{% endif %}
               </div>
               {% if activity_name %}
-              <div style="padding-top:6px; color:#a8b0bf;">Vous recevez ce courriel car vous êtes inscrit à {{ activity_name }}.</div>
+              <div style="padding-top:6px; color:{{ c_label }};">Vous recevez ce courriel car vous êtes inscrit à {{ activity_name }}.</div>
               {% endif %}
             </td>
           </tr>

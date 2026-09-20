@@ -2,63 +2,195 @@
 {% from 'macros/status_mark.html' import status_mark %}
 
 {% block title %}Boutique{% endblock %}
+{% block shell_class %} mp-shop-shell--wide{% endblock %}
+
+{% block head %}
+<style>
+  /* Slightly tinted page so the white cards read as raised; the tint follows the brand color. */
+  :root {
+    /* Shop surfaces: the shop is the public storefront, so it is allowed more depth than the
+       admin (see "Public Shop Surface" in docs/DESIGN.md). Everything here is a token. */
+    --shop-radius-card: 1rem;
+    --shop-radius-hero: 1.25rem;
+    --shop-shadow-card: 0 1px 2px rgb(0 0 0 / .05), 0 6px 18px rgb(0 0 0 / .07);
+    --shop-shadow-card-hover: 0 2px 4px rgb(0 0 0 / .06), 0 14px 30px rgb(0 0 0 / .12);
+    --shop-shadow-hero: 0 1px 2px rgb(0 0 0 / .06), 0 12px 32px rgb(0 0 0 / .14);
+    --shop-on-image: #fff;
+    --shop-on-image-foreground: #111;
+    /* Fade behind the hero text. Starts early and gets strong enough that white text stays >= 4.5:1
+       even on a pure-white photo (sky, snow): ~.57 black behind the description, ~.85 at the bottom edge. */
+    --shop-scrim: linear-gradient(180deg, rgb(0 0 0 / 0) 15%, rgb(0 0 0 / .5) 45%, rgb(0 0 0 / .85) 100%);
+    --shop-text-shadow: 0 1px 2px rgb(0 0 0 / .45);
+  }
+  body { background: color-mix(in oklab, var(--mp-primary) 4%, var(--mp-background)); }
+
+  .mp-shop-section { margin-top: 2.5rem; }
+  .mp-shop-section__head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+  .mp-shop-section__head h2 { margin: 0; font-size: 1.25rem; font-weight: 650; }
+  .mp-shop-section__count { color: var(--mp-muted-foreground); font-size: .875rem; }
+
+  /* Featured activity: big photo, text over a dark fade so it stays readable on any image. */
+  .mp-shop-feature { position: relative; display: flex; align-items: flex-end; min-height: 32rem; overflow: hidden;
+    border-radius: var(--shop-radius-hero); color: var(--shop-on-image); text-decoration: none;
+    background: linear-gradient(160deg, color-mix(in oklab, var(--mp-primary) 70%, var(--mp-background)), var(--mp-primary));
+    box-shadow: var(--shop-shadow-hero); }
+  .mp-shop-feature:hover { color: var(--shop-on-image); }
+  .mp-shop-feature:focus-visible { outline: 3px solid var(--mp-primary); outline-offset: 3px; }
+  .mp-shop-feature__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .6s ease; }
+  .mp-shop-feature:hover .mp-shop-feature__img { transform: scale(1.03); }
+  .mp-shop-feature::after { content: ""; position: absolute; inset: 0; background: var(--shop-scrim); }
+  .mp-shop-feature__body { position: relative; z-index: 1; text-shadow: var(--shop-text-shadow); display: flex; flex-direction: column; gap: .5rem; padding: 2rem; max-width: 40rem; }
+  .mp-shop-feature__title { margin: 0; font-size: clamp(1.75rem, 4vw, 2.5rem); line-height: 1.1; font-weight: 700; text-wrap: balance; }
+  .mp-shop-feature__text { margin: 0; opacity: .92; }
+  .mp-shop-feature__place { display: inline-flex; align-items: center; gap: .35rem; font-size: .9rem; opacity: .95; }
+  .mp-shop-feature__cta { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem 1.25rem; margin-top: .75rem; }
+  .mp-shop-feature__btn { background: var(--shop-on-image); color: var(--shop-on-image-foreground); font-weight: 650; font-size: .95rem; padding: .65rem 1.25rem; border-radius: 999px;
+    text-shadow: none; transition: transform .2s ease; }
+  .mp-shop-feature:hover .mp-shop-feature__btn { transform: translateY(-1px); }
+  .mp-shop-price { font-size: .9rem; }
+  .mp-shop-price strong { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+
+  .mp-shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 1.5rem; }
+  .mp-shop-card { display: flex; flex-direction: column; overflow: hidden; background: var(--mp-background); border-radius: var(--shop-radius-card); color: inherit; text-decoration: none;
+    box-shadow: var(--shop-shadow-card); transition: transform .2s ease, box-shadow .2s ease; }
+  .mp-shop-card:hover { color: inherit; transform: translateY(-3px); box-shadow: var(--shop-shadow-card-hover); }
+  .mp-shop-card:focus-visible { outline: 2px solid var(--mp-primary); outline-offset: 3px; }
+  .mp-shop-card .mp-shop-media { aspect-ratio: 16 / 10; }
+  .mp-shop-card__body { display: flex; flex-direction: column; gap: .25rem; padding: 1rem 1.125rem 1.125rem; }
+  .mp-shop-card__title { margin: 0; font-size: 1.05rem; font-weight: 600; }
+  .mp-shop-card__meta { color: var(--mp-muted-foreground); font-size: .875rem; }
+  .mp-shop-card .mp-shop-price { margin-top: .5rem; }
+  .mp-shop-card__price { font-weight: 700; font-variant-numeric: tabular-nums; margin-top: .25rem; }
+
+  .mp-shop-empty { display: flex; flex-direction: column; align-items: center; gap: .5rem; text-align: center; padding: 5rem 1rem 6rem; }
+  .mp-shop-empty h1 { margin: 0; font-size: 1.3rem; font-weight: 650; }
+  .mp-shop-empty p { margin: 0; max-width: 34ch; color: var(--mp-muted-foreground); }
+
+  .mp-shop-footer { margin-top: 3rem; background: var(--mp-background); border-top: 1px solid var(--mp-border); }
+  .mp-shop-footer__in { max-width: 1080px; margin-inline: auto; padding: 1.5rem 1rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 2rem;
+    font-size: .875rem; color: var(--mp-muted-foreground); }
+  .mp-shop-footer__in strong { color: var(--mp-foreground); }
+  /* Padding + equal negative margin = a 44px-tall tap area with no change to the layout. */
+  .mp-shop-footer__in a { color: var(--mp-foreground); font-weight: 600; display: inline-block; padding: .75rem .5rem; margin: -.75rem -.5rem; }
+
+  @media (max-width: 575.98px) {
+    .mp-shop-grid { gap: 1.25rem; }
+    /* On a phone the photo runs edge to edge, right under the header. */
+    .mp-shop-feature { margin: -1.5rem -1rem 0; border-radius: 0; min-height: 30rem; box-shadow: none; }
+    .mp-shop-feature__img { object-position: 35% 40%; }
+    .mp-shop-feature__body { padding: 1.25rem 1rem; }
+    /* Keep the button and the price on one row down to ~340px content width. */
+    .mp-shop-feature__cta { gap: .5rem 1rem; }
+    .mp-shop-feature__btn { padding: .65rem 1rem; }
+    .mp-shop-footer__in { flex-direction: column; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mp-shop-feature__img, .mp-shop-feature__btn, .mp-shop-card { transition: none; }
+    .mp-shop-feature:hover .mp-shop-feature__img, .mp-shop-feature:hover .mp-shop-feature__btn, .mp-shop-card:hover { transform: none; }
+  }
+</style>
+{% endblock %}
+
+{% macro price_line(meta) %}
+  {% if meta.from_price is not none %}
+    <span class="mp-shop-price">
+      {% if meta.from_price == 0 %}<strong>Gratuit</strong>
+      {% else %}{{ 'à partir de ' if meta.price_varies else '' }}<strong>{{ meta.from_price | ca_money }}</strong>{% endif %}
+    </span>
+  {% endif %}
+{% endmacro %}
 
 {% block content %}
+{% if activities or products %}
+<h1 class="visually-hidden">Boutique {{ (settings.get('ORG_NAME') if settings else None) or ORG_NAME }}</h1>
+{% endif %}
 {% if activities %}
-<section class="mb-4">
-  <h2 class="h3 mb-3">Activités</h2>
-  <div class="row row-cols-1 row-cols-sm-2 g-3">
-    {% for activity in activities %}
-    <div class="col">
-      <a href="{{ url_for('shop_activity', activity_id=activity.id) }}" class="card card-link h-100 text-reset">
-        {% if activity.image_filename %}
-        <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
-             class="mp-shop-media" alt="{{ activity.name }}">
-        {% else %}
-        <div class="mp-shop-media mp-shop-media-empty" aria-hidden="true"><i class="ti ti-calendar-event"></i></div>
-        {% endif %}
-        <div class="card-body">
-          <h3 class="card-title h4 mb-1">{{ activity.name }}</h3>
-          {% if activity.description %}
-          <p class="text-secondary small mb-0">{{ activity.description|truncate(90) }}</p>
-          {% endif %}
-        </div>
-      </a>
+{% set featured = activities[0] %}
+{% set featured_meta = activity_meta[featured.id] %}
+<a href="{{ url_for('shop_activity', activity_id=featured.id) }}" class="mp-shop-feature"
+   aria-labelledby="shop-feature-title" aria-describedby="shop-feature-text shop-feature-place">
+  {% if featured.image_filename %}
+  {# The hero is the largest thing on screen: load it first. Its box has a fixed min-height, so no layout shift. #}
+  <img class="mp-shop-feature__img" src="{{ url_for('static', filename='uploads/activity_images/' + featured.image_filename) }}" alt="" fetchpriority="high" decoding="async">
+  {% endif %}
+  <div class="mp-shop-feature__body">
+    <h2 class="mp-shop-feature__title" id="shop-feature-title">{{ featured.name }}</h2>
+    {% if featured.description %}<p class="mp-shop-feature__text" id="shop-feature-text">{{ featured.description|truncate(140) }}</p>{% endif %}
+    {% if featured_meta.location %}
+    <span class="mp-shop-feature__place" id="shop-feature-place"><i class="ti ti-map-pin" aria-hidden="true"></i>{{ featured_meta.location }}</span>
+    {% endif %}
+    <div class="mp-shop-feature__cta">
+      <span class="mp-shop-feature__btn">Voir les passeports</span>
+      {{ price_line(featured_meta) }}
     </div>
+  </div>
+</a>
+
+{% if activities|length > 1 %}
+<section class="mp-shop-section">
+  <div class="mp-shop-section__head">
+    <h2>Autres activités</h2>
+    <span class="mp-shop-section__count">{{ activities|length - 1 }} {{ 'activité' if activities|length == 2 else 'activités' }}</span>
+  </div>
+  <div class="mp-shop-grid">
+    {% for activity in activities[1:] %}
+    {% set meta = activity_meta[activity.id] %}
+    <a href="{{ url_for('shop_activity', activity_id=activity.id) }}" class="mp-shop-card">
+      {% if activity.image_filename %}
+      <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}" class="mp-shop-media" alt="" loading="lazy" decoding="async">
+      {% else %}
+      <div class="mp-shop-media mp-shop-media-empty" aria-hidden="true"><i class="ti ti-calendar-event"></i></div>
+      {% endif %}
+      <div class="mp-shop-card__body">
+        <h3 class="mp-shop-card__title">{{ activity.name }}</h3>
+        {% if meta.location %}<span class="mp-shop-card__meta">{{ meta.location }}</span>{% endif %}
+        {{ price_line(meta) }}
+      </div>
+    </a>
     {% endfor %}
   </div>
 </section>
 {% endif %}
+{% endif %}
 
 {% if products %}
-<section class="mb-4">
-  <h2 class="h3 mb-3">Produits</h2>
-  <div class="row row-cols-1 row-cols-sm-2 g-3">
+<section class="mp-shop-section">
+  <div class="mp-shop-section__head">
+    <h2>Produits</h2>
+    <span class="mp-shop-section__count">{{ products|length }} {{ 'produit' if products|length == 1 else 'produits' }}</span>
+  </div>
+  <div class="mp-shop-grid">
     {% for product in products %}
-    <div class="col">
-      <a href="{{ url_for('shop_product', product_id=product.id) }}" class="card card-link h-100 text-reset">
-        {% if product.photo_filename %}
-        <img src="{{ url_for('static', filename='uploads/product_images/' + product.photo_filename) }}"
-             class="mp-shop-media" alt="{{ product.name }}">
-        {% else %}
-        <div class="mp-shop-media mp-shop-media-empty" aria-hidden="true"><i class="ti ti-photo"></i></div>
-        {% endif %}
-        <div class="card-body">
-          <h3 class="card-title h4 mb-1">{{ product.name }}</h3>
-          <div class="fw-bold">{{ product.price | ca_money }}</div>
-        </div>
-      </a>
-    </div>
+    <a href="{{ url_for('shop_product', product_id=product.id) }}" class="mp-shop-card">
+      {% if product.photo_filename %}
+      <img src="{{ url_for('static', filename='uploads/product_images/' + product.photo_filename) }}" class="mp-shop-media" alt="" loading="lazy" decoding="async">
+      {% else %}
+      <div class="mp-shop-media mp-shop-media-empty" aria-hidden="true"><i class="ti ti-photo"></i></div>
+      {% endif %}
+      <div class="mp-shop-card__body">
+        <h3 class="mp-shop-card__title">{{ product.name }}</h3>
+        <div class="mp-shop-card__price">{{ product.price | ca_money }}</div>
+      </div>
+    </a>
     {% endfor %}
   </div>
 </section>
 {% endif %}
 
 {% if not activities and not products %}
-<div class="text-center py-5">
+<div class="mp-shop-empty">
   {{ status_mark("ti-shopping-bag", class_="mb-3") }}
-  <h1 class="h3 mb-1">La boutique est vide</h1>
-  <p class="text-secondary mb-0">Aucun article n'est offert pour le moment. Revenez bientôt.</p>
+  <h1>La boutique ouvre bientôt</h1>
+  <p>{{ (settings.get('ORG_NAME') if settings else None) or ORG_NAME }} prépare ses premières offres. Revenez nous voir dans quelques jours.</p>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block after_shell %}
+<footer class="mp-shop-footer">
+  <div class="mp-shop-footer__in">
+    <strong>{{ (settings.get('ORG_NAME') if settings else None) or ORG_NAME }}</strong>
+    {% if payment_email %}<span>Une question ? <a href="mailto:{{ payment_email }}">Écrivez-nous</a></span>{% endif %}
+  </div>
+</footer>
 {% endblock %}

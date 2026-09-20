@@ -254,8 +254,11 @@
               <div id="shop-enabled-content"{% if settings.get('SHOP_ENABLED') != 'True' %} class="d-none"{% endif %}>
                 <label class="mp-label" for="shopUrl">Shop Link</label>
                 <div class="input-group">
-                  <input type="text" class="form-control" id="shopUrl" value="{{ url_for('shop', _external=True) }}" readonly>
+                  <input type="text" class="form-control" id="shopUrl" value="{{ shop_url }}" readonly>
                   {{ button("", variant="outline", id="copy-shop-url", size="icon", icon="ti-copy", attrs={"aria-label": "Copy shop URL"}) }}
+                </div>
+                <div class="form-text mt-2">
+                  <a href="{{ shop_url }}" target="_blank" rel="noopener">Open your shop in a new tab</a>
                 </div>
                 <div class="form-text mt-3">
                   Choose which activities appear in the shop from each activity's edit page.

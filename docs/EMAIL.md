@@ -60,12 +60,11 @@ Top to bottom, every pass-style email follows this order:
 1. **Photo header band** — real activity photo, full-width, followed by a solid ink bar with eyebrow + activity name. No overlay, no gradient, no `position:absolute`. See the warning below.
 2. **Org identity** — logo (56px) + org name, plain row, no card.
 3. **Admin message** — one flowing paragraph of admin-edited text. `<strong>` renders near-black against grey body text (`.mp-message strong` in `_base.html`).
-4. **Participant** — wrapped in `well('Participant')`: uppercase label, name, email/phone, then Facts.
-5. **Facts** — Montant → Statut (pill) → Crédits → Lieu, label left / value right on one line. Do not also repeat the location in the message paragraph; it is redundant with the Lieu row.
-6. **Code d'accès** — wrapped in `well("Code d'accès")`: caption, then QR in a plain white rounded card, then pass code. All left-aligned.
-7. **Séances** (conditional) and **Historique** (conditional) — `section_card()`, title above a light grey well.
-8. **Payment instructions** (`signup_payment_first` only) — same title-above-card convention, with the Interac logo.
-9. **CTA button** — full-width, ink background. See CTA rules below.
+4. **Votre passeport** — `well('Votre passeport')` holding one `rows_block()`: Participant (name, email underneath) → Montant → Statut (pill) → Crédits → Lieu, label left / value right, hairline between rows. No grey fill, and the name is not repeated as a heading. Do not also repeat the location in the message paragraph; it is redundant with the Lieu row.
+5. **Code d'accès** — `well("Code d'accès")` holding `qr_block()`: one outlined white box, QR centered, pass code below it, caption under that.
+6. **CTA button** — full-width, ink background, directly under the QR so the action is above the fold. See CTA rules below. (`latePayment` has no QR, so its button goes directly under the Votre passeport list, above Historique — the whole email is one action and it must be on the first phone screen.) `latePayment` also shows `interac_block()` ("Instructions de paiement": amount + destination address) between the list and the button, only when a payment address is configured; the default message deliberately keeps the address in its sentence too. The address appears twice on purpose: recipients skim, and seeing it in both places makes them more likely to act. Do not "clean up" the repetition.
+7. **Séances** (conditional) and **Historique** (conditional) — `section_card()`, title above hairline rows. Historique passes `muted=True`: regular weight, grey text, same 13.5px size.
+8. **Payment instructions** (`signup_payment_first` only) — `interac_block()` keeps its own light-grey card (a payment card with the Interac logo, not a list section), with the Interac logo.
 
 ### ⚠️ Never overlay content on the photo
 
@@ -77,9 +76,16 @@ Do not "fix" this back toward an overlay — it will break in real inboxes again
 
 - No dark mode.
 - No decorative chips, pills, dots, or colored accent bars. Color only where semantically load-bearing (the paid/unpaid pill).
-- Type scale inside the card: 11 / 13.5 / 16 / 22px, weights 400 and 700.
+- Type scale inside the card: 11 / 13.5 / 16 / 22px, weights 400 and 700. Do not add in-between sizes (12, 12.5…) — mute with weight and color instead.
+- No filled grey boxes and no card inside a card. A section is a title above hairline rows; the QR is the one outlined box.
+- The unpaid pill text is `#7a5f17` on `#fff3d6` (5.5:1). The earlier `#8a6d1f` measured 4.44:1 and failed. `pass.html`'s `.pass-status-pill--unpaid` uses the same value.
+- Muted text is `#5f6779` (`C_LABEL` / `c_label`). It clears 4.5:1 on both the white card and the `#f1f4f9` page behind the footer; the earlier `#8892a4` and `#a8b0bf` did not.
 - No `position:absolute` or `position:relative` in email HTML. Ever.
 - Ground every test in real DB data. Invented content hid three separate real bugs.
+
+### When the signup reference code shows
+
+Only when another unpaid signup in the same activity has the **same name and the same amount** (`has_conflicting_unpaid_signup()`, `utils.py`). Every signup has a code stored, but it is shown to the customer only in that case. The signup email and the web confirmation page (`signup_confirmation.html`) must both follow this rule; the page passes `earlier_only=True` so the first person is never shown a code after a later duplicate appears. The email *preview* forces the code on so admins can see the layout.
 
 ### CTA rules
 
@@ -89,6 +95,8 @@ Do not "fix" this back toward an overlay — it will break in real inboxes again
 | `latePayment` | `button(pass_url, cta_text or 'Effectuer le paiement')` |
 | `survey_invitation` | `button(survey_url, 'Répondre au formulaire')` |
 | `signup`, `signup_payment_first` | No CTA button |
+
+`signup` shows a short `Votre demande` recap list (participant + email, activity, status "En attente d'approbation") under the message. It only uses fields every real send has (`user_name`, `user_email`, `activity_name`), and escapes them with `| e` because `rows_block()` renders values with `|safe`.
 
 - `cta_text` **is** read from context — do not hardcode labels. `latePayment`'s label is deliberately different, since that email is about an unpaid pass with nothing to view yet.
 - `cta_url` exists in `config/email_defaults.json` and has sanitization behind it (`utils.py:380`) but is **deliberately never used**. `href` is always the real per-passport `pass_url` (or `survey_url`), never a generic `/my-passes` default. Every call site carries a comment saying so — do not "helpfully" wire it in.
@@ -100,17 +108,16 @@ Do not "fix" this back toward an overlay — it will break in real inboxes again
 | `money(amount)` | Quebec-French amount formatting: `50,00 $` |
 | `credit_line(remaining, total=None)` | "1 sur 5", or bare "1" when no real session total exists |
 | `interac_block(requested_amount, payment_email, base_url='')` | Interac transfer instructions card + logo |
-| `signup_code_notice(signup_code)` | Yellow warning card for the payment reference code, shown only on naming conflict |
+| `signup_code_notice(signup_code)` | Yellow warning card for the payment reference code, shown only on naming conflict. The code sits directly on the amber card (no white box inside it), 16px mono, on the documented type scale |
 | `button(href, label, accent=None)` | Full-width solid-ink CTA (`accent` is ignored — kept for old call sites) |
 | `photo_band(hero_image_url, eyebrow, headline, is_photo=True)` | Hero image + solid ink caption bar; branches on `is_photo` |
-| `identity_block(label, name, email=None, phone=None)` | Participant identity; `label=None` skips the title (supplied by `well()`) |
-| `rows_block(items, outer_border=True, top_margin=18)` | The label/value row list used by Facts, Séances and Historique |
+| `rows_block(items, outer_border=True, top_margin=18, muted=False)` | The label/value row list used by Facts, Séances and Historique. Items are `{label, value, sub}`; `muted=True` is the quiet Historique style |
 | `status_pill(paid)` | "Payé"/"Non payé" pill — the one place color is load-bearing |
-| `qr_block(qr_src, ref_code=None, caption=None)` | Caption → QR white rounded card → pass code, left-aligned |
-| `well(label)` | Generic title-above-grey-card wrapper, used via `{% call %}` |
-| `section_card(label, items)` | `well()` + `rows_block()` convenience wrapper |
+| `qr_block(qr_src, ref_code=None, caption=None)` | One outlined box: QR → pass code → caption, all centered |
+| `well(label)` | Section title above its content, used via `{% call %}`. No fill, no padding |
+| `section_card(label, items, muted=False)` | `well()` + `rows_block()` convenience wrapper |
 
-Deleted in the redesign — if you see these referenced anywhere, the reference is stale: `pass_card()`, `session_list()`, `next_session()`, `history_table()`.
+Deleted in the redesign — if you see these referenced anywhere, the reference is stale: `pass_card()`, `session_list()`, `next_session()`, `history_table()`, `identity_block()` (the participant is now the first row of the Facts list).
 
 ## Hero image resolution
 
@@ -275,7 +282,7 @@ All 7 templates were unified into one visual language, and `templates/pass.html`
 - **`credit_line()` "4 sur 1" bug** — a quantity-purchase passport type (`sessions_included=1`, multiple tickets) showed a nonsensical fraction. Now only shows the fraction when the total is a real multi-session count.
 - **`approve_and_create_pass()` never set `paid_date`** (`app.py` ~2274) — it copied `paid=signup.paid` onto the new Passport but not `paid_date`/`marked_paid_by`/`payment_method`, and `get_pass_history_data()` only fills the Historique "Paiement" row when both `paid` and `paid_date` are truthy. Payment-first passports showed "Payé" in Facts but "En attente" in Historique forever. Fixed at creation time.
 
-**Accepted tradeoff, do not re-litigate as a defect:** `qr_block()` dropped its black border for a plain white card, matching the passport page. An email client that blocks images now shows nothing where the QR would be, instead of an empty frame. This was a knowing call.
+**Accepted tradeoff, do not re-litigate as a defect:** the QR sits in a thin light-grey outline rather than a heavy frame, so an email client that blocks images shows an empty outlined box with the pass code still readable beneath it. The pass code text is the fallback; the QR is a convenience.
 
 ### Deliberate divergences from `templates/pass.html`
 
@@ -284,12 +291,17 @@ The passport page and the emails share a design language but are **not** identic
 | Element | Passport page | Email | Why |
 |---|---|---|---|
 | Org logo | Overlaid on the hero photo with a drop-shadow glow | Plain row below the ink bar | Gmail has no `position:absolute`; `filter:drop-shadow` is unsupported in Outlook/Windows Mail |
-| QR card | White rounded card, no border | Same | Ported deliberately |
-| Facts rows | Label left / value right | Same | Passport drifted, then came back |
+| QR box | Outlined box, centered (`.pass-qr-frame`) | Same (`qr_block()`) | Kept in step (Sept 2026 lean pass) |
+| Section style | Title above hairline rows, no fill (`.pass-well`) | Same (`well()`) | Kept in step |
+| Facts rows | Participant first, then Montant → Lieu, label left / value right | Same | Kept in step |
+| Historique | Regular weight, grey (`.pass-well--quiet`) | `muted=True` | Kept in step |
+| Button under QR | n/a (the page is the destination) | `button()` right below QR | The email's job is to send people here |
 
 The org-logo overlay is a permanent, deliberate divergence — not an oversight to be "fixed."
 
 ## Common traps
+
+- The preview route falls back to the local host for `pass_url` when `SITE_URL` is unset, so the CTA button is visible in dev. Real sends still read `SITE_URL` and omit the button without it.
 
 - Browser preview is same-origin; it cannot reveal what Gmail's sanitizer strips.
 - `cta_url` is not used in templates; `href` is always `pass_url` (or `survey_url`).

@@ -3,7 +3,7 @@
   code to present would only be confusing.
 #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import identity_block, rows_block, status_pill, section_card, well, button, money, credit_line %}
+{% from "email/components.html" import rows_block, status_pill, section_card, well, button, money, credit_line, interac_block %}
 
 {% set preheader = 'Votre passeport attend son paiement.' %}
 {% set photo_eyebrow = 'Paiement en attente' %}
@@ -15,6 +15,7 @@
 {% set location = (activity.location_address_formatted or activity.location_address_raw) if activity else None %}
 
 {% set facts = [
+  {'label': 'Participant', 'value': pass_data.user.name, 'sub': pass_data.user.email},
   {'label': 'Montant', 'value': money(pass_data.sold_amt)},
   {'label': 'Statut', 'value': status_pill(pass_data.paid)},
   {'label': 'Crédits', 'value': credit_line(pass_data.uses_remaining, total)},
@@ -23,12 +24,33 @@
 
 <tr>
   <td class="mp-pad" style="padding:24px 32px 0 32px;">
-    {% call well('Participant') %}
-      {{ identity_block(None, pass_data.user.name, pass_data.user.email) }}
-      {{ rows_block(facts, outer_border=False, top_margin=12) }}
+    {% call well('Votre passeport') %}
+      {{ rows_block(facts, outer_border=False, top_margin=0) }}
     {% endcall %}
   </td>
 </tr>
+
+{# Where to send the money gets its own box, not a clause inside the message. Same
+   interac_block() the signup-with-payment email uses. Skipped when no payment address is
+   configured, so the email never shows an empty box. #}
+{% if payment_email %}
+<tr>
+  <td class="mp-pad" style="padding:0 32px;">
+    {{ interac_block(money(pass_data.sold_amt), payment_email, base_url) }}
+  </td>
+</tr>
+{% endif %}
+
+{% if pass_url %}
+<tr>
+  <td class="mp-pad" style="padding:0 32px 16px 32px;">
+    {# The pass isn't usable until it's paid, so this stays action-oriented ("make the
+       payment"), not "view your passport" like the other three templates — href is still
+       pass_url (not cta_url) since that's where the payment instructions actually live. #}
+    {{ button(pass_url, cta_text or 'Effectuer le paiement') }}
+  </td>
+</tr>
+{% endif %}
 
 {% if history_rows %}
 <tr>
@@ -37,18 +59,7 @@
     {% for e in history_rows %}
       {% set _ = history_items.append({'label': e.label, 'value': e.date, 'sub': e.by}) %}
     {% endfor %}
-    {{ section_card('Historique', history_items) }}
-  </td>
-</tr>
-{% endif %}
-
-{% if pass_url %}
-<tr>
-  <td class="mp-pad" style="padding:8px 32px 0 32px;">
-    {# The pass isn't usable until it's paid, so this stays action-oriented ("make the
-       payment"), not "view your passport" like the other three templates — href is still
-       pass_url (not cta_url) since that's where the payment instructions actually live. #}
-    {{ button(pass_url, cta_text or 'Effectuer le paiement') }}
+    {{ section_card('Historique', history_items, muted=True) }}
   </td>
 </tr>
 {% endif %}

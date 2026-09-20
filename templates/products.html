@@ -18,6 +18,9 @@
         </div>
         <div class="col-auto ms-auto d-print-none">
           <div class="btn-list">
+            {% if shop_enabled %}
+            {{ button("View MyShop", variant="outline", href=shop_url, icon="ti-arrow-up-right", attrs={"target": "_blank", "rel": "noopener"}) }}
+            {% endif %}
             {{ button("Add Product", icon="ti-plus", attrs={"data-bs-toggle": "modal", "data-bs-target": "#productModal"}) }}
           </div>
         </div>

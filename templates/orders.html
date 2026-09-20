@@ -5,6 +5,7 @@
 {% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state, preserve_filters %}
 {% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
 {% from 'macros/buttons.html' import button %}
+{% from 'macros/action_menu.html' import action_menu %}
 
 <div class="page-wrapper">
   <div class="page-header d-print-none" style="padding-top: 2rem;">
@@ -14,7 +15,19 @@
           <h1 class="page-title">Orders</h1>
         </div>
         <div class="col-auto ms-auto d-print-none">
-          <div class="btn-list">
+          {# Phone: one Actions menu keeps the title and button on a single line. #}
+          <div class="d-md-none">
+            {% set menu_items = [] %}
+            {% if shop_enabled %}
+              {% set _ = menu_items.append({"label": "View MyShop", "icon": '<i class="ti ti-arrow-up-right"></i>', "url": shop_url, "attrs": {"target": "_blank", "rel": "noopener"}}) %}
+            {% endif %}
+            {% set _ = menu_items.append({"label": "Manage Products", "icon": '<i class="ti ti-package"></i>', "url": url_for('list_products')}) %}
+            {{ action_menu(id="orders-header-actions", items=menu_items, label="Actions", icon_only=False) }}
+          </div>
+          <div class="btn-list d-none d-md-flex">
+            {% if shop_enabled %}
+            {{ button("View MyShop", variant="outline", href=shop_url, icon="ti-arrow-up-right", attrs={"target": "_blank", "rel": "noopener"}) }}
+            {% endif %}
             {{ button("Manage Products", variant="outline", href=url_for('list_products')) }}
           </div>
         </div>
@@ -33,11 +46,18 @@
         </div>
 
         {% if not rows %}
-          {{ table_empty_state(icon="ti-shopping-bag" if not (q or status_filter) else "ti-search",
-             title="No orders yet" if not (q or status_filter) else "No orders match your filters",
-             description="Orders appear here once a customer checks out from the shop." if not (q or status_filter) else "Try adjusting your search or filter selection.",
-             action_label="Clear all filters" if (q or status_filter) else none,
-             action_url=url_for('list_orders') if (q or status_filter) else none) }}
+          {% if q %}
+            {{ table_empty_state(icon="ti-search", title="No orders match your search",
+               description="Try a different name, email, or order code.",
+               action_label="Clear search", action_url=url_for('list_orders')) }}
+          {% elif tabs[-1].count == 0 %}
+            {{ table_empty_state(icon="ti-shopping-bag", title="No orders yet",
+               description="Orders appear here once a customer checks out from the shop.") }}
+          {% else %}
+            {{ table_empty_state(icon="ti-shopping-bag", title="Nothing here right now",
+               description="No orders in this tab.",
+               action_label="View all orders", action_url=url_for('list_orders', show_all='true')) }}
+          {% endif %}
         {% else %}
           {% set columns = [
             {"label": "Order", "class": "d-none d-md-table-cell"},

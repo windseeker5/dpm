@@ -136,7 +136,7 @@ def tab_url(endpoint, current_filters, **overrides):
     return url_for(endpoint, **params)
 
 
-def has_conflicting_unpaid_signup(signup, activity):
+def has_conflicting_unpaid_signup(signup, activity, earlier_only=False):
     """
     Check if there are OTHER unpaid signups for this activity
     with the same normalized name AND same requested_amount.
@@ -148,6 +148,9 @@ def has_conflicting_unpaid_signup(signup, activity):
     Args:
         signup: The Signup object to check
         activity: The Activity the signup belongs to
+        earlier_only: Only count signups made BEFORE this one. The confirmation page uses this
+            so it always agrees with the email sent at signup time (when no later signup could
+            exist yet): the second "Martin Tremblay" gets the code, the first never does.
 
     Returns:
         True if there's a naming conflict requiring the signup code for disambiguation
@@ -158,12 +161,15 @@ def has_conflicting_unpaid_signup(signup, activity):
     current_amount = signup.requested_amount or 0.0
 
     # Find other unpaid signups for same activity
-    potential_conflicts = Signup.query.filter(
+    query = Signup.query.filter(
         Signup.activity_id == activity.id,
         Signup.id != signup.id,  # Exclude current
         Signup.paid == False,
         Signup.status.in_(['pending', 'approved'])
-    ).all()
+    )
+    if earlier_only:
+        query = query.filter(Signup.id < signup.id)
+    potential_conflicts = query.all()
 
     # Check for same name AND same amount
     for other in potential_conflicts:
@@ -1048,6 +1054,22 @@ def _get_booked_slot_labels(passport):
         return []
 
 
+def format_history_date(value):
+    """"2026-08-25 09:19" -> "25 août, 09:19".
+
+    The stored format is sortable but long, and three of them stacked in a narrow column
+    read as a log dump. Uses the same French month names as format_slot_label so the dates
+    in the history match the dates in the session list.
+    """
+    if not value:
+        return ""
+    try:
+        dt = datetime.strptime(value[:16], "%Y-%m-%d %H:%M")
+    except (ValueError, TypeError):
+        return value
+    return f"{dt.day} {_FR_MONTHS.get(dt.month, '')}, {dt.strftime('%H:%M')}"
+
+
 def _build_history_rows(history):
     """Flatten get_pass_history_data() into rows for the email history table.
 
@@ -1063,20 +1085,7 @@ def _build_history_rows(history):
     def _who(value):
         return value.split("@")[0] if value else ""
 
-    def _when(value):
-        """"2026-08-25 09:19" -> "25 août, 09:19".
-
-        The stored format is sortable but long, and three of them stacked in a narrow column
-        read as a log dump. Uses the same French month names as format_slot_label so the dates
-        in the history match the dates in the session list.
-        """
-        if not value:
-            return ""
-        try:
-            dt = datetime.strptime(value[:16], "%Y-%m-%d %H:%M")
-        except (ValueError, TypeError):
-            return value
-        return f"{dt.day} {_FR_MONTHS.get(dt.month, '')}, {dt.strftime('%H:%M')}"
+    _when = format_history_date
 
     rows = []
     try:
