@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% from 'macros/buttons.html' import button %}
 {% block title %}Archive {{ activity.name }}{% endblock %}
 
 {% block content %}
@@ -78,8 +79,8 @@
             </div>
 
             <div class="d-flex gap-2">
-              <button type="submit" class="btn btn-warning">Archive activity</button>
-              <a href="{{ url_for('list_activities') }}" class="btn btn-ghost-secondary">Cancel</a>
+              {{ button("Archive activity", type="submit") }}
+              {{ button("Cancel", variant="link", href=url_for('list_activities')) }}
             </div>
           </form>
         </div>

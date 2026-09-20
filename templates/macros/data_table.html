@@ -1,3 +1,4 @@
+{% from 'macros/buttons.html' import button %}
 {#
   Data Table — the shared shape behind the Passports/Sign-ups/Activities
   list pages, which today each hand-roll their own copy of this table
@@ -300,7 +301,7 @@
   <p class="text-muted mb-3">{{ other_matches_count }} match{{ "es" if other_matches_count != 1 else "" }} found in other tabs.</p>
   {% endif %}
   {% if action_label and action_url %}
-  <a href="{{ action_url }}" class="btn btn-link">{{ action_label }}</a>
+  {{ button(action_label, variant="link", href=action_url) }}
   {% endif %}
 </div>
 {% endmacro %}

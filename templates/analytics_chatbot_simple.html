@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from 'macros/buttons.html' import button %}
 {% block title %}Wayne | minipass{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/wayne-chat.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/wayne-chat.css') }}?v=2">
 {% endblock %}
 
 {% block content %}
@@ -16,9 +17,7 @@
         <form class="wayne-composer wayne-composer-large" id="wayne-start-form">
           <label class="visually-hidden" for="wayne-start-input">Ask Wayne about your minipass data</label>
           <textarea class="form-control" id="wayne-start-input" name="question" rows="1" maxlength="500" placeholder="Ask about your minipass data…" required></textarea>
-          <button class="btn btn-primary btn-icon wayne-send" type="submit" aria-label="Ask Wayne">
-            <i class="ti ti-arrow-up" aria-hidden="true"></i>
-          </button>
+          {{ button('<i class="ti ti-arrow-up" aria-hidden="true"></i>' | safe, size="icon", type="submit", attrs={"class": "wayne-send", "aria-label": "Ask Wayne"}) }}
         </form>
       </div>
 
@@ -32,9 +31,7 @@
         <form class="wayne-composer wayne-composer-compact" id="wayne-chat-form">
           <label class="visually-hidden" for="wayne-chat-input">Ask Wayne another question</label>
           <textarea class="form-control" id="wayne-chat-input" name="question" rows="1" maxlength="500" placeholder="Ask Wayne another question…" required></textarea>
-          <button class="btn btn-primary btn-icon wayne-send" type="submit" aria-label="Ask Wayne">
-            <i class="ti ti-arrow-up" aria-hidden="true"></i>
-          </button>
+          {{ button('<i class="ti ti-arrow-up" aria-hidden="true"></i>' | safe, size="icon", type="submit", attrs={"class": "wayne-send", "aria-label": "Ask Wayne"}) }}
         </form>
       </div>
 

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'macros/buttons.html' import button %}
 {% block title %}Tier Limit Exceeded{% endblock %}
 
 {% block content %}
@@ -82,14 +83,9 @@
                     <td>
                       <form method="POST" action="{{ url_for('archive_activity_from_limit', activity_id=activity.id) }}" style="display: inline;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-sm btn-warning">
-                          <i class="ti ti-archive me-1"></i> Archive
-                        </button>
+                        {{ button("Archive", size="sm", type="submit") }}
                       </form>
-                      <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}"
-                         class="btn btn-sm btn-ghost-primary ms-1" target="_blank">
-                        <i class="ti ti-eye me-1"></i> View
-                      </a>
+                      {{ button("View", variant="ghost", size="sm", href=url_for('activity_dashboard', activity_id=activity.id), attrs={"class": "ms-1", "target": "_blank"}) }}
                     </td>
                   </tr>
                   {% endfor %}
@@ -107,9 +103,7 @@
                   <p class="text-muted mb-0">Get more active activities and unlock additional features with a higher tier plan.</p>
                 </div>
                 <div>
-                  <a href="mailto:support@minipass.me?subject=Upgrade%20Request" class="btn btn-primary">
-                    <i class="ti ti-rocket me-2"></i> Contact Support
-                  </a>
+                  {{ button("Contact Support", href="mailto:support@minipass.me?subject=Upgrade%20Request") }}
                 </div>
               </div>
             </div>

@@ -89,7 +89,7 @@
   color: #8290a3;
 }
 
-.wayne-send.btn {
+.wayne-send.mp-btn[data-variant] {
   flex: 0 0 2.75rem;
   width: 2.75rem;
   height: 2.75rem;
@@ -99,7 +99,7 @@
   box-shadow: none;
 }
 
-.wayne-send.btn i {
+.wayne-send.mp-btn i {
   font-size: 1.15rem;
 }
 

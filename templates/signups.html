@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'macros/buttons.html' import button %}
 {% block title %}Signups Management{% endblock %}
 
 {% block content %}
@@ -87,9 +88,9 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        {{ button("Cancel", variant="link", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
         <form method="GET" id="approveSignupModalForm" action="" class="w-100">
-          <button type="submit" id="approveSignupModalBtn" class="btn w-100"></button>
+          {{ button("", type="submit", id="approveSignupModalBtn", attrs={"class": "w-100"}) }}
         </form>
       </div>
     </div>
@@ -118,14 +119,14 @@
         <div class="w-100">
           <div class="row">
             <div class="col">
-              <button class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+              {{ button("Cancel", variant="outline", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
             </div>
             <div class="col">
               <form method="POST" id="signupDeleteForm" class="d-inline w-100">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="selected_signups" id="deleteSignupId">
-                <button type="submit" class="btn btn-danger w-100">Delete</button>
+                {{ button("Delete", variant="destructive", type="submit", attrs={"class": "w-100"}) }}
               </form>
             </div>
           </div>
@@ -151,7 +152,8 @@ document.getElementById('approveSignupModal').addEventListener('show.bs.modal', 
     : 'Approve signup and create passport for ' + userName + '?';
   document.getElementById('approveSignupModalNote').style.display = isPaymentFirst ? 'block' : 'none';
   const submitBtn = document.getElementById('approveSignupModalBtn');
-  submitBtn.className = 'btn w-100 ' + (isPaymentFirst ? 'btn-azure' : 'btn-primary');
+  submitBtn.className = 'mp-btn w-100';
+  submitBtn.setAttribute('data-variant', 'primary');
   submitBtn.textContent = isPaymentFirst ? 'Yes, Mark Paid & Create' : 'Yes, Approve & Create';
 });
 
