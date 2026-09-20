@@ -12,6 +12,7 @@ import qrcode
 import secrets
 import string
 import subprocess
+from functools import lru_cache
 import logging
 import traceback
 import shutil
@@ -46,16 +47,15 @@ from flask_wtf import CSRFProtect
 
 
 # 🧱 SQLAlchemy Extras
-from sqlalchemy import extract, func, case, desc, text
+from sqlalchemy import extract, func, case, text
 
 # 📎 File Handling
 from werkzeug.utils import secure_filename
 
 # 🧠 Models
-from models import db, Admin, Redemption, Setting, EbankPayment, ReminderLog, EmailLog, Income, Expense
+from models import db, Admin, Redemption, Setting, EbankPayment, EmailLog, Income, Expense
 from models import Activity, User, Signup, Passport, PassportType, AdminActionLog
 from models import SurveyTemplate, Survey, SurveyResponse
-from models import QueryLog
 from models import StripeTransaction
 from models import Product, Order, CartOrder
 
@@ -96,7 +96,6 @@ from utils import (
 )
 
 # 🧠 Data Tools
-from collections import defaultdict
 
 # Wayne's local-first skill router is registered below.
 
@@ -1009,8 +1008,19 @@ def initialize_background_tasks():
     init_scheduler(app)
 
 
+def _static_file_version(filename):
+    """Cache-busting token for a static file: its last-modified time (0 if missing)."""
+    try:
+        return int(os.path.getmtime(os.path.join(app.static_folder, filename)))
+    except OSError:
+        return 0
+
+
+@lru_cache(maxsize=1)
 def get_git_version():
-    """Get git version from version.txt file (created during deployment) or git command (dev)"""
+    """Get git version from version.txt file (created during deployment) or git command (dev).
+
+    Cached: the version cannot change while the process is running, and this runs on every render."""
     # Try version.txt first (production Docker)
     try:
         version_file = os.path.join(os.path.dirname(__file__), 'version.txt')
@@ -1146,6 +1156,7 @@ def inject_globals_and_csrf():
         'PRIMARY_BRAND_FOREGROUND': brand_primary_foreground,
         'HAS_CUSTOM_BRAND_COLOR': has_custom_brand_color,
         'git_version': get_git_version(),
+        'minipass_css_v': _static_file_version('minipass.css'),
         'csrf_token': generate_csrf,  # returns the raw CSRF token
         'pending_signups_count': pending_signups_count,
         'active_passport_count': active_passport_count,
@@ -1213,51 +1224,6 @@ def trim_email(email):
 ##
 
   
-
-
-@app.route("/retry-failed-emails")
-def retry_failed_emails():
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    from models import EmailLog, Passport
-    from utils import send_email_async
-    from datetime import datetime
-
-    failed_logs = EmailLog.query.filter_by(result="FAILED").all()
-    retried = 0
-
-    # 🔁 Replace with your email for testing
-    override_email = "kdresdell@gmail.com"
-    #testing_mode = True
-    testing_mode = False
-
-    for log in failed_logs:
-        passport_obj = Passport.query.filter_by(pass_code=log.pass_code).first()
-        if not passport_obj:
-            continue  # Skip if no matching passport
-
-        try:
-            context = json.loads(log.context_json)
-        except:
-            continue
-
-        send_email_async(
-            current_app._get_current_object(),
-            user_email=override_email if testing_mode else log.to_email,
-            subject=f"[TEST] {log.subject}" if testing_mode else log.subject,
-            user_name=context.get("user_name", "User"),
-            pass_code=log.pass_code,
-            created_date=context.get("created_date", datetime.now().strftime("%Y-%m-%d")),
-            remaining_games=context.get("remaining_games", 0),
-            special_message=context.get("special_message", None),
-            admin_email=session.get("admin")
-        )
-
-        retried += 1
-
-    flash(f"Retried {retried} failed email(s) — sent to {override_email}.", "info")
-    return redirect(url_for("dashboard"))
 
 
 @app.route("/resend-email/<int:log_id>", methods=["POST"])
@@ -4609,62 +4575,6 @@ def api_payment_bot_test_email():
     except Exception as e:
         print(f"Error sending test email: {e}")
         return jsonify({"error": "Failed to send test email"}), 500
-
-
-@app.route("/api/payment-bot/check-emails", methods=["POST"])
-def api_payment_bot_check_emails():
-    """Manually trigger email payment bot to check for new payments"""
-    if "admin" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    from utils import match_gmail_payments_to_passes, get_setting, log_admin_action, cleanup_duplicate_payment_logs_auto
-
-    # Check if payment bot is enabled
-    if get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False") != "True":
-        return jsonify({"error": "Payment bot is not enabled in settings"}), 400
-
-    try:
-        # Log the action first
-        log_admin_action(f"Manual payment bot check triggered by {session.get('admin', 'Unknown')}")
-
-        # Run the email checking function
-        result = match_gmail_payments_to_passes()
-
-        # Auto-cleanup duplicates after processing (same as scheduled job)
-        cleanup_duplicate_payment_logs_auto()
-        
-        # Return success with any matched payments info
-        if result and isinstance(result, dict):
-            return jsonify({
-                "success": True, 
-                "message": f"Email check completed. {result.get('matched', 0)} payments matched.",
-                "details": result
-            }), 200
-        else:
-            return jsonify({
-                "success": True,
-                "message": "Email check completed. No new payments found."
-            }), 200
-            
-    except Exception as e:
-        import traceback
-        error_msg = str(e)
-        print(f"Error running payment bot check: {error_msg}")
-        print(f"Traceback: {traceback.format_exc()}")
-        
-        # Provide more specific error messages
-        if "AUTHENTICATIONFAILED" in error_msg or "Invalid credentials" in error_msg:
-            return jsonify({
-                "error": "Email authentication failed. Please check your email settings (username/password)."
-            }), 500
-        elif "connection" in error_msg.lower():
-            return jsonify({
-                "error": "Could not connect to email server. Please check your server settings."
-            }), 500
-        else:
-            return jsonify({
-                "error": f"Failed to check emails: {error_msg}"
-            }), 500
 
 
 @app.route("/api/move-payment-email", methods=["POST"])
@@ -10464,12 +10374,9 @@ def activity_dashboard(activity_id):
     _actual = float(total_paid_revenue or 0)
     revenue_progress_pct = min(round((_actual / _target * 100) if _target > 0 else 0), 100)
     
-    # Activity log entries (recent activity)
-    # Use get_all_activity_logs to get properly formatted logs like dashboard does
-    from utils import get_all_activity_logs
-    all_activity_logs = get_all_activity_logs()
-    # Filter for this activity
-    activity_logs = [log for log in all_activity_logs if activity.name in log.get('action', '')][:10]
+    # Not shown on this page. This used to load every log table and filter on a key
+    # ('action') that log entries do not have, so the result was always empty.
+    activity_logs = []
 
     # KPI data structure for the dashboard template
     # Using the same structure from get_kpi_data() as dashboard does - no transformation
@@ -11740,28 +11647,6 @@ def get_kpi_data_api():
             'details': str(e) if app.debug else None
         }), 500
 
-
-@app.template_filter("from_json")
-def from_json_filter(json_str):
-    """Parse JSON string in templates"""
-    try:
-        return json.loads(json_str) if json_str else {}
-    except:
-        return {}
-
-@app.template_filter("days_ago")
-def days_ago_filter(dt):
-    """Calculate days between a datetime and now"""
-    try:
-        if dt:
-            now = datetime.now(timezone.utc)
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            diff = now - dt
-            return diff.days
-        return 0
-    except:
-        return 0
 
 @app.template_filter("utc_to_local")
 def jinja_utc_to_local_filter(dt):
@@ -13996,174 +13881,6 @@ def test_payment_bot_now():
         return f"<h1>{error_msg}</h1><p><a href='/admin/unified-settings'>← Back to Settings</a></p>"
 
 
-@app.route("/update-payment-notes")
-def update_payment_notes():
-    """Update existing NO_MATCH payment records with detailed, accurate notes"""
-    if "admin" not in session:
-        return "Must be logged in as admin", 401
-
-    try:
-        print("🔧 Starting retroactive payment notes update...")
-        import unicodedata
-        from rapidfuzz import fuzz
-
-        def normalize_name(text):
-            """Remove accents and normalize text for better matching"""
-            normalized = unicodedata.normalize('NFD', text)
-            without_accents = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
-            return without_accents.lower().strip()
-
-        # Get all NO_MATCH payments
-        no_match_payments = EbankPayment.query.filter_by(result='NO_MATCH').all()
-        updated_count = 0
-        threshold = int(get_setting("BANK_EMAIL_NAME_CONFIDANCE", "85"))
-        DIAGNOSTIC_MIN = 50  # Show candidates above 50% for context in diagnostic messages
-
-        for payment in no_match_payments:
-            name = payment.bank_info_name
-            amt = payment.bank_info_amt
-            email_received_date = payment.email_received_date
-            payment_amount = float(amt)
-
-            # Get all unpaid passports with this amount
-            all_unpaid = Passport.query.filter_by(paid=False).all()
-            unpaid_passports = [p for p in all_unpaid if float(p.sold_amt) == payment_amount]
-
-            new_note = None
-
-            # FIXED: Check unpaid passports FIRST, only check paid if no unpaid match
-            if not unpaid_passports:
-                # No unpaid passports at this amount
-                available_amounts = list(set(float(p.sold_amt) for p in all_unpaid))
-                available_amounts.sort()
-                amounts_summary = ", ".join([f"${a:.2f}({sum(1 for p in all_unpaid if float(p.sold_amt) == a)})" for a in available_amounts[:5]])
-                new_note = f"No unpaid passports for ${payment_amount:.2f}. Payment may have arrived before passport creation. Available unpaid amounts: {amounts_summary}"
-            else:
-                # There ARE unpaid passports - check if any match the payment name
-                normalized_payment_name = normalize_name(name)
-
-                # Try to find matching unpaid passport
-                unpaid_match_found = False
-                for p in unpaid_passports:
-                    if not p.user:
-                        continue
-                    score = fuzz.ratio(normalized_payment_name, normalize_name(p.user.name))
-                    if score >= threshold:  # Use threshold (85%) for matching
-                        unpaid_match_found = True
-                        # Found a matching unpaid passport - this should have been auto-matched
-                        # This means the payment bot hasn't run yet or there was an error
-                        new_note = f"UNPAID MATCH AVAILABLE: {p.user.name} (${payment_amount:.2f}, Passport #{p.id}, Score: {score}%) - Run payment bot to auto-match"
-                        break
-
-                # If no unpaid match, check if this might be a duplicate payment for already-paid passport
-                if not unpaid_match_found:
-                    all_paid = Passport.query.filter_by(paid=True).all()
-                    paid_passports_same_amount = [p for p in all_paid if float(p.sold_amt) == payment_amount]
-
-                    matching_paid_passport = None
-                    for p in paid_passports_same_amount:
-                        if not p.user:
-                            continue
-                        normalized_passport_name = normalize_name(p.user.name)
-                        score = fuzz.ratio(normalized_payment_name, normalized_passport_name)
-                        if score >= 95:  # Strict matching for paid passports
-                            matching_paid_passport = p
-                            break
-
-                    if matching_paid_passport:
-                        # Found matching PAID passport - likely duplicate payment
-                        paid_by = matching_paid_passport.marked_paid_by or "unknown admin"
-                        paid_date_str = matching_paid_passport.paid_date.strftime("%Y-%m-%d %H:%M") if matching_paid_passport.paid_date else "unknown date"
-
-                        time_diff_info = ""
-                        if matching_paid_passport.paid_date and email_received_date:
-                            # Ensure both datetimes are timezone-aware for comparison
-                            from datetime import timezone as tz
-                            paid_dt = matching_paid_passport.paid_date if matching_paid_passport.paid_date.tzinfo else matching_paid_passport.paid_date.replace(tzinfo=tz.utc)
-                            email_dt = email_received_date if email_received_date.tzinfo else email_received_date.replace(tzinfo=tz.utc)
-
-                            diff_seconds = (email_dt - paid_dt).total_seconds()
-                            if diff_seconds > 0:
-                                diff_minutes = int(diff_seconds / 60)
-                                time_diff_info = f" ({diff_minutes} min after passport marked paid)"
-                            else:
-                                diff_minutes = int(abs(diff_seconds) / 60)
-                                time_diff_info = f" ({diff_minutes} min before email received)"
-
-                        new_note = f"MATCH FOUND: {matching_paid_passport.user.name} (${payment_amount:.2f}, Passport #{matching_paid_passport.id}) - Already marked PAID by {paid_by} on {paid_date_str}{time_diff_info}"
-                    else:
-                        # Truly no match - create detailed note
-                        all_candidates = []
-                        for p in unpaid_passports:
-                            if not p.user:
-                                continue
-                            score = fuzz.ratio(normalized_payment_name, normalize_name(p.user.name))
-                            if score >= DIAGNOSTIC_MIN:
-                                all_candidates.append((p.user.name, score))
-
-                        all_candidates.sort(key=lambda x: x[1], reverse=True)
-                        top_candidates = all_candidates[:3]
-
-                        note_parts = [f"No match found for '{name}' (${amt})."]
-                        note_parts.append(f"Found {len(unpaid_passports)} unpaid passport(s) for ${amt}, but")
-
-                        if top_candidates:
-                            candidate_strs = [f"{cname} ({score:.0f}%)" for cname, score in top_candidates]
-                            note_parts.append(f"all names below {threshold}% threshold. Closest: {', '.join(candidate_strs)}.")
-                        else:
-                            note_parts.append(f"all names below {threshold}% threshold (no candidates above {DIAGNOSTIC_MIN}%).")
-                            if unpaid_passports:
-                                example_names = [p.user.name for p in unpaid_passports[:3] if p.user]
-                                if example_names:
-                                    note_parts.append(f"Available names: {', '.join(example_names[:3])}")
-
-                        # Check for pending payment-first Interac signups at this amount and
-                        # report the true reason — a real name score, not a blanket label.
-                        pending_interac = db.session.query(Signup).join(Activity).filter(
-                            Signup.passport_id == None,
-                            Signup.requested_amount == payment_amount,
-                            Activity.workflow_type == "payment_first",
-                            Signup.payment_method == "interac",
-                            Signup.status == "pending"
-                        ).all()
-                        if pending_interac:
-                            signup_scores = []
-                            for s in pending_interac:
-                                if not s.user:
-                                    continue
-                                s_score = fuzz.ratio(normalized_payment_name, normalize_name(s.user.name))
-                                signup_scores.append((s.user.name, s_score))
-                            signup_scores.sort(key=lambda x: x[1], reverse=True)
-
-                            if signup_scores:
-                                if len(signup_scores) > 1 and (signup_scores[0][1] - signup_scores[1][1]) < 5:
-                                    tie_strs = [f"{cname} ({score:.0f}%)" for cname, score in signup_scores if score >= signup_scores[0][1] - 5]
-                                    note_parts.append(f"Note: {len(tie_strs)} pending Interac signup(s) tied for this amount, ambiguous: {', '.join(tie_strs)}. Manual review required.")
-                                else:
-                                    cname, score = signup_scores[0]
-                                    note_parts.append(f"Note: closest pending Interac signup is '{cname}' ({score:.0f}%) — below the {threshold}% threshold. Review and link manually if correct.")
-
-                        new_note = " ".join(note_parts)
-
-            # Update the record if note changed
-            if new_note and new_note != payment.note:
-                payment.note = new_note
-                updated_count += 1
-
-        db.session.commit()
-
-        message = f"Updated {updated_count} out of {len(no_match_payments)} NO_MATCH payment records with detailed notes!"
-        print(message)
-        return f"<h1>{message}</h1><p><strong>Refresh your payment matches page to see the new detailed reasons.</strong></p><p><a href='/payment-bot-matches'>→ View Payment Matches</a></p>"
-
-    except Exception as e:
-        error_msg = f"Update failed: {str(e)}"
-        print(error_msg)
-        import traceback
-        traceback.print_exc()
-        return f"<h1>{error_msg}</h1><p><a href='/payment-bot-matches'>← Back</a></p>"
-
-
 # ================================
 # 📧 EMAIL TEMPLATE CUSTOMIZATION ROUTES
 # ================================
@@ -14619,21 +14336,6 @@ def reset_email_template(activity_id):
             'success': False,
             'message': f'Error resetting template: {str(e)}'
         }), 500
-
-
-@app.route("/admin/clear-template-cache", methods=["POST"])
-def clear_template_cache():
-    """Clear the hero image cache after recompiling templates"""
-    if "admin" not in session:
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
-
-    from utils import clear_hero_image_cache
-    clear_hero_image_cache()
-
-    return jsonify({
-        'success': True,
-        'message': 'Template hero image cache cleared successfully'
-    })
 
 
 @app.route("/activity/<int:activity_id>/email-preview")

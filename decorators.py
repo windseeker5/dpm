@@ -2,7 +2,6 @@
 from functools import wraps
 from flask import session, jsonify, request, g
 from datetime import datetime, timedelta, timezone
-import hashlib
 from collections import defaultdict
 
 # Rate limiting storage (in production, use Redis)
@@ -62,31 +61,6 @@ def rate_limit(max_requests=10, window=60):
             rate_limit_store[rate_key].append(current_time)
             
             return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-def validate_json(schema_class):
-    """Decorator to validate JSON input against a schema"""
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if not request.is_json:
-                return jsonify({
-                    'success': False,
-                    'error': 'Content-Type must be application/json'
-                }), 400
-            
-            try:
-                schema = schema_class()
-                validated_data = schema.load(request.json)
-                g.validated_data = validated_data
-                return f(*args, **kwargs)
-            except Exception as e:
-                return jsonify({
-                    'success': False,
-                    'error': 'Invalid JSON data',
-                    'details': str(e)
-                }), 400
         return decorated_function
     return decorator
 
