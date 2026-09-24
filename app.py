@@ -3556,13 +3556,22 @@ def shop_activity(activity_id):
     if request.method == "POST":
         passport_type_id = request.form.get("passport_type_id") or None
         slot_id = request.form.get("slot_id") or None
+        try:
+            requested_sessions = max(1, int(request.form.get("requested_sessions", 1)))
+        except (TypeError, ValueError):
+            requested_sessions = 1
+        # Scheduled activities always book a single session at signup time (extra
+        # sessions are booked later from the passport page), so the stepper is never
+        # shown for them — force 1 here too regardless of what the form sent.
+        if activity.uses_scheduling:
+            requested_sessions = 1
 
         cart = _get_shop_cart()
         cart.append({
             "type": "activity",
             "activity_id": activity.id,
             "passport_type_id": int(passport_type_id) if passport_type_id else None,
-            "sessions": 1,
+            "sessions": requested_sessions,
             "slot_id": int(slot_id) if slot_id else None,
         })
         _save_shop_cart(cart)
@@ -3586,10 +3595,20 @@ def shop_activity(activity_id):
         for pt in passport_types
     ]
     passport_type_prices = {option["value"]: option["amount"] for option in passport_type_options}
+    # Raw (unformatted) unit prices for the quantity-stepper's client-side total math —
+    # passport_type_prices above holds ca_money()-formatted strings, which can't be
+    # multiplied in JS.
+    passport_type_raw_prices = {str(pt.id): float(pt.price_per_user) for pt in passport_types}
+    default_unit_price = (
+        passport_type_raw_prices.get(passport_type_options[0]["value"])
+        if passport_type_options else float(activity.price_per_user)
+    )
 
     return render_template("shop_activity.html", activity=activity, settings=settings,
                             passport_types=passport_types, passport_type_options=passport_type_options,
                             passport_type_prices=passport_type_prices,
+                            passport_type_raw_prices=passport_type_raw_prices,
+                            default_unit_price=default_unit_price,
                             display_location=_short_location(activity),
                             remaining_capacity=remaining_capacity,
                             is_sold_out=is_sold_out, available_slots=available_slots,

@@ -6,6 +6,39 @@
 
 {% block title %}{{ activity.name }}{% endblock %}
 
+{% block head %}
+{% if activity.allow_quantity_selection and not activity.uses_scheduling %}
+<style>
+  .mp-stepper {
+    display: inline-flex;
+    align-items: stretch;
+  }
+  .mp-stepper input[type="number"] {
+    width: 3rem;
+    text-align: center;
+    border: 1px solid var(--tblr-border-color);
+    border-left: 0;
+    border-right: 0;
+    font-weight: 600;
+    -moz-appearance: textfield;
+  }
+  .mp-stepper input[type="number"]::-webkit-outer-spin-button,
+  .mp-stepper input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .mp-stepper .mp-btn:first-child {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .mp-stepper .mp-btn:last-child {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+</style>
+{% endif %}
+{% endblock %}
+
 {% block content %}
 <a href="{{ url_for('shop') }}" class="text-secondary small d-inline-flex align-items-center gap-1 mb-3">
   <i class="ti ti-arrow-left"></i> Retour à la boutique
@@ -75,6 +108,22 @@
       </p>
     </div>
     {% endif %}
+
+    {% if activity.allow_quantity_selection and not activity.uses_scheduling %}
+    <hr class="my-3">
+    <div class="d-flex align-items-center justify-content-between gap-3">
+      <div>
+        <h2 class="h3 mb-1" id="quantity-title">Quantité</h2>
+        <p class="text-secondary small mb-0">Nombre de places à réserver</p>
+      </div>
+      <div class="mp-stepper" role="group" aria-label="Modifier la quantité">
+        {{ button("", variant="outline", size="icon", id="qty-decrease", attrs={"aria-label": "Diminuer la quantité"}, icon="ti-minus") }}
+        <input type="number" id="qty-display" class="mp-stepper-input" value="1" min="1" max="10" readonly aria-live="polite">
+        {{ button("", variant="outline", size="icon", id="qty-increase", attrs={"aria-label": "Augmenter la quantité"}, icon="ti-plus") }}
+      </div>
+    </div>
+    <input type="hidden" name="requested_sessions" id="hidden-qty" value="1">
+    {% endif %}
   </div>
 
   <div class="card-footer">
@@ -88,23 +137,62 @@
   </div>
 </form>
 
-{% if passport_type_options | length > 1 %}
 <script>
-  /* Keep the footer total in step with the selected passport type so the buyer
-     confirms the amount at the button, not only inside the card they picked. */
   (function () {
-    var prices = {{ passport_type_prices | tojson }};
+    /* Keep the footer total in step with both the selected passport type and the
+       chosen quantity, so the buyer confirms the real amount at the button. */
+    var priceLabels = {{ passport_type_prices | tojson }};
+    var rawPrices = {{ passport_type_raw_prices | tojson }};
+    var basePrice = {{ default_unit_price | tojson }};
+    var maxQty = {{ remaining_capacity if remaining_capacity is not none else 10 }};
+    var currentQty = 1;
+    var unitPrice = basePrice;
+
     var total = document.getElementById('shop-activity-total');
     var form = document.getElementById('shop-activity-form');
-    if (!total || !form) return;
 
-    form.addEventListener('change', function (event) {
-      if (event.target.name !== 'passport_type_id') return;
-      var label = prices[event.target.value];
-      if (label) total.textContent = label;
-    });
+    function formatMoney(value) {
+      return new Intl.NumberFormat('fr-CA', {
+        style: 'currency',
+        currency: 'CAD',
+        minimumFractionDigits: 2
+      }).format(value);
+    }
+
+    function updateTotal() {
+      if (total) total.textContent = formatMoney(unitPrice * currentQty);
+    }
+
+    if (form) {
+      form.addEventListener('change', function (event) {
+        if (event.target.name !== 'passport_type_id') return;
+        var raw = rawPrices[event.target.value];
+        if (typeof raw === 'number') {
+          unitPrice = raw;
+          updateTotal();
+        } else if (priceLabels[event.target.value] && currentQty === 1) {
+          total.textContent = priceLabels[event.target.value];
+        }
+      });
+    }
+
+    var qtyDisplay = document.getElementById('qty-display');
+    var hiddenQty = document.getElementById('hidden-qty');
+    var decreaseButton = document.getElementById('qty-decrease');
+    var increaseButton = document.getElementById('qty-increase');
+
+    function updateQty(delta) {
+      var newQty = Math.max(1, Math.min(currentQty + delta, Math.min(maxQty, 10)));
+      if (newQty === currentQty) return;
+      currentQty = newQty;
+      if (qtyDisplay) qtyDisplay.value = currentQty;
+      if (hiddenQty) hiddenQty.value = currentQty;
+      updateTotal();
+    }
+
+    if (decreaseButton) decreaseButton.addEventListener('click', function () { updateQty(-1); });
+    if (increaseButton) increaseButton.addEventListener('click', function () { updateQty(1); });
   })();
 </script>
-{% endif %}
 {% endif %}
 {% endblock %}
