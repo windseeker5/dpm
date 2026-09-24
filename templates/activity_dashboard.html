@@ -563,6 +563,9 @@ div.dropdown-divider {
         </div>
       </div>
 
+      <form method="POST" id="resendPaymentInstructionsForm" style="display:none">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      </form>
 
       <!-- Signups Section -->
       {% if has_pending_signups %}
@@ -810,6 +813,11 @@ function confirmSignupDelete(signupId, signupUser) {
   document.getElementById('signupDeleteForm').action = "{{ url_for('bulk_signup_action') }}";
   const modal = new bootstrap.Modal(document.getElementById('signupDeleteModal'));
   modal.show();
+}
+
+function resendPaymentInstructions(resendUrl) {
+  document.getElementById('resendPaymentInstructionsForm').action = resendUrl;
+  document.getElementById('resendPaymentInstructionsForm').submit();
 }
 
 </script>

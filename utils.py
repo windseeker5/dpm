@@ -4612,7 +4612,8 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                         "user_name": user_name or context.get("user_name") if context else None,
                         "activity_name": context.get("activity_name") if context else None,
                         "template_type": template_name,
-                        "special_message": context.get("special_message", "") if context else ""
+                        "special_message": context.get("special_message", "") if context else "",
+                        "survey_id": context.get("survey_id") if context else None
                     }),
                     result="SENT",
                     timestamp=timestamp_override or datetime.now(timezone.utc)
@@ -4653,6 +4654,7 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                         "activity_name": error_activity_name,
                         "template_type": kwargs.get("template_name"),
                         "special_message": error_context.get("special_message", "") if error_context else "",
+                        "survey_id": error_context.get("survey_id") if error_context else None,
                         "error": str(e),
                     }),
                     result="FAILED",
@@ -5020,6 +5022,95 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         )
     except Exception as e:
         print(f"⚠️ Push notification error (signup): {e}")
+
+
+def send_survey_invitation_email(app, passport, survey, response, question_count):
+    """Build and send one survey_invitation email for an existing SurveyResponse.
+
+    Pulled out of send_survey_invitations()'s per-passport loop so resend_email() can
+    call the exact same send path for a single recipient without touching SurveyResponse
+    state (no new token, no invited_dt restamp) — that stays the caller's job.
+    """
+    from utils import get_email_context, get_setting, send_email_async
+    from flask import url_for
+    from jinja2 import Template as JinjaTemplate
+
+    survey_url = url_for('take_survey', survey_token=survey.survey_token,
+                          _external=True) + f"?token={response.response_token}"
+
+    if survey.activity and survey.activity.logo_filename:
+        activity_logo_url = url_for('static', filename=f'uploads/logos/{survey.activity.logo_filename}')
+    else:
+        org_logo = get_setting('LOGO_FILENAME', 'logo.png')
+        activity_logo_url = url_for('static', filename=f'uploads/{org_logo}')
+
+    base_context = {
+        'user_name': passport.user.name or 'Participant',
+        'activity': survey.activity,
+        'activity_name': survey.activity.name,
+        'survey_name': survey.name,
+        'survey_url': survey_url,
+        'question_count': question_count,
+        'organization_name': get_setting('ORG_NAME', 'minipass'),
+        'organization_address': get_setting('ORG_ADDRESS', ''),
+        'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
+        'activity_logo_url': activity_logo_url
+    }
+
+    email_context = get_email_context(survey.activity, 'survey_invitation', base_context)
+
+    render_context = {
+        'user_name': passport.user.name or 'Participant',
+        'activity_name': survey.activity.name,
+        'activity': survey.activity,
+        'survey_name': survey.name,
+        'survey_url': survey_url,
+        'question_count': question_count,
+        'organization_name': get_setting('ORG_NAME', 'minipass'),
+        'organization_address': get_setting('ORG_ADDRESS', ''),
+        'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
+    }
+
+    # French fallbacks: these only fire if config/email_defaults.json fails to load, and
+    # an English heading on an otherwise French email is worse than a plain one.
+    subject_template = email_context.get('subject', f"Votre avis sur {survey.name}")
+    title_template = email_context.get('title', 'Votre avis compte')
+    admin_message_template = email_context.get('admin_message', '<p>Vous avez participé à cette activité. Un court formulaire nous aide à améliorer l\'expérience.</p><p>Merci du temps que vous y consacrez.</p>')
+
+    subject = JinjaTemplate(subject_template).render(**render_context)
+    rendered_title = JinjaTemplate(title_template).render(**render_context)
+    rendered_admin_message = JinjaTemplate(admin_message_template).render(**render_context)
+
+    context = {
+        'user_name': passport.user.name or 'Participant',
+        'activity_name': survey.activity.name,
+        'survey_name': survey.name,
+        'survey_url': survey_url,
+        'question_count': question_count,
+        'organization_name': get_setting('ORG_NAME', 'minipass'),
+        'organization_address': get_setting('ORG_ADDRESS', ''),
+        'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
+        'unsubscribe_url': f"https://minipass.me/unsubscribe?email={passport.user.email}",
+        'privacy_url': "https://minipass.me/privacy",
+        'title': rendered_title,
+        'admin_message': rendered_admin_message,
+        'hero_image_url': f"{get_setting('SITE_URL', '').rstrip('/')}/activity/{survey.activity.id}/hero-image/survey_invitation",
+        'owner_logo_url': f"{get_setting('SITE_URL', '').rstrip('/')}/owner-logo?activity_id={survey.activity.id}",
+        'hero_is_photo': email_context.get('hero_is_photo', True),
+        'survey_id': survey.id,
+        '_skip_email_context': True
+    }
+
+    send_email_async(
+        app=app,
+        user=passport.user,
+        activity=survey.activity,
+        subject=subject,
+        to_email=passport.user.email,
+        template_name='survey_invitation',
+        context=context,
+        use_hosted_images=True
+    )
 
 
 def _build_pass_event_email(event_type, pass_data, activity, admin_email=None, timestamp=None):

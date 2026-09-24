@@ -1232,7 +1232,7 @@ def resend_email(log_id):
         return redirect(url_for("login"))
 
     from models import EmailLog, Passport
-    from utils import notify_pass_event
+    from utils import notify_pass_event, notify_signup_event, template_key
 
     log = EmailLog.query.get_or_404(log_id)
 
@@ -1242,6 +1242,81 @@ def resend_email(log_id):
         context = {}
 
     from models import Activity
+
+    base = template_key(log.template_name) if log.template_name else ""
+
+    # These template families never carry a Passport (signups pending payment/approval
+    # have none yet), so let the Passport-lookup below run its course and fail into the
+    # confusing "no passport found" message. Handle them here instead, before that happens.
+    if base in ("signup", "signup_payment_first"):
+        from models import Signup, User
+
+        activity_name = context.get("activity_name")
+        activity = Activity.query.filter_by(name=activity_name).first() if activity_name else None
+        signup = None
+        if activity and log.to_email:
+            user_ids = [u.id for u in User.query.filter_by(email=log.to_email).all()]
+            if user_ids:
+                signup = Signup.query.filter(
+                    Signup.user_id.in_(user_ids), Signup.activity_id == activity.id
+                ).order_by(Signup.id.desc()).first()
+
+        if not signup or not activity:
+            flash("Cannot resend — the original signup could not be found.", "warning")
+            return redirect(request.referrer or url_for("activity_log"))
+
+        # notify_signup_event re-derives signup vs. signup_payment_first from the activity's
+        # CURRENT workflow_type, not from log.template_name — if that setting changed since
+        # the original send, the resend uses today's template. Same behavior pass-event resends
+        # already have (they re-render from current activity settings too).
+        notify_signup_event(current_app._get_current_object(), signup=signup, activity=activity)
+
+        log.result = "DISMISSED"
+        db.session.commit()
+        flash(f"Email resent to {log.to_email}.", "success")
+        return redirect(request.referrer or url_for("activity_log"))
+
+    if base == "survey_invitation":
+        from models import Survey, SurveyResponse, User
+        from utils import send_survey_invitation_email
+
+        survey_id = context.get("survey_id")
+        survey = db.session.get(Survey, survey_id) if survey_id else None
+        if not survey:
+            flash("Cannot resend — this survey invitation is too old to identify which survey it belongs to.", "warning")
+            return redirect(request.referrer or url_for("activity_log"))
+
+        response = None
+        if log.to_email:
+            user_ids = [u.id for u in User.query.filter_by(email=log.to_email).all()]
+            if user_ids:
+                response = SurveyResponse.query.filter(
+                    SurveyResponse.survey_id == survey.id, SurveyResponse.user_id.in_(user_ids)
+                ).order_by(SurveyResponse.id.desc()).first()
+        passport = Passport.query.get(response.passport_id) if response else None
+
+        if not response or not passport:
+            flash("Cannot resend — original survey invitation record not found.", "warning")
+            return redirect(request.referrer or url_for("activity_log"))
+
+        try:
+            questions_data = json.loads(survey.template.questions)
+            question_count = len(questions_data.get('questions', []))
+        except Exception:
+            question_count = 0
+
+        send_survey_invitation_email(
+            current_app._get_current_object(), passport, survey, response, question_count
+        )
+
+        log.result = "DISMISSED"
+        db.session.commit()
+        flash(f"Email resent to {log.to_email}.", "success")
+        return redirect(request.referrer or url_for("activity_log"))
+
+    if base in ("order_placed", "order_paid", "cart_order_placed", "cart_order_paid", "subscription_notification"):
+        flash("This type of email can't be resent yet.", "warning")
+        return redirect(request.referrer or url_for("activity_log"))
 
     # Find passport: by pass_code first, then fall back via email + activity_name
     passport = None
@@ -1274,15 +1349,14 @@ def resend_email(log_id):
         return redirect(request.referrer or url_for("activity_log"))
 
     # Map template name back to event type. Historical EmailLog rows still carry the old
-    # "<name>_compiled/index.html" spelling, so normalise before looking it up.
+    # "<name>_compiled/index.html" spelling, so normalise before looking it up (base was
+    # already computed above, before the signup/survey/order branch checks).
     template_to_event = {
         "newPass": "pass_created",
         "paymentReceived": "payment_received",
         "latePayment": "payment_late",
         "redeemPass": "pass_redeemed",
     }
-    from utils import template_key
-    base = template_key(log.template_name) if log.template_name else ""
     event_type = template_to_event.get(base)
     if not event_type:
         flash(f"Cannot resend — unknown template type '{base}'.", "warning")
@@ -2062,6 +2136,10 @@ def list_signups():
                     "data-user-name": user_name, "data-approve-url": approve_url,
                     "data-workflow-type": "payment_first",
                 }})
+                resend_url = url_for('resend_payment_instructions', signup_id=signup.id)
+                actions.append({"label": "Resend Payment Instructions", "icon": '<i class="ti ti-send"></i>', "attrs": {
+                    "onclick": f"resendPaymentInstructions('{resend_url}'); return false;"
+                }})
             else:
                 actions.append({"label": "Approve & Create Passport", "icon": '<i class="ti ti-check"></i>', "attrs": {
                     "data-bs-toggle": "modal", "data-bs-target": "#approveSignupModal",
@@ -2249,6 +2327,31 @@ def bulk_signup_action():
         return redirect(url_for("activity_dashboard", activity_id=activity_id))
 
     return redirect(url_for("list_signups"))
+
+
+@app.route("/signup/<int:signup_id>/resend-payment-instructions", methods=["POST"])
+def resend_payment_instructions(signup_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    signup = db.session.get(Signup, signup_id)
+    if not signup:
+        flash("Signup not found.", "error")
+        return redirect(request.referrer or url_for("list_signups"))
+
+    activity = signup.activity
+    if not activity or activity.workflow_type != "payment_first":
+        flash("Cannot resend — this signup isn't awaiting payment.", "warning")
+        return redirect(request.referrer or url_for("list_signups"))
+    if signup.status != "pending":
+        flash("Cannot resend — this signup is no longer awaiting payment.", "warning")
+        return redirect(request.referrer or url_for("list_signups"))
+
+    from utils import notify_signup_event
+    notify_signup_event(current_app._get_current_object(), signup=signup, activity=activity)
+
+    flash(f"Payment instructions resent to {signup.user.email}.", "success")
+    return redirect(request.referrer or url_for("list_signups"))
 
 
 @app.route("/signup/approve-create-pass/<int:signup_id>")
@@ -10596,6 +10699,10 @@ def activity_dashboard(activity_id):
                     "data-user-name": s_user_name, "data-approve-url": approve_url,
                     "data-workflow-type": "payment_first",
                 }})
+                s_resend_url = url_for('resend_payment_instructions', signup_id=signup.id)
+                actions.append({"label": "Resend Payment Instructions", "icon": '<i class="ti ti-send"></i>', "attrs": {
+                    "onclick": f"resendPaymentInstructions('{s_resend_url}'); return false;"
+                }})
             else:
                 actions.append({"label": "Approve & Create Passport", "icon": '<i class="ti ti-check"></i>', "attrs": {
                     "data-bs-toggle": "modal", "data-bs-target": "#approveSignupModal",
@@ -13431,113 +13538,10 @@ def send_survey_invitations(survey_id):
             # Send email invitation
             try:
                 log(f"🔵 Preparing to send survey invitation to {passport.user.email}")
-                survey_url = url_for('take_survey', survey_token=survey.survey_token,
-                                   _external=True) + f"?token={response.response_token}"
-                log(f"🔵 Survey URL created: {survey_url}")
 
-                # Use activity-specific email templates
-                from utils import get_email_context, get_setting
-                print(f"🔵 get_email_context and get_setting imported")
-
-                # Build logo URL in request context (url_for needs request context)
-                if survey.activity and survey.activity.logo_filename:
-                    activity_logo_url = url_for('static', filename=f'uploads/logos/{survey.activity.logo_filename}')
-                else:
-                    org_logo = get_setting('LOGO_FILENAME', 'logo.png')
-                    activity_logo_url = url_for('static', filename=f'uploads/{org_logo}')
-
-                # Build base context
-                base_context = {
-                    'user_name': passport.user.name or 'Participant',
-                    'activity': survey.activity,  # Add activity object for Jinja2 template rendering
-                    'activity_name': survey.activity.name,
-                    'survey_name': survey.name,
-                    'survey_url': survey_url,
-                    'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'minipass'),
-                    'organization_address': get_setting('ORG_ADDRESS', ''),
-                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
-                    'activity_logo_url': activity_logo_url  # Add logo URL to base context
-                }
-
-                # Get email context using activity-specific templates
-                email_context = get_email_context(survey.activity, 'survey_invitation', base_context)
-
-                # CRITICAL FIX: Render Jinja2 variables in customized template strings
-                # The customized templates contain Jinja2 variables like {{ activity_name }} that need to be rendered
-                from jinja2 import Template as JinjaTemplate
-
-                # Build rendering context with all available variables
-                render_context = {
-                    'user_name': passport.user.name or 'Participant',
-                    'activity_name': survey.activity.name,
-                    'activity': survey.activity,  # For accessing activity properties
-                    'survey_name': survey.name,
-                    'survey_url': survey_url,
-                    'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'minipass'),
-                    'organization_address': get_setting('ORG_ADDRESS', ''),
-                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
-                }
-
-                # Render subject, title, and admin_message if they contain Jinja2 variables
-                # French fallbacks: these only fire if config/email_defaults.json fails to
-                # load, and an English heading on an otherwise French email is worse than a
-                # plain one.
-                subject_template = email_context.get('subject', f"Votre avis sur {survey.name}")
-                title_template = email_context.get('title', 'Votre avis compte')
-                admin_message_template = email_context.get('admin_message', '<p>Vous avez participé à cette activité. Un court formulaire nous aide à améliorer l\'expérience.</p><p>Merci du temps que vous y consacrez.</p>')
-
-                subject = JinjaTemplate(subject_template).render(**render_context)
-                rendered_title = JinjaTemplate(title_template).render(**render_context)
-                rendered_admin_message = JinjaTemplate(admin_message_template).render(**render_context)
-
-                template_name = 'survey_invitation'  # Match the template folder name
-
-                # Note: inline_images and logo loading is handled automatically by send_email_async()
-
-                context = {
-                    'user_name': passport.user.name or 'Participant',
-                    'activity_name': survey.activity.name,
-                    'survey_name': survey.name,
-                    'survey_url': survey_url,
-                    'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'minipass'),
-                    'organization_address': get_setting('ORG_ADDRESS', ''),
-                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
-                    'unsubscribe_url': f"https://minipass.me/unsubscribe?email={passport.user.email}",
-                    'privacy_url': "https://minipass.me/privacy",
-                    # Survey email template variables - now RENDERED (Jinja2 variables already processed)
-                    'title': rendered_title,
-                    'admin_message': rendered_admin_message,
-                    # Hero image URL for hosted images
-                    'hero_image_url': f"{get_setting('SITE_URL', '').rstrip('/')}/activity/{survey.activity.id}/hero-image/survey_invitation",
-                    # Real bug found during the redesign: this context is built by hand and never
-                    # goes through get_email_context() again (see _skip_email_context below), so
-                    # neither of these were ever set — the org logo silently never rendered, and
-                    # the hero always defaulted to being treated as a real photo even when it's
-                    # the generic mascot icon.
-                    'owner_logo_url': f"{get_setting('SITE_URL', '').rstrip('/')}/owner-logo?activity_id={survey.activity.id}",
-                    'hero_is_photo': email_context.get('hero_is_photo', True),
-                    # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
-                    '_skip_email_context': True
-                }
-
-                print(f"🔵 About to call send_email_async()")
-                print(f"🔵 Template: {template_name}")
-                print(f"🔵 Subject: {subject}")
-                print(f"🔵 To: {passport.user.email}")
-                print(f"🔵 Context keys: {list(context.keys())}")
-
-                send_email_async(
-                    app=current_app._get_current_object(),
-                    user=passport.user,
-                    activity=survey.activity,  # Pass activity to use customized email templates
-                    subject=subject,
-                    to_email=passport.user.email,
-                    template_name=template_name,
-                    context=context,
-                    use_hosted_images=True
+                from utils import send_survey_invitation_email
+                send_survey_invitation_email(
+                    current_app._get_current_object(), passport, survey, response, question_count
                 )
 
                 print(f"send_email_async() called successfully for {passport.user.email}")
@@ -13562,111 +13566,9 @@ def send_survey_invitations(survey_id):
             
             # Send email invitation
             try:
-                survey_url = url_for('take_survey', survey_token=survey.survey_token, 
-                                   _external=True) + f"?token={existing_response.response_token}"
-                
-                # Use activity-specific email templates
-                from utils import get_email_context
-
-                # Build logo URL in request context (url_for needs request context)
-                if survey.activity and survey.activity.logo_filename:
-                    activity_logo_url = url_for('static', filename=f'uploads/logos/{survey.activity.logo_filename}')
-                else:
-                    org_logo = get_setting('LOGO_FILENAME', 'logo.png')
-                    activity_logo_url = url_for('static', filename=f'uploads/{org_logo}')
-
-                # Build base context
-                base_context = {
-                    'user_name': passport.user.name or 'Participant',
-                    'activity': survey.activity,  # Add activity object for Jinja2 template rendering
-                    'activity_name': survey.activity.name,
-                    'survey_name': survey.name,
-                    'survey_url': survey_url,
-                    'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'minipass'),
-                    'organization_address': get_setting('ORG_ADDRESS', ''),
-                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
-                    'activity_logo_url': activity_logo_url  # Add logo URL to base context
-                }
-
-                # Get email context using activity-specific templates
-                email_context = get_email_context(survey.activity, 'survey_invitation', base_context)
-
-                # CRITICAL FIX: Render Jinja2 variables in customized template strings
-                # The customized templates contain Jinja2 variables like {{ activity_name }} that need to be rendered
-                from jinja2 import Template as JinjaTemplate
-
-                # Build rendering context with all available variables
-                render_context = {
-                    'user_name': passport.user.name or 'Participant',
-                    'activity_name': survey.activity.name,
-                    'activity': survey.activity,  # For accessing activity properties
-                    'survey_name': survey.name,
-                    'survey_url': survey_url,
-                    'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'minipass'),
-                    'organization_address': get_setting('ORG_ADDRESS', ''),
-                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
-                }
-
-                # Render subject, title, and admin_message if they contain Jinja2 variables
-                # French fallbacks: these only fire if config/email_defaults.json fails to
-                # load, and an English heading on an otherwise French email is worse than a
-                # plain one.
-                subject_template = email_context.get('subject', f"Votre avis sur {survey.name}")
-                title_template = email_context.get('title', 'Votre avis compte')
-                admin_message_template = email_context.get('admin_message', '<p>Vous avez participé à cette activité. Un court formulaire nous aide à améliorer l\'expérience.</p><p>Merci du temps que vous y consacrez.</p>')
-
-                subject = JinjaTemplate(subject_template).render(**render_context)
-                rendered_title = JinjaTemplate(title_template).render(**render_context)
-                rendered_admin_message = JinjaTemplate(admin_message_template).render(**render_context)
-
-                template_name = 'survey_invitation'  # Match the template folder name
-
-                # Note: inline_images and logo loading is handled automatically by send_email_async()
-
-                context = {
-                    'user_name': passport.user.name or 'Participant',
-                    'activity_name': survey.activity.name,
-                    'survey_name': survey.name,
-                    'survey_url': survey_url,
-                    'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'minipass'),
-                    'organization_address': get_setting('ORG_ADDRESS', ''),
-                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
-                    'unsubscribe_url': f"https://minipass.me/unsubscribe?email={passport.user.email}",
-                    'privacy_url': "https://minipass.me/privacy",
-                    # Survey email template variables - now RENDERED (Jinja2 variables already processed)
-                    'title': rendered_title,
-                    'admin_message': rendered_admin_message,
-                    # Hero image URL for hosted images
-                    'hero_image_url': f"{get_setting('SITE_URL', '').rstrip('/')}/activity/{survey.activity.id}/hero-image/survey_invitation",
-                    # Real bug found during the redesign: this context is built by hand and never
-                    # goes through get_email_context() again (see _skip_email_context below), so
-                    # neither of these were ever set — the org logo silently never rendered, and
-                    # the hero always defaulted to being treated as a real photo even when it's
-                    # the generic mascot icon.
-                    'owner_logo_url': f"{get_setting('SITE_URL', '').rstrip('/')}/owner-logo?activity_id={survey.activity.id}",
-                    'hero_is_photo': email_context.get('hero_is_photo', True),
-                    # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
-                    '_skip_email_context': True
-                }
-
-                print(f"🔵 About to call send_email_async()")
-                print(f"🔵 Template: {template_name}")
-                print(f"🔵 Subject: {subject}")
-                print(f"🔵 To: {passport.user.email}")
-                print(f"🔵 Context keys: {list(context.keys())}")
-
-                send_email_async(
-                    app=current_app._get_current_object(),
-                    user=passport.user,
-                    activity=survey.activity,  # Pass activity to use customized email templates
-                    subject=subject,
-                    to_email=passport.user.email,
-                    template_name=template_name,
-                    context=context,
-                    use_hosted_images=True
+                from utils import send_survey_invitation_email
+                send_survey_invitation_email(
+                    current_app._get_current_object(), passport, survey, existing_response, question_count
                 )
 
                 print(f"send_email_async() called successfully for {passport.user.email}")
