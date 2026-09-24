@@ -215,6 +215,9 @@ class CartOrder(db.Model):
     juggling Order and Signup separately. `total_amount` is what the Interac bot matches
     the incoming e-transfer against."""
     __tablename__ = "cart_order"
+    # sqlite_autoincrement: see the identical note on Signup — cart_code is id-derived and
+    # needs a high-water mark that survives a full-file DB restore.
+    __table_args__ = {"sqlite_autoincrement": True}
 
     id = db.Column(db.Integer, primary_key=True)
     cart_code = db.Column(db.String(20), unique=True, nullable=True)  # format: MP-CART-0001234
@@ -243,6 +246,9 @@ class Order(db.Model):
     # Explicit table name: "order" is a reserved SQL keyword (and Wayne, the AI chatbot,
     # generates raw SQL against these table names — a reserved word invites broken queries).
     __tablename__ = "shop_order"
+    # sqlite_autoincrement: see the identical note on Signup — order_code is id-derived and
+    # needs a high-water mark that survives a full-file DB restore.
+    __table_args__ = {"sqlite_autoincrement": True}
 
     id = db.Column(db.Integer, primary_key=True)
     order_code = db.Column(db.String(20), unique=True, nullable=True)  # format: MP-ORD-0001234
@@ -352,6 +358,13 @@ class StripeTransaction(db.Model):
 
 
 class Signup(db.Model):
+    # sqlite_autoincrement: signup_code is derived from this id (f"MP-INS-{id:07d}"). Plain
+    # SQLite INTEGER PRIMARY KEY allocates the next id as max(existing)+1, which a full-file
+    # DB restore can roll backward, causing a reissued id (and therefore a reissued, already
+    # -used-elsewhere reference code). AUTOINCREMENT makes SQLite track a high-water mark in
+    # sqlite_sequence that isn't recomputed from current table contents.
+    __table_args__ = {"sqlite_autoincrement": True}
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False, index=True)

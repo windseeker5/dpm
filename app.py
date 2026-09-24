@@ -217,6 +217,15 @@ with app.app_context():
     app.config["MAIL_PASSWORD"] = Config.get_setting(app, "MAIL_PASSWORD", "")
     app.config["MAIL_DEFAULT_SENDER"] = Config.get_setting(app, "MAIL_DEFAULT_SENDER", "")
 
+    # Defense-in-depth for a restore done by copying a .db file onto disk directly (e.g. a
+    # manual VPS deploy step) rather than through this app's own restore routes, which
+    # already call this themselves — see restore_database() in api/backup.py.
+    try:
+        from utils import enforce_watermarks
+        enforce_watermarks()
+    except Exception as _e:
+        print(f"[STARTUP] enforce_watermarks() failed: {_e}")
+
     # Stripe health check: verify the API key can access the subscription
     try:
         from utils import get_setting as _startup_get_setting
@@ -3376,6 +3385,8 @@ def signup(activity_id):
         db.session.add(signup_record)
         db.session.flush()  # Get the ID before commit
         signup_record.signup_code = f"MP-INS-{signup_record.id:07d}"
+        from utils import bump_watermark
+        bump_watermark("signup", signup_record.id)
 
         # Session scheduling: claim the seat in the SAME transaction as the Signup, so
         # there is never a signup without a seat, nor a seat without a signup explaining it.
@@ -3804,6 +3815,8 @@ def shop_checkout():
         db.session.add(cart_order)
         db.session.flush()
         cart_order.cart_code = f"MP-CART-{cart_order.id:07d}"
+        from utils import bump_watermark
+        bump_watermark("cart_order", cart_order.id)
 
         running_total = 0.0
         checkout_error = None

@@ -1168,6 +1168,90 @@ def generate_pass_code():
     return f"MP-{str(uuid.uuid4()).replace('-', '')[:12]}"
 
 
+# ── Restore-immune watermark for id-derived reference codes ──
+#
+# cart_code / signup_code / order_code are built as f"PREFIX-{row.id:07d}" (see
+# bump_watermark() call sites). Even with sqlite_autoincrement on those tables, a full-file
+# DB restore (see api/backup.py's restore_database()) replaces the whole .db file, including
+# its sqlite_sequence high-water marks — so a restored snapshot can make the next insert
+# reissue an id (and therefore a reference code) that was already handed out before the
+# snapshot was taken. instance/code_watermarks.json is a sibling file that backup/restore
+# never reads or writes, so it survives a restore untouched; enforce_watermarks() uses it to
+# push sqlite_sequence back up to the highest id ever issued before the next insert can run.
+
+def _watermark_file_path():
+    from api.backup import resolve_db_path
+    return os.path.join(os.path.dirname(resolve_db_path()), "code_watermarks.json")
+
+
+def bump_watermark(table_name, issued_id):
+    """Raise the persisted watermark for `table_name` to max(current, issued_id). Never
+    lowers it. Call this right after generating an id-derived reference code."""
+    import fcntl
+
+    if not issued_id:
+        return
+    path = _watermark_file_path()
+    lock_path = path + ".lock"
+    lock_file = open(lock_path, "a")
+    try:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        data = {}
+        if os.path.exists(path):
+            try:
+                with open(path, "r") as f:
+                    data = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                data = {}
+        if issued_id > data.get(table_name, 0):
+            data[table_name] = issued_id
+            tmp_path = path + ".tmp"
+            with open(tmp_path, "w") as f:
+                json.dump(data, f)
+            os.replace(tmp_path, path)
+    finally:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        lock_file.close()
+
+
+def enforce_watermarks():
+    """Force each tracked table's sqlite_sequence forward to at least its persisted
+    watermark, so a table that just came back from a restored snapshot with a lower max(id)
+    can't reissue a reference code that was already sent out before the snapshot was taken.
+    Call this after any DB restore, and once at app startup (covers a restore done by
+    copying a .db file onto disk directly, outside this app's own restore routes)."""
+    from sqlalchemy import text
+
+    path = _watermark_file_path()
+    if not os.path.exists(path):
+        return
+    try:
+        with open(path, "r") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return
+
+    for table_name, watermark in data.items():
+        if not isinstance(watermark, int) or watermark <= 0:
+            continue
+        try:
+            db.session.execute(
+                text("UPDATE sqlite_sequence SET seq = :seq WHERE name = :name AND seq < :seq"),
+                {"name": table_name, "seq": watermark},
+            )
+            db.session.execute(
+                text(
+                    "INSERT INTO sqlite_sequence (name, seq) "
+                    "SELECT :name, :seq WHERE NOT EXISTS "
+                    "(SELECT 1 FROM sqlite_sequence WHERE name = :name)"
+                ),
+                {"name": table_name, "seq": watermark},
+            )
+        except Exception as e:
+            print(f"⚠️ enforce_watermarks: could not advance sequence for {table_name!r}: {e}")
+    db.session.commit()
+
+
 
 # ── Placeholder Gradients for Missing Activity Covers & Org Logos ──
 
@@ -1549,6 +1633,7 @@ def create_order_line_for_cart(cart_order, product, quantity, size=None, notes="
     db.session.add(order)
     db.session.flush()
     order.order_code = f"MP-ORD-{order.id:07d}"
+    bump_watermark("shop_order", order.id)
     return order, None
 
 
@@ -1615,6 +1700,7 @@ def create_signup_line_for_cart(cart_order, activity, passport_type_id=None, req
     db.session.add(signup_record)
     db.session.flush()
     signup_record.signup_code = f"MP-INS-{signup_record.id:07d}"
+    bump_watermark("signup", signup_record.id)
 
     if chosen_slot is not None:
         if not claim_slot_seat(chosen_slot.id):
@@ -4831,6 +4917,14 @@ def notify_order_event(app, *, order, event_type):
         "amount": order.amount,
         "payment_method": order.payment_method,
         "payment_email": payment_email,
+        # No `activity=` is passed to send_email_async below (a shop Order isn't tied to
+        # one), so get_email_context() never runs and owner_logo_url/organization_name are
+        # never set otherwise — the logo silently disappears. /owner-logo with no
+        # activity_id already falls back to the org-level logo, same pattern used in
+        # send_survey_invitation_email().
+        "organization_name": get_setting("ORG_NAME", "minipass"),
+        "organization_address": get_setting("ORG_ADDRESS", ""),
+        "owner_logo_url": f"{get_setting('SITE_URL', '').rstrip('/')}/owner-logo",
     }
 
     send_email_async(app, subject=subject, to_email=order.buyer_email,
@@ -4890,6 +4984,11 @@ def notify_cart_order_event(app, *, cart_order, event_type):
         # go looking for an email that will never arrive.
         "product_count": len(cart_order.orders),
         "passport_count": len(cart_order.signups),
+        # Same reasoning as notify_order_event(): no single Activity to pass, so set the
+        # logo directly rather than relying on send_email_async's auto get_email_context().
+        "organization_name": get_setting("ORG_NAME", "minipass"),
+        "organization_address": get_setting("ORG_ADDRESS", ""),
+        "owner_logo_url": f"{get_setting('SITE_URL', '').rstrip('/')}/owner-logo",
     }
 
     send_email_async(app, subject=subject, to_email=cart_order.buyer_email,

@@ -4464,6 +4464,239 @@ def task57_merge_duplicate_shop_cart_signups(cursor):
 
 
 # ============================================================================
+# TASK 58: Force true AUTOINCREMENT on id-derived payment-reference-code tables
+# ============================================================================
+def task58_enforce_autoincrement_on_code_tables(cursor):
+    """cart_order.cart_code, signup.signup_code and shop_order.order_code are all built as
+    f"PREFIX-{row.id:07d}" — a plain SQLite `INTEGER PRIMARY KEY` allocates the next id as
+    max(existing id) + 1, recomputed fresh at insert time, not a persistent counter. A DB
+    restore (or any future row deletion) that removes the row holding a table's current max
+    id makes the next insert reissue that same id — and therefore the same public
+    payment-matching reference code, to a different order/signup. True SQLite AUTOINCREMENT
+    (`INTEGER PRIMARY KEY AUTOINCREMENT`) makes SQLite track the high-water mark in its own
+    `sqlite_sequence` table so it can't regress from row deletion (a restore can still roll
+    the whole file — and sqlite_sequence with it — back to an earlier snapshot; that residual
+    gap is closed separately by the app-level code_watermarks.json watermark, not by this
+    migration).
+
+    SQLite can't ALTER a table to add AUTOINCREMENT after creation, so each table is
+    recreated (rename old -> create new with AUTOINCREMENT -> copy rows -> recreate indexes
+    -> drop old), preserving every existing row's id and code exactly as-is — this is a
+    structural fix only, it renumbers nothing.
+
+    Idempotent: skipped per-table if that table's stored CREATE TABLE SQL already contains
+    AUTOINCREMENT.
+    """
+    log("🔒", "TASK 58: Enforcing AUTOINCREMENT on cart_order/signup/shop_order", Colors.BLUE)
+
+    def already_autoincrement(table_name):
+        cursor.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table_name,)
+        )
+        row = cursor.fetchone()
+        return bool(row and row[0] and "AUTOINCREMENT" in row[0].upper())
+
+    def recreate_indexes(table_name, index_defs):
+        for index_sql in index_defs:
+            cursor.execute(index_sql)
+
+    cursor.execute("PRAGMA foreign_keys = OFF")
+    any_migrated = False
+
+    # monthly_transactions_detail/monthly_financial_summary read from signup/shop_order —
+    # SQLite's ALTER TABLE RENAME auto-rewrites view bodies to follow the rename, which
+    # leaves them referencing a "_old" table that gets dropped a moment later. Drop them
+    # first and rebuild with task55/task56's own (already-idempotent) definitions once the
+    # table recreation below is done, rather than hand-duplicating view SQL here.
+    cursor.execute("DROP VIEW IF EXISTS monthly_transactions_detail")
+    cursor.execute("DROP VIEW IF EXISTS monthly_financial_summary")
+
+    try:
+        # --- cart_order ---
+        if already_autoincrement("cart_order"):
+            log("⏭️ ", "  cart_order already AUTOINCREMENT, skipping", Colors.YELLOW)
+        elif not check_table_exists(cursor, "cart_order"):
+            log("⏭️ ", "  Table 'cart_order' doesn't exist, skipping", Colors.YELLOW)
+        else:
+            cursor.execute("ALTER TABLE cart_order RENAME TO cart_order_old")
+            cursor.execute("""
+                CREATE TABLE cart_order (
+                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    cart_code VARCHAR(20) UNIQUE,
+                    buyer_name VARCHAR(150) NOT NULL,
+                    buyer_email VARCHAR(150),
+                    buyer_phone VARCHAR(20),
+                    payment_method VARCHAR(20),
+                    stripe_checkout_session_id VARCHAR(255),
+                    total_amount FLOAT NOT NULL,
+                    status VARCHAR(20),
+                    created_dt DATETIME,
+                    paid_at DATETIME
+                )
+            """)
+            cursor.execute("""
+                INSERT INTO cart_order (id, cart_code, buyer_name, buyer_email, buyer_phone,
+                    payment_method, stripe_checkout_session_id, total_amount, status,
+                    created_dt, paid_at)
+                SELECT id, cart_code, buyer_name, buyer_email, buyer_phone,
+                    payment_method, stripe_checkout_session_id, total_amount, status,
+                    created_dt, paid_at
+                FROM cart_order_old
+            """)
+            rows_copied = cursor.rowcount
+            cursor.execute("DROP TABLE cart_order_old")
+            log("✅", f"  cart_order recreated with AUTOINCREMENT ({rows_copied} rows preserved)", Colors.GREEN)
+            any_migrated = True
+
+        # --- signup ---
+        if already_autoincrement("signup"):
+            log("⏭️ ", "  signup already AUTOINCREMENT, skipping", Colors.YELLOW)
+        elif not check_table_exists(cursor, "signup"):
+            log("⏭️ ", "  Table 'signup' doesn't exist, skipping", Colors.YELLOW)
+        else:
+            cursor.execute("ALTER TABLE signup RENAME TO signup_old")
+            cursor.execute("""
+                CREATE TABLE signup (
+                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    activity_id INTEGER NOT NULL,
+                    passport_type_id INTEGER,
+                    subject VARCHAR(200),
+                    description TEXT,
+                    form_url VARCHAR(500),
+                    form_data TEXT,
+                    signed_up_at DATETIME,
+                    paid BOOLEAN,
+                    paid_at DATETIME,
+                    passport_id INTEGER,
+                    status VARCHAR(50),
+                    cart_order_id INTEGER,
+                    requested_sessions INTEGER DEFAULT 1,
+                    requested_amount FLOAT DEFAULT 0.0,
+                    signup_code VARCHAR(20),
+                    payment_method VARCHAR(20) DEFAULT 'interac',
+                    stripe_checkout_session_id VARCHAR(255),
+                    CONSTRAINT fk_signup_cart_order_id FOREIGN KEY(cart_order_id) REFERENCES cart_order (id) ON DELETE SET NULL,
+                    FOREIGN KEY(passport_type_id) REFERENCES passport_type (id) ON DELETE SET NULL,
+                    FOREIGN KEY(passport_id) REFERENCES passport (id) ON DELETE SET NULL,
+                    FOREIGN KEY(user_id) REFERENCES user (id),
+                    FOREIGN KEY(activity_id) REFERENCES activity (id)
+                )
+            """)
+            cursor.execute("""
+                INSERT INTO signup (id, user_id, activity_id, passport_type_id, subject,
+                    description, form_url, form_data, signed_up_at, paid, paid_at,
+                    passport_id, status, cart_order_id, requested_sessions, requested_amount,
+                    signup_code, payment_method, stripe_checkout_session_id)
+                SELECT id, user_id, activity_id, passport_type_id, subject,
+                    description, form_url, form_data, signed_up_at, paid, paid_at,
+                    passport_id, status, cart_order_id, requested_sessions, requested_amount,
+                    signup_code, payment_method, stripe_checkout_session_id
+                FROM signup_old
+            """)
+            rows_copied = cursor.rowcount
+            cursor.execute("DROP TABLE signup_old")
+            recreate_indexes("signup", [
+                "CREATE INDEX ix_signup_status ON signup (status)",
+                "CREATE INDEX ix_signup_activity ON signup (activity_id)",
+                "CREATE INDEX ix_signup_user ON signup (user_id)",
+                "CREATE INDEX ix_signup_passport_type ON signup (passport_type_id)",
+            ])
+            log("✅", f"  signup recreated with AUTOINCREMENT ({rows_copied} rows preserved)", Colors.GREEN)
+            any_migrated = True
+
+        # --- shop_order ---
+        if already_autoincrement("shop_order"):
+            log("⏭️ ", "  shop_order already AUTOINCREMENT, skipping", Colors.YELLOW)
+        elif not check_table_exists(cursor, "shop_order"):
+            log("⏭️ ", "  Table 'shop_order' doesn't exist, skipping", Colors.YELLOW)
+        else:
+            cursor.execute("ALTER TABLE shop_order RENAME TO shop_order_old")
+            cursor.execute("""
+                CREATE TABLE shop_order (
+                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    order_code VARCHAR(20) UNIQUE,
+                    product_id INTEGER,
+                    product_name VARCHAR(150) NOT NULL,
+                    unit_price FLOAT NOT NULL DEFAULT 0.0,
+                    quantity INTEGER NOT NULL DEFAULT 1,
+                    amount FLOAT NOT NULL DEFAULT 0.0,
+                    size VARCHAR(50),
+                    buyer_name VARCHAR(150) NOT NULL,
+                    buyer_email VARCHAR(150),
+                    buyer_phone VARCHAR(20),
+                    notes TEXT,
+                    payment_method VARCHAR(20) DEFAULT 'interac',
+                    stripe_checkout_session_id VARCHAR(255),
+                    status VARCHAR(20) DEFAULT 'awaiting_payment',
+                    created_dt DATETIME,
+                    paid_at DATETIME,
+                    cart_order_id INTEGER REFERENCES cart_order (id),
+                    FOREIGN KEY(product_id) REFERENCES product (id) ON DELETE SET NULL
+                )
+            """)
+            cursor.execute("""
+                INSERT INTO shop_order (id, order_code, product_id, product_name, unit_price,
+                    quantity, amount, size, buyer_name, buyer_email, buyer_phone, notes,
+                    payment_method, stripe_checkout_session_id, status, created_dt, paid_at,
+                    cart_order_id)
+                SELECT id, order_code, product_id, product_name, unit_price,
+                    quantity, amount, size, buyer_name, buyer_email, buyer_phone, notes,
+                    payment_method, stripe_checkout_session_id, status, created_dt, paid_at,
+                    cart_order_id
+                FROM shop_order_old
+            """)
+            rows_copied = cursor.rowcount
+            cursor.execute("DROP TABLE shop_order_old")
+            recreate_indexes("shop_order", [
+                "CREATE INDEX ix_shop_order_status ON shop_order (status)",
+                "CREATE INDEX ix_shop_order_product_id ON shop_order (product_id)",
+                "CREATE INDEX ix_shop_order_cart_order_id ON shop_order (cart_order_id)",
+            ])
+            log("✅", f"  shop_order recreated with AUTOINCREMENT ({rows_copied} rows preserved)", Colors.GREEN)
+            any_migrated = True
+
+        cursor.execute("PRAGMA foreign_keys = ON")
+
+        # Rebuild the two views dropped above, using the same task functions that created
+        # them originally (both are DROP VIEW IF EXISTS + CREATE VIEW, safe to call again) —
+        # this leaves them byte-identical to a fresh full run of every task in order.
+        task55_financial_views_with_products(cursor)
+        task56_transactions_detail_add_keys(cursor)
+
+        # Seed instance/code_watermarks.json from MAX(id) for any table that just got
+        # migrated, so a DB migrating for the first time starts with a correct watermark
+        # rather than an absent one (enforce_watermarks() at app startup/restore-time is a
+        # no-op if the file doesn't exist yet).
+        if any_migrated:
+            watermark_path = os.path.join(os.path.dirname(DB_PATH), "code_watermarks.json")
+            data = {}
+            if os.path.exists(watermark_path):
+                try:
+                    with open(watermark_path, "r") as f:
+                        data = json.load(f)
+                except (json.JSONDecodeError, OSError):
+                    data = {}
+            for table_name in ("cart_order", "signup", "shop_order"):
+                cursor.execute(f"SELECT MAX(id) FROM {table_name}")
+                max_id = cursor.fetchone()[0] or 0
+                if max_id > data.get(table_name, 0):
+                    data[table_name] = max_id
+            tmp_path = watermark_path + ".tmp"
+            with open(tmp_path, "w") as f:
+                json.dump(data, f)
+            os.replace(tmp_path, watermark_path)
+            log("✅", f"  Seeded {watermark_path} from current MAX(id) per table", Colors.GREEN)
+
+        return True
+
+    except sqlite3.OperationalError as e:
+        cursor.execute("PRAGMA foreign_keys = ON")
+        log("❌", f"  Failed to enforce AUTOINCREMENT: {e}", Colors.RED)
+        raise
+
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -4540,6 +4773,7 @@ def main():
         ("Financial Views: Products + AR Fix", task55_financial_views_with_products),
         ("Financial Views: Detail View Keys", task56_transactions_detail_add_keys),
         ("Merge Duplicate Shop-Cart Signups", task57_merge_duplicate_shop_cart_signups),
+        ("Enforce AUTOINCREMENT on Code Tables", task58_enforce_autoincrement_on_code_tables),
     ]
 
     completed = 0
