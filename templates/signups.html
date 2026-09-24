@@ -136,8 +136,17 @@
   </div>
 </div>
 
+<form method="POST" id="resendPaymentInstructionsForm" style="display:none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+
 <script src="{{ url_for('static', filename='js/mp-table-toolbar.js') }}?v=1.0"></script>
 <script>
+function resendPaymentInstructions(resendUrl) {
+  document.getElementById('resendPaymentInstructionsForm').action = resendUrl;
+  document.getElementById('resendPaymentInstructionsForm').submit();
+}
+
 // Populate shared approve signup modal
 document.getElementById('approveSignupModal').addEventListener('show.bs.modal', function(event) {
   const btn = event.relatedTarget;
