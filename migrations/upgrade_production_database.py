@@ -4355,6 +4355,115 @@ def task56_transactions_detail_add_keys(cursor):
 
 
 # ============================================================================
+# TASK 57: Merge duplicate shop-cart signups from the pre-fix quantity bug
+# ============================================================================
+def task57_merge_duplicate_shop_cart_signups(cursor):
+    """Merge pre-existing duplicate Signup rows left behind by the shop-cart quantity bug
+    (fix-shop-cart-passport-quantity.md): before the fix, /shop/activity/<id> had no quantity
+    field, so buying N tickets meant clicking "Add to cart" N times, and checkout turned each
+    click into its own Signup row (each with its own freshly-created duplicate User row) —
+    e.g. 5 identical "Yan Marechal" signups at $40 instead of one at $200 with
+    requested_sessions=5. The fix stops this going forward; this task cleans up what the bug
+    already left behind.
+
+    Only merges UNPAID duplicates (no Passport created yet) — merging already-paid duplicates
+    would mean combining separate Passports/uses_remaining, which is riskier and out of scope
+    here (see fix-shop-cart-passport-quantity.md's own "Rollout" note).
+
+    Detection: unpaid Signup rows sharing the same (cart_order_id, activity_id,
+    passport_type_id), where cart_order_id is set (i.e. came from a shop-cart checkout, not
+    the standalone /signup/<id> flow) and every row's linked User has the SAME normalized
+    name + email. That last check is the safety guard — two different real people could in
+    theory have bought the same passport type in the same cart before the quantity fix existed
+    (the only way to sign up 2 people at once was clicking "Add to cart" twice), so this only
+    merges rows that are actually the same person entered repeatedly, matching what real
+    duplicate data looks like (identical name/email/phone).
+
+    The oldest row (lowest id) in each group survives, with requested_sessions and
+    requested_amount summed across the group; the other rows are deleted. Their now-orphaned
+    duplicate User rows are deliberately left in place (not deleted) rather than chasing every
+    FK that might reference a user — lower risk, and they become invisible once their signup
+    is gone.
+
+    Idempotent: running it again finds no qualifying groups (each survivor is now alone in its
+    (cart_order_id, activity_id, passport_type_id) group) and changes nothing.
+    """
+    log("🧹", "TASK 57: Merging duplicate shop-cart signups (pre-fix quantity bug)", Colors.BLUE)
+
+    if not check_table_exists(cursor, 'signup'):
+        log("⏭️ ", "  Table 'signup' doesn't exist, skipping", Colors.YELLOW)
+        return True
+    if not check_column_exists(cursor, 'signup', 'cart_order_id'):
+        log("⏭️ ", "  Column 'cart_order_id' doesn't exist on signup yet, skipping", Colors.YELLOW)
+        return True
+
+    cursor.execute("""
+        SELECT s.id, s.user_id, s.cart_order_id, s.activity_id, s.passport_type_id,
+               s.requested_sessions, s.requested_amount, u.name, u.email
+        FROM signup s
+        JOIN user u ON u.id = s.user_id
+        WHERE s.cart_order_id IS NOT NULL
+          AND s.passport_id IS NULL
+        ORDER BY s.cart_order_id, s.activity_id, s.passport_type_id, s.id ASC
+    """)
+    rows = cursor.fetchall()
+
+    def normalize(text):
+        return (text or "").strip().lower()
+
+    groups = {}
+    for row in rows:
+        (signup_id, user_id, cart_order_id, activity_id, passport_type_id,
+         requested_sessions, requested_amount, user_name, user_email) = row
+        key = (cart_order_id, activity_id, passport_type_id)
+        groups.setdefault(key, []).append({
+            "id": signup_id,
+            "user_id": user_id,
+            "requested_sessions": requested_sessions or 1,
+            "requested_amount": requested_amount or 0.0,
+            "name": normalize(user_name),
+            "email": normalize(user_email),
+        })
+
+    groups_merged = 0
+    rows_removed = 0
+
+    for key, members in groups.items():
+        if len(members) < 2:
+            continue
+        identities = {(m["name"], m["email"]) for m in members}
+        if len(identities) != 1:
+            # Different people shared this cart/activity/passport-type combo (the only way
+            # to sign up 2 different people at once before the quantity fix) — not a
+            # duplicate-bug artifact, leave every row untouched.
+            continue
+
+        survivor, *duplicates = members  # already ordered by id ASC
+        total_sessions = sum(m["requested_sessions"] for m in members)
+        total_amount = sum(m["requested_amount"] for m in members)
+
+        cursor.execute(
+            "UPDATE signup SET requested_sessions = ?, requested_amount = ? WHERE id = ?",
+            (total_sessions, total_amount, survivor["id"]),
+        )
+        duplicate_ids = [m["id"] for m in duplicates]
+        cursor.executemany("DELETE FROM signup WHERE id = ?", [(did,) for did in duplicate_ids])
+
+        groups_merged += 1
+        rows_removed += len(duplicate_ids)
+        log("✅", f"  Merged {len(members)} duplicate signup(s) for {survivor['name'] or survivor['email']!r} "
+                  f"(cart_order_id={key[0]}, activity_id={key[1]}) into signup id={survivor['id']}: "
+                  f"requested_sessions={total_sessions}, requested_amount={total_amount}", Colors.GREEN)
+
+    if groups_merged:
+        log("📊", f"  Summary: {groups_merged} duplicate group(s) merged, {rows_removed} duplicate signup row(s) removed")
+    else:
+        log("✅", "  No duplicate shop-cart signup groups found — nothing to merge", Colors.GREEN)
+
+    return True
+
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -4430,6 +4539,7 @@ def main():
         ("Additional Performance Indexes", task54_add_more_performance_indexes),
         ("Financial Views: Products + AR Fix", task55_financial_views_with_products),
         ("Financial Views: Detail View Keys", task56_transactions_detail_add_keys),
+        ("Merge Duplicate Shop-Cart Signups", task57_merge_duplicate_shop_cart_signups),
     ]
 
     completed = 0

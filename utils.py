@@ -2522,6 +2522,36 @@ def cleanup_duplicate_payment_logs_auto():
 
 
 def match_gmail_payments_to_passes():
+    """Exclusive-lock wrapper around _match_gmail_payments_to_passes_impl().
+
+    Guards against overlapping invocations (the 30-min scheduler job vs. any of the
+    manual "check emails now" admin routes vs. a double-click) using the same
+    non-blocking fcntl file-lock pattern as init_scheduler() in app.py. Without this,
+    two overlapping runs can both pass the EbankPayment "already processed" check
+    before either commits, matching and paying the same e-transfer twice.
+    """
+    import fcntl
+
+    # Each customer deployment is its own process/container (see init_scheduler()'s
+    # identical fixed-path pattern in app.py), so one lock path per process is enough.
+    lock_file_path = "/tmp/minipass_payment_bot.lock"
+
+    lock_file = open(lock_file_path, 'w')
+    try:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except (IOError, OSError):
+        print("⏭️ payment bot already running, skipping this trigger")
+        lock_file.close()
+        return {"matched": 0, "no_match": 0, "skipped": 0, "emails_found": 0, "already_running": True}
+
+    try:
+        return _match_gmail_payments_to_passes_impl()
+    finally:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        lock_file.close()
+
+
+def _match_gmail_payments_to_passes_impl():
     from utils import extract_interac_transfers, get_setting, notify_pass_event, notify_order_event
     from models import EbankPayment, Passport, Signup, Order, db
     from datetime import datetime, timezone, timedelta
@@ -3367,6 +3397,34 @@ def match_gmail_payments_to_passes():
                         print(f"   ⚠️ Found PAID passport: {p.user.name} (Score: {score}%, Passport #{p.id})")
                         break
 
+                # Also check already-PAID cart orders / shop orders for a same-amount,
+                # same-buyer match. Mirrors the paid-passport check above so a second
+                # overlapping bot run reports *why* it found no match (cart/order already
+                # paid) instead of leaving a bare, unexplained NO_MATCH.
+                matching_paid_cart = None
+                if not matching_paid_passport:
+                    paid_carts_same_amount = CartOrder.query.filter_by(status="paid").filter(
+                        CartOrder.total_amount == payment_amount
+                    ).all()
+                    for c in paid_carts_same_amount:
+                        score = fuzz.ratio(payment_name_normalized, normalize_for_comparison(c.buyer_name))
+                        if score >= 95:
+                            matching_paid_cart = c
+                            print(f"   ⚠️ Found PAID cart order: {c.buyer_name} (Score: {score}%, Cart {c.cart_code})")
+                            break
+
+                matching_paid_order = None
+                if not matching_paid_passport and not matching_paid_cart:
+                    paid_orders_same_amount = Order.query.filter_by(status="paid").filter(
+                        Order.amount == payment_amount
+                    ).all()
+                    for o in paid_orders_same_amount:
+                        score = fuzz.ratio(payment_name_normalized, normalize_for_comparison(o.buyer_name))
+                        if score >= 95:
+                            matching_paid_order = o
+                            print(f"   ⚠️ Found PAID order: {o.buyer_name} (Score: {score}%, Order {o.order_code})")
+                            break
+
                 # If found a matching PAID passport, this is likely a duplicate payment
                 if matching_paid_passport:
                     # Found a matching PAID passport - provide detailed info
@@ -3391,6 +3449,14 @@ def match_gmail_payments_to_passes():
 
                     note_text = f"MATCH FOUND: {matching_paid_passport.user.name} (${payment_amount:.2f}, Passport #{matching_paid_passport.id}) - Already marked PAID by {paid_by} on {paid_date_str}{time_diff_info}"
                     print(f"   💡 Likely duplicate payment - passport already paid")
+                elif matching_paid_cart:
+                    paid_date_str = matching_paid_cart.paid_at.strftime("%Y-%m-%d %H:%M") if matching_paid_cart.paid_at else "unknown date"
+                    note_text = f"MATCH FOUND: cart order {matching_paid_cart.cart_code} for {matching_paid_cart.buyer_name} (${payment_amount:.2f}) - Already marked PAID on {paid_date_str}"
+                    print(f"   💡 Likely duplicate payment - cart order already paid")
+                elif matching_paid_order:
+                    paid_date_str = matching_paid_order.paid_at.strftime("%Y-%m-%d %H:%M") if matching_paid_order.paid_at else "unknown date"
+                    note_text = f"MATCH FOUND: order {matching_paid_order.order_code} for {matching_paid_order.buyer_name} (${payment_amount:.2f}) - Already marked PAID on {paid_date_str}"
+                    print(f"   💡 Likely duplicate payment - order already paid")
                 else:
                     # Truly no match - create detailed diagnostic note
                     print(f"   💡 No paid passport match either - creating detailed NO_MATCH note")
