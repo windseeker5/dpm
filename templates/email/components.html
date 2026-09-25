@@ -109,6 +109,33 @@
 
 
 {#
+  Shop-cart equivalent of signup_code_notice() — same card, same rule (only shown when
+  another unpaid cart order shares this buyer's name and amount), different copy since
+  it's a commande, not an inscription.
+#}
+{% macro cart_code_notice(cart_code) -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="width:100%; background-color:#fff8e6; border:1px solid #f0d9a0; border-radius:8px; margin-top:16px;">
+  <tr>
+    <td style="padding:16px 20px;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#7a5f17;">
+        Code à inclure au virement
+      </div>
+      <div style="margin:8px 0 10px 0; font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size:16px; font-weight:700; letter-spacing:0.04em; color:{{ C_INK }};">
+        {{ cart_code }}
+      </div>
+      <div style="font-size:13.5px; line-height:1.6; color:#6b5518;">
+        Inscrivez-le dans le champ <strong>« Message au destinataire »</strong> de votre virement —
+        ce n'est pas la question de sécurité. Une autre commande porte le même nom et le même
+        montant, ce code nous permet de reconnaître la vôtre.
+      </div>
+    </td>
+  </tr>
+</table>
+{%- endmacro %}
+
+
+{#
   The call to action. Solid ink, full width — established the hard way after several
   passes that tried per-type accent colours and colored borders: color is reserved for the
   one place it is semantically load-bearing (the paid/unpaid status pill below), not for

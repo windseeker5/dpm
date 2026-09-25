@@ -3910,7 +3910,7 @@ def shop_checkout():
 
 @app.route("/shop/order/thank-you/<cart_code>")
 def shop_order_thank_you(cart_code):
-    from utils import get_setting
+    from utils import get_setting, has_conflicting_unpaid_cart_order
 
     cart_order = CartOrder.query.filter_by(cart_code=cart_code).first()
     if not cart_order:
@@ -3921,8 +3921,16 @@ def shop_order_thank_you(cart_code):
     display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
     payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
 
+    # The reference code is only for the rare case where another unpaid Interac cart order
+    # has the same buyer name AND amount — the same rule the signup confirmation page uses
+    # (has_conflicting_unpaid_signup / list_signups' approve flow).
+    needs_cart_code = (
+        cart_order.payment_method == "interac"
+        and has_conflicting_unpaid_cart_order(cart_order, earlier_only=True)
+    )
+
     return render_template("shop_order_confirmation.html", cart_order=cart_order, settings=settings,
-                            payment_email=payment_email)
+                            payment_email=payment_email, needs_cart_code=needs_cart_code)
 
 
 # Statuses the financial views understand. A row saved with anything outside these sets still

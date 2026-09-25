@@ -180,6 +180,39 @@ def has_conflicting_unpaid_signup(signup, activity, earlier_only=False):
     return False
 
 
+def has_conflicting_unpaid_cart_order(cart_order, earlier_only=False):
+    """Shop-cart equivalent of has_conflicting_unpaid_signup() — same rule (same normalized
+    buyer name AND same total amount among other unpaid Interac cart orders), applied to
+    CartOrder instead of Signup, so the shop checkout only shows a reference code when it's
+    actually needed to tell two buyers apart, exactly like the signup form already does.
+
+    Only considers "awaiting_payment" Interac orders — a paid or cancelled order, or a
+    Stripe order (whose confirmation never needed a code in the first place), can't cause
+    an ambiguous e-transfer.
+    """
+    from models import CartOrder
+
+    current_name = normalize_name(cart_order.buyer_name)
+    current_amount = cart_order.total_amount or 0.0
+
+    query = CartOrder.query.filter(
+        CartOrder.id != cart_order.id,
+        CartOrder.payment_method == "interac",
+        CartOrder.status == "awaiting_payment",
+    )
+    if earlier_only:
+        query = query.filter(CartOrder.id < cart_order.id)
+    potential_conflicts = query.all()
+
+    for other in potential_conflicts:
+        other_name = normalize_name(other.buyer_name)
+        other_amount = other.total_amount or 0.0
+        if current_name == other_name and abs(current_amount - other_amount) < 0.01:
+            return True
+
+    return False
+
+
 # Where the shipped default hero images live, one PNG per template type.
 HERO_DIR = os.path.join('static', 'images', 'email', 'heroes')
 
@@ -4936,7 +4969,7 @@ def notify_cart_order_event(app, *, cart_order, event_type):
     lines together), instead of firing the old per-item notify_order_event()/
     notify_signup_event() once per line. event_type: 'cart_placed' (Interac instructions,
     sent right after checkout) or 'cart_paid' (payment confirmed for every line)."""
-    from utils import send_email_async, get_setting
+    from utils import send_email_async, get_setting, has_conflicting_unpaid_cart_order
 
     if not cart_order.buyer_email:
         return
@@ -4972,8 +5005,18 @@ def notify_cart_order_event(app, *, cart_order, event_type):
     rows = [{"label": item["label"], "value": _fr_money(item["amount"])} for item in items]
     rows.append({"label": "Total", "value": _fr_money(cart_order.total_amount)})
 
+    # The reference code is only for the rare case where another unpaid Interac cart order
+    # has the same buyer name AND amount — the same rule the signup email uses
+    # (has_conflicting_unpaid_signup / notify_signup_event). In the ordinary case, name +
+    # amount already uniquely identifies the payer, so no code is shown.
+    needs_cart_code = (
+        cart_order.payment_method == "interac"
+        and has_conflicting_unpaid_cart_order(cart_order)
+    )
+
     context = {
         "cart_code": cart_order.cart_code,
+        "needs_cart_code": needs_cart_code,
         "rows": rows,
         "total_amount": cart_order.total_amount,
         "payment_method": cart_order.payment_method,
