@@ -217,6 +217,15 @@ with app.app_context():
     app.config["MAIL_PASSWORD"] = Config.get_setting(app, "MAIL_PASSWORD", "")
     app.config["MAIL_DEFAULT_SENDER"] = Config.get_setting(app, "MAIL_DEFAULT_SENDER", "")
 
+    # Defense-in-depth for a restore done by copying a .db file onto disk directly (e.g. a
+    # manual VPS deploy step) rather than through this app's own restore routes, which
+    # already call this themselves — see restore_database() in api/backup.py.
+    try:
+        from utils import enforce_watermarks
+        enforce_watermarks()
+    except Exception as _e:
+        print(f"[STARTUP] enforce_watermarks() failed: {_e}")
+
     # Stripe health check: verify the API key can access the subscription
     try:
         from utils import get_setting as _startup_get_setting
@@ -3376,6 +3385,8 @@ def signup(activity_id):
         db.session.add(signup_record)
         db.session.flush()  # Get the ID before commit
         signup_record.signup_code = f"MP-INS-{signup_record.id:07d}"
+        from utils import bump_watermark
+        bump_watermark("signup", signup_record.id)
 
         # Session scheduling: claim the seat in the SAME transaction as the Signup, so
         # there is never a signup without a seat, nor a seat without a signup explaining it.
@@ -3804,6 +3815,8 @@ def shop_checkout():
         db.session.add(cart_order)
         db.session.flush()
         cart_order.cart_code = f"MP-CART-{cart_order.id:07d}"
+        from utils import bump_watermark
+        bump_watermark("cart_order", cart_order.id)
 
         running_total = 0.0
         checkout_error = None
@@ -3897,7 +3910,7 @@ def shop_checkout():
 
 @app.route("/shop/order/thank-you/<cart_code>")
 def shop_order_thank_you(cart_code):
-    from utils import get_setting
+    from utils import get_setting, has_conflicting_unpaid_cart_order
 
     cart_order = CartOrder.query.filter_by(cart_code=cart_code).first()
     if not cart_order:
@@ -3908,8 +3921,16 @@ def shop_order_thank_you(cart_code):
     display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
     payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
 
+    # The reference code is only for the rare case where another unpaid Interac cart order
+    # has the same buyer name AND amount — the same rule the signup confirmation page uses
+    # (has_conflicting_unpaid_signup / list_signups' approve flow).
+    needs_cart_code = (
+        cart_order.payment_method == "interac"
+        and has_conflicting_unpaid_cart_order(cart_order, earlier_only=True)
+    )
+
     return render_template("shop_order_confirmation.html", cart_order=cart_order, settings=settings,
-                            payment_email=payment_email)
+                            payment_email=payment_email, needs_cart_code=needs_cart_code)
 
 
 # Statuses the financial views understand. A row saved with anything outside these sets still

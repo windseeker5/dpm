@@ -69,6 +69,7 @@
       </div>
       {% endif %}
     </dl>
+    {% if needs_cart_code and cart_order.cart_code %}
     {{ code_block(
       value=cart_order.cart_code,
       label="Code de référence",
@@ -76,6 +77,7 @@
       copied_label="Copié",
       hint="Inscrivez ce code dans le champ « Message au destinataire » de votre virement — pas dans la question de sécurité."
     ) }}
+    {% endif %}
   </div>
 </div>
 {% else %}

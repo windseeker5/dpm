@@ -499,6 +499,14 @@ def restore_database(temp_dir):
         if os.path.exists(sidecar):
             os.remove(sidecar)
 
+    # The restored snapshot's cart_order/signup/shop_order tables have whatever
+    # sqlite_sequence high-water mark they had when the backup was taken — lower than what
+    # may have been issued since, on either this environment or wherever the backup came
+    # from. Push it back up to the persisted watermark (a sibling file this function never
+    # touches) so the next checkout/signup can't reissue an already-used reference code.
+    from utils import enforce_watermarks
+    enforce_watermarks()
+
 def restore_uploads(temp_dir):
     """Restore uploaded files from backup - handles busy directories"""
     # Try new backup structure first (static/uploads in zip)
