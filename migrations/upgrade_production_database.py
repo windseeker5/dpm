@@ -20,6 +20,7 @@ import sys
 import os
 import json
 import hashlib
+import re
 from datetime import datetime, timezone
 
 # Add parent directory to path
@@ -4486,6 +4487,10 @@ def task58_enforce_autoincrement_on_code_tables(cursor):
 
     Idempotent: skipped per-table if that table's stored CREATE TABLE SQL already contains
     AUTOINCREMENT.
+
+    The rename step runs under PRAGMA legacy_alter_table = ON — see the comment at the top of
+    the body. Without it SQLite rewrites other tables' FOREIGN KEY clauses to follow the
+    rename, and task59 below has to clean up after it.
     """
     log("🔒", "TASK 58: Enforcing AUTOINCREMENT on cart_order/signup/shop_order", Colors.BLUE)
 
@@ -4501,6 +4506,15 @@ def task58_enforce_autoincrement_on_code_tables(cursor):
             cursor.execute(index_sql)
 
     cursor.execute("PRAGMA foreign_keys = OFF")
+    # On SQLite >= 3.25, "ALTER TABLE x RENAME TO x_old" rewrites every reference to x in
+    # OTHER objects' stored SQL to follow the rename — including the FOREIGN KEY clauses of
+    # unrelated tables. Those tables then point at x_old, which is dropped a few statements
+    # later, leaving a dangling FK: every later write to them dies with
+    # "no such table: main.x_old" as soon as PRAGMA foreign_keys is ON (app.py does that per
+    # request). That is how slot_booking/stripe_transaction/ebank_payment got broken and made
+    # activity deletion 500. legacy_alter_table = ON restores the pre-3.25 behaviour, where
+    # RENAME touches nothing but the table itself — which is exactly what a rebuild wants.
+    cursor.execute("PRAGMA legacy_alter_table = ON")
     any_migrated = False
 
     # monthly_transactions_detail/monthly_financial_summary read from signup/shop_order —
@@ -4656,6 +4670,7 @@ def task58_enforce_autoincrement_on_code_tables(cursor):
             log("✅", f"  shop_order recreated with AUTOINCREMENT ({rows_copied} rows preserved)", Colors.GREEN)
             any_migrated = True
 
+        cursor.execute("PRAGMA legacy_alter_table = OFF")
         cursor.execute("PRAGMA foreign_keys = ON")
 
         # Rebuild the two views dropped above, using the same task functions that created
@@ -4691,9 +4706,115 @@ def task58_enforce_autoincrement_on_code_tables(cursor):
         return True
 
     except sqlite3.OperationalError as e:
+        cursor.execute("PRAGMA legacy_alter_table = OFF")
         cursor.execute("PRAGMA foreign_keys = ON")
         log("❌", f"  Failed to enforce AUTOINCREMENT: {e}", Colors.RED)
         raise
+
+
+# ============================================================================
+# TASK 59: Repair FOREIGN KEY clauses left pointing at a dropped "<table>_old"
+# ============================================================================
+def task59_repair_dangling_fk_references(cursor):
+    """Retarget any FOREIGN KEY still pointing at a "<table>_old" that no longer exists.
+
+    Cleans up after the SQLite rename-rewrite behaviour described in task58: a rebuild done
+    as "rename x -> x_old / create new x / copy / drop x_old" silently repointed OTHER
+    tables' foreign keys at x_old, and dropping x_old left them dangling. Any write to an
+    affected table then fails with "no such table: main.x_old" once foreign_keys is ON,
+    which is how deleting an activity started returning a 500.
+
+    task58 no longer causes this, but databases already upgraded carry the damage, so it has
+    to be repaired here rather than only prevented.
+
+    Detection uses PRAGMA foreign_key_list rather than matching "_old" in the schema text,
+    so a column merely named like `sold_amt` is never mistaken for a dangling reference.
+
+    Only the FK target name in the stored CREATE TABLE SQL changes — column order, types,
+    defaults, constraints, indexes and every row are preserved byte-for-byte. Idempotent: a
+    no-op on a healthy database.
+    """
+    log("\U0001f527", "TASK 59: Repairing dangling '_old' foreign key references", Colors.BLUE)
+
+    def find_dangling():
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        existing = {r[0] for r in cursor.fetchall()}
+        broken = {}
+        for table in sorted(existing):
+            if table.startswith("sqlite_"):
+                continue
+            cursor.execute(f'PRAGMA foreign_key_list("{table}")')
+            for row in cursor.fetchall():
+                target = row[2]
+                if target in existing:
+                    continue
+                if not target.endswith("_old") or target[:-4] not in existing:
+                    log("\u26a0\ufe0f ", f"  {table}: FK -> missing '{target}', not a _old rename; left alone", Colors.YELLOW)
+                    continue
+                broken.setdefault(table, {})[target] = target[:-4]
+        return broken
+
+    broken = find_dangling()
+    if not broken:
+        log("\u2705", "  No dangling foreign key references found", Colors.GREEN)
+        return True
+
+    # See task58: without this, the renames below would themselves rewrite other tables'
+    # references (e.g. expense -> stripe_transaction) and recreate the very bug being fixed.
+    cursor.execute("PRAGMA legacy_alter_table = ON")
+    try:
+        for table, mapping in broken.items():
+            cursor.execute(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,)
+            )
+            new_sql = cursor.fetchone()[0]
+            for bad, good in mapping.items():
+                pattern = re.compile(
+                    r'(REFERENCES\s+)(?:"%s"|\[%s\]|`%s`|%s)(?!\w)' % ((re.escape(bad),) * 4),
+                    re.IGNORECASE,
+                )
+                new_sql, n = pattern.subn(r'\1"%s"' % good, new_sql)
+                if not n:
+                    raise sqlite3.OperationalError(
+                        f"task59: could not retarget '{bad}' in {table} DDL"
+                    )
+
+            cursor.execute(
+                "SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name=? "
+                "AND sql IS NOT NULL",
+                (table,),
+            )
+            index_defs = [r[0] for r in cursor.fetchall()]
+            cursor.execute(f'PRAGMA table_info("{table}")')
+            cols = ",".join('"%s"' % r[1] for r in cursor.fetchall())
+
+            cursor.execute(f'ALTER TABLE "{table}" RENAME TO "{table}_fkfix"')
+            cursor.execute(new_sql)
+            cursor.execute(
+                f'INSERT INTO "{table}" ({cols}) SELECT {cols} FROM "{table}_fkfix"'
+            )
+            rows_copied = cursor.rowcount
+            # Dropping the old table drops its indexes too, freeing their names to be reused.
+            cursor.execute(f'DROP TABLE "{table}_fkfix"')
+            for index_sql in index_defs:
+                cursor.execute(index_sql)
+
+            fixed = ", ".join(f"{b} -> {g}" for b, g in mapping.items())
+            log("\u2705", f"  {table} repaired ({fixed}; {rows_copied} rows, "
+                           f"{len(index_defs)} indexes preserved)", Colors.GREEN)
+
+        leftover = find_dangling()
+        if leftover:
+            raise sqlite3.OperationalError(f"task59: dangling FKs remain: {leftover}")
+        cursor.execute("PRAGMA foreign_key_check")
+        violations = cursor.fetchall()
+        if violations:
+            raise sqlite3.OperationalError(f"task59: foreign_key_check failed: {violations}")
+        log("\u2705", "  foreign_key_check clean after repair", Colors.GREEN)
+    finally:
+        cursor.execute("PRAGMA legacy_alter_table = OFF")
+
+    return True
 
 
 # ============================================================================
@@ -4774,6 +4895,7 @@ def main():
         ("Financial Views: Detail View Keys", task56_transactions_detail_add_keys),
         ("Merge Duplicate Shop-Cart Signups", task57_merge_duplicate_shop_cart_signups),
         ("Enforce AUTOINCREMENT on Code Tables", task58_enforce_autoincrement_on_code_tables),
+        ("Repair Dangling _old Foreign Keys", task59_repair_dangling_fk_references),
     ]
 
     completed = 0
