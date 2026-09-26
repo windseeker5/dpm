@@ -4876,7 +4876,6 @@ def main():
         ("Foreign Keys", task3_fix_redemption_cascade),
         ("Survey Templates", task4_add_french_survey),
         ("Email Templates", task5_fix_email_templates),
-        ("Verification", task6_verify_schema),
         ("Payment Email Dates", task7_add_email_received_date),
         ("ReminderLog CASCADE", task8_fix_reminderlog_cascade),
         ("Passport Deletion FKs", task9_fix_passport_deletion_fks),
@@ -4929,6 +4928,9 @@ def main():
         ("Enforce AUTOINCREMENT on Code Tables", task58_enforce_autoincrement_on_code_tables),
         ("Repair Dangling _old Foreign Keys", task59_repair_dangling_fk_references),
         ("Lookup and Date-Range Indexes", task60_add_lookup_and_date_indexes),
+        # Runs last so it verifies the final schema; earlier it checked for columns
+        # that later tasks had not created yet.
+        ("Verification", task6_verify_schema),
     ]
 
     completed = 0
