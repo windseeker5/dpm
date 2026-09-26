@@ -206,7 +206,7 @@ CATALOG = [
     ),
     dict(
         order="91", script="91_production_interac_live.py", area="[REAL MONEY] Interac payment", title="Pay with Interac e-transfer (real money)", summary="Pay for real by Interac e-transfer. You send the transfer yourself.",
-        description="Buy ONE mixed cart — a $2.00 activity passport plus a $1.00 shop product, $3.00 total — then PAUSE for Ken to send himself a single real e-transfer for that amount to the inbox demo.minipass.me monitors. Triggers the matcher behind /test-payment-bot-now and verifies the payment splits correctly across the books.",
+        description="Buy ONE mixed cart — a $2.00 activity passport plus a $1.00 shop product, $3.00 total — then PAUSE for Ken to send himself a single real e-transfer for that amount to the inbox demo.minipass.me monitors. Triggers the matcher via the Interac Inbox "Check for new payments now" button and verifies the payment splits correctly across the books.",
         credentials="kdresdell@gmail.com (password via UAT_ADMIN_PASSWORD env var) (+ one real $3.00 e-transfer, sent by hand)", email="kdresdell@gmail.com", viewport="desktop",
         verifies="EbankPayment result = MATCHED; Activity Log shows the cart code. Before payment the $3.00 sits in ACCOUNTS RECEIVABLE with cash untouched; after payment it MOVES to CASH RECEIVED with the total unchanged (catching double-counting). The split is checked: the activity row gets exactly $2.00 and the product's $1.00 goes to 'Boutique', never to the activity. Product line present in both the report page and the CSV export; report page and CSV agree on every bucket.",
         money=True, manual=False,

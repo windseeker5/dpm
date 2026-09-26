@@ -434,43 +434,6 @@ class ContentSanitizer:
             return url
         except Exception:
             return ''
-    
-    @staticmethod
-    def sanitize_email_template_data(template_data):
-        """
-        Sanitize all fields in email template data
-        
-        Args:
-            template_data (dict): Template data dictionary
-            
-        Returns:
-            dict: Sanitized template data
-        """
-        if not template_data:
-            return {}
-            
-        sanitized = template_data.copy()
-        
-        # Fields that need HTML sanitization
-        html_fields = ['admin_message']
-        for field in html_fields:
-            if field in sanitized:
-                sanitized[field] = ContentSanitizer.sanitize_html(sanitized[field])
-        
-        # Fields that need URL validation
-        if 'cta_url' in sanitized:
-            sanitized['cta_url'] = ContentSanitizer.validate_url(sanitized['cta_url'])
-        
-        # Fields that need basic text sanitization (no HTML allowed)
-        text_fields = ['subject', 'title', 'cta_text']
-        for field in text_fields:
-            if field in sanitized:
-                # Strip HTML tags completely for these fields
-                sanitized[field] = bleach.clean(sanitized[field], tags=[], strip=True)
-                # Remove any remaining special characters that could be harmful
-                sanitized[field] = re.sub(r'[<>"\']', '', sanitized[field])
-        
-        return sanitized
 
 
 def utc_to_local(dt_utc):
@@ -984,24 +947,6 @@ def has_booking_today(passport):
     return find_booking_to_fulfil(passport) is not None
 
 
-def count_active_bookings(passport):
-    """How many upcoming sessions this passport currently holds (for customer display)."""
-    from models import SlotBooking
-
-    try:
-        if passport is None or not getattr(passport, "id", None):
-            return 0
-        bookings = SlotBooking.query.filter(
-            SlotBooking.passport_id == passport.id,
-            SlotBooking.status.in_(("held", "confirmed")),
-        ).all()
-        now_local = datetime.now()
-        return sum(1 for b in bookings if b.slot and b.slot.starts_at >= now_local)
-    except Exception as e:
-        logging.warning("count_active_bookings failed: %s", e)
-        return 0
-
-
 def _get_pass_url(passport):
     """Absolute URL to this passport's public page, for the email CTA.
 
@@ -1405,33 +1350,6 @@ def generate_placeholder_logo_image(name, size=200):
     return buf
 
 
-def save_optimized_image(file_stream, dest_folder, prefix="upload", max_size=(1200, 800)):
-    """Save uploaded image: resize to max dimensions, convert to JPEG quality=85.
-
-    Returns the saved filename. For PDF/SVG files, callers should skip this function.
-    """
-    from PIL import Image as _Image
-
-    img = _Image.open(file_stream)
-
-    # Flatten transparency to white background
-    if img.mode in ('RGBA', 'P'):
-        bg = _Image.new('RGB', img.size, (255, 255, 255))
-        if img.mode == 'P':
-            img = img.convert('RGBA')
-        bg.paste(img, mask=img.split()[3])
-        img = bg
-    elif img.mode != 'RGB':
-        img = img.convert('RGB')
-
-    img.thumbnail(max_size, _Image.Resampling.LANCZOS)
-
-    filename = f"{prefix}_{uuid.uuid4().hex[:10]}.jpg"
-    os.makedirs(dest_folder, exist_ok=True)
-    img.save(os.path.join(dest_folder, filename), 'JPEG', quality=85, optimize=True)
-    return filename
-
-
 def generate_qr_code(pass_code):
     qr = qrcode.make(pass_code)
     img_bytes = io.BytesIO()
@@ -1670,13 +1588,14 @@ def create_order_line_for_cart(cart_order, product, quantity, size=None, notes="
     return order, None
 
 
-def create_signup_line_for_cart(cart_order, activity, passport_type_id=None, requested_sessions=1,
-                                 slot_id=None, notes=""):
+def create_signup_and_user(*, buyer_name, buyer_email, buyer_phone, activity,
+                            passport_type_id=None, requested_sessions=1, slot_id=None,
+                            payment_method="interac", notes="", cart_order_id=None):
     """Create a User + Signup (and, for a scheduled activity, a held SlotBooking) for one
-    activity-passport line of a /shop cart checkout. Mirrors the standalone signup() route's
-    validation/creation logic so the same rules apply whether a passport is bought alone or
-    from the cart. Does not commit and does not roll back on failure — the caller owns the
-    checkout transaction, same as create_order_line_for_cart().
+    activity-passport purchase — shared by the standalone /signup route and one
+    activity-passport line of a /shop cart checkout, so the same capacity/session/slot
+    rules apply whichever way a passport is bought. Does not commit and does not roll back
+    on failure — the caller owns the transaction.
 
     Returns (signup, error_message).
     """
@@ -1709,26 +1628,36 @@ def create_signup_line_for_cart(cart_order, activity, passport_type_id=None, req
             if chosen_slot.starts_at < datetime.now():
                 return None, f"Cette séance de « {activity.name} » est déjà passée. Choisissez-en une autre."
 
-    passport_type = db.session.get(PassportType, passport_type_id) if passport_type_id else None
+    # passport_type_id comes straight from the public form, and it sets the price. It must be an
+    # active type of THIS activity — otherwise a buyer can post a cheap type from another activity
+    # (or omit it for a $0 signup) and still get a pass for this one.
+    passport_type = None
+    if passport_type_id:
+        passport_type = db.session.get(PassportType, passport_type_id)
+        if (passport_type is None or passport_type.activity_id != activity.id
+                or passport_type.status != "active"):
+            return None, f"Ce type de passe n'est plus disponible pour « {activity.name} »."
+    elif PassportType.query.filter_by(activity_id=activity.id, status="active").first():
+        return None, f"Veuillez choisir un type de passe pour « {activity.name} »."
     unit_price = passport_type.price_per_user if passport_type else 0.0
     requested_amount = round(unit_price * requested_sessions, 2)
 
-    user = User(name=cart_order.buyer_name, email=cart_order.buyer_email, phone_number=cart_order.buyer_phone)
+    user = User(name=buyer_name, email=buyer_email, phone_number=buyer_phone)
     db.session.add(user)
     db.session.flush()
 
     signup_record = Signup(
         user_id=user.id,
         activity_id=activity.id,
-        cart_order_id=cart_order.id,
+        cart_order_id=cart_order_id,
         passport_type_id=passport_type_id or None,
         subject=f"Signup for {activity.name}" + (f" - {passport_type.name}" if passport_type else ""),
         description=notes or "",
         form_data="",
         requested_sessions=requested_sessions,
         requested_amount=requested_amount,
-        payment_method=cart_order.payment_method,
-        status='stripe_processing' if cart_order.payment_method == 'stripe' else 'pending',
+        payment_method=payment_method,
+        status='stripe_processing' if payment_method == 'stripe' else 'pending',
     )
     db.session.add(signup_record)
     db.session.flush()
@@ -1738,7 +1667,7 @@ def create_signup_line_for_cart(cart_order, activity, passport_type_id=None, req
     if chosen_slot is not None:
         if not claim_slot_seat(chosen_slot.id):
             return None, f"That session for “{activity.name}” was just filled. Please choose another."
-        hold_hours = (SLOT_HOLD_HOURS_STRIPE if cart_order.payment_method == "stripe"
+        hold_hours = (SLOT_HOLD_HOURS_STRIPE if payment_method == "stripe"
                       else get_slot_hold_hours())
         db.session.add(SlotBooking(
             slot_id=chosen_slot.id,
@@ -1750,6 +1679,30 @@ def create_signup_line_for_cart(cart_order, activity, passport_type_id=None, req
         ))
 
     return signup_record, None
+
+
+def create_signup_line_for_cart(cart_order, activity, passport_type_id=None, requested_sessions=1,
+                                 slot_id=None, notes=""):
+    """Create a User + Signup (and, for a scheduled activity, a held SlotBooking) for one
+    activity-passport line of a /shop cart checkout. Thin wrapper around
+    create_signup_and_user() using the cart order's buyer info. Does not commit and does
+    not roll back on failure — the caller owns the checkout transaction, same as
+    create_order_line_for_cart().
+
+    Returns (signup, error_message).
+    """
+    return create_signup_and_user(
+        buyer_name=cart_order.buyer_name,
+        buyer_email=cart_order.buyer_email,
+        buyer_phone=cart_order.buyer_phone,
+        activity=activity,
+        passport_type_id=passport_type_id,
+        requested_sessions=requested_sessions,
+        slot_id=slot_id,
+        payment_method=cart_order.payment_method,
+        notes=notes,
+        cart_order_id=cart_order.id,
+    )
 
 
 # ✅ PHASE 3: Optimized QR Code Generation & Hosted Image System
@@ -1837,6 +1790,52 @@ def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
 
         return history
 
+
+
+def unsubscribe_token(email_address):
+    """Signed token proving an unsubscribe link came from one of our emails, so a stranger
+    can't opt someone else out just by typing their address into /unsubscribe."""
+    from itsdangerous import URLSafeSerializer
+    from flask import current_app
+    return URLSafeSerializer(current_app.config["SECRET_KEY"], salt="unsubscribe").dumps(
+        (email_address or "").strip().lower())
+
+
+def unsubscribe_token_email(token):
+    """The email address a valid unsubscribe token was issued for, or None."""
+    from itsdangerous import URLSafeSerializer, BadSignature
+    from flask import current_app
+    try:
+        return URLSafeSerializer(current_app.config["SECRET_KEY"], salt="unsubscribe").loads(token)
+    except BadSignature:
+        return None
+
+
+def has_valid_dkim_from(raw_email, expected_from):
+    """True if raw_email carries a valid DKIM signature from the expected sender's domain.
+
+    The From: header alone is just text anyone can write — a forged "Virement Interac" email
+    with a buyer's name would otherwise mark their pass paid. A DKIM signature can only be
+    produced by the sending domain's mail servers, so it proves the email really came from
+    Interac (or, in dev, from the Gmail account set in BANK_EMAIL_FROM). Relaxed alignment:
+    a signature from interac.ca also covers notify@payments.interac.ca.
+    """
+    import dkim
+
+    expected_domain = expected_from.rsplit("@", 1)[-1].lower().strip()
+    if not expected_domain:
+        return False
+    try:
+        checker = dkim.DKIM(raw_email)
+        signature_count = len(email.message_from_bytes(raw_email).get_all("DKIM-Signature") or [])
+        for idx in range(signature_count):
+            if checker.verify(idx=idx):
+                signed_by = (checker.domain or b"").decode().lower()
+                if expected_domain == signed_by or expected_domain.endswith("." + signed_by):
+                    return True
+    except Exception as e:
+        print(f"⚠️ DKIM verification error: {e}")
+    return False
 
 
 def extract_interac_transfers(gmail_user, gmail_password, mail=None):
@@ -1953,6 +1952,12 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
                 continue
             if from_email.lower() != from_expected.lower():
                 print(f"⚠️ Ignored email from unexpected sender: {from_email}")
+                continue
+            # BANK_EMAIL_REQUIRE_DKIM is an escape hatch only (no UI): if Interac ever stops
+            # signing, set it to "False" rather than lose payments — the email stays in the inbox.
+            if (get_setting("BANK_EMAIL_REQUIRE_DKIM", "True") == "True"
+                    and not has_valid_dkim_from(raw_email, from_expected)):
+                print(f"🚫 Ignored email claiming to be from {from_email}: no valid DKIM signature (possible forgery)")
                 continue
 
             # 💰 Extract name & amount — support multiple Interac subject formats
@@ -2097,11 +2102,6 @@ def get_kpi_data(activity_id=None, period='7d'):
                 query = query.filter(Passport.activity_id == activity_id)
             return query
             
-        def get_base_signup_query():
-            query = Signup.query
-            if activity_id:
-                query = query.filter(Signup.activity_id == activity_id)
-            return query
             
         def get_base_income_query():
             query = Income.query
@@ -2545,13 +2545,6 @@ def send_unpaid_reminders(app, force_send=False):
     from models import ReminderLog, Passport, db
     from datetime import datetime, timedelta, timezone
 
-    def ensure_utc_aware(dt):
-        if dt is None:
-            return None
-        if dt.tzinfo is None:
-            return dt.replace(tzinfo=timezone.utc)
-        return dt
-
     with app.app_context():
         try:
             days = float(get_setting("CALL_BACK_DAYS", "15"))
@@ -2880,7 +2873,7 @@ def _match_gmail_payments_to_passes_impl():
             # are excluded from the single-item branches below via cart_order_id, so a
             # coincidental amount match never marks just one line of an unpaid cart paid.)
             from models import CartOrder
-            from utils import auto_create_passport_from_signup, notify_cart_order_event
+            from utils import auto_create_passport_from_signup, finalize_cart_order_if_complete
 
             pending_carts = CartOrder.query.filter_by(
                 status="awaiting_payment", payment_method="interac"
@@ -2923,12 +2916,10 @@ def _match_gmail_payments_to_passes_impl():
                         matched_cart, cart_best_score = cart_scores[0]
 
                 if matched_cart:
-                    matched_cart.status = "paid"
-                    matched_cart.paid_at = datetime.now(timezone.utc)
-
+                    now_paid_at = datetime.now(timezone.utc)
                     for order in matched_cart.orders:
                         order.status = "paid"
-                        order.paid_at = matched_cart.paid_at
+                        order.paid_at = now_paid_at
 
                     created_passports = []
                     for signup_record in matched_cart.signups:
@@ -2980,19 +2971,18 @@ def _match_gmail_payments_to_passes_impl():
                         except Exception as e:
                             print(f"   Passport email failed for signup {signup_record.id}: {e}")
 
-                    try:
-                        notify_cart_order_event(current_app._get_current_object(), cart_order=matched_cart,
-                                                 event_type="cart_paid")
-                    except Exception as e:
-                        print(f"   Cart confirmation email failed: {e}")
+                    finalize_cart_order_if_complete(current_app._get_current_object(), matched_cart)
 
                     results["matched"] += 1
                     print(f"   ✅ Matched cart order {matched_cart.cart_code} for {matched_cart.buyer_name} (${amt})")
                     continue
 
-            # Get all unpaid passports first, then filter by amount in Python
-            all_unpaid = Passport.query.filter_by(paid=False).all()
-            unpaid_passports = [p for p in all_unpaid if float(p.sold_amt) == payment_amount]
+            # Unpaid passports for exactly this amount, filtered in SQL with their user loaded —
+            # this used to load every unpaid passport for every email, then look up each user.
+            from sqlalchemy.orm import joinedload
+            unpaid_passports = (Passport.query.options(joinedload(Passport.user))
+                                .filter(Passport.paid == False, Passport.sold_amt == payment_amount)
+                                .all())
 
             print(f"🔍 Found {len(unpaid_passports)} unpaid passports for ${payment_amount:.2f}")
             print("="*80)
@@ -3501,8 +3491,11 @@ def _match_gmail_payments_to_passes_impl():
                 payment_name_normalized = normalize_for_comparison(name)
 
                 # Check if a PAID passport exists with matching amount and name (exact match only)
-                all_paid = Passport.query.filter_by(paid=True).all()
-                paid_passports_same_amount = [p for p in all_paid if float(p.sold_amt) == payment_amount]
+                # Filtered in SQL: the paid table only grows, and this runs once per unmatched email.
+                from sqlalchemy.orm import joinedload
+                paid_passports_same_amount = (Passport.query.options(joinedload(Passport.user))
+                                              .filter(Passport.paid == True, Passport.sold_amt == payment_amount)
+                                              .all())
 
                 matching_paid_passport = None
                 for p in paid_passports_same_amount:
@@ -3962,17 +3955,30 @@ def get_all_activity_logs():
     from models import Passport, Redemption, EmailLog, EbankPayment, ReminderLog, AdminActionLog, Signup
     from utils import utc_to_local
     from flask import current_app
+    from sqlalchemy.orm import joinedload
 
     logs = []
 
     with current_app.app_context():
+        # Payments and reminders both name a passport's user/activity. Load every passport they
+        # point at in ONE query (with user + activity) instead of a lookup per log row — this
+        # runs on every dashboard view, so the per-row version grew with the whole history.
+        payments = EbankPayment.query.all()
+        reminders = ReminderLog.query.all()
+        needed_ids = ({p.matched_pass_id for p in payments if p.result == "MATCHED" and p.matched_pass_id}
+                      | {r.passport_id for r in reminders if r.passport_id})
+        passports_by_id = {
+            pp.id: pp for pp in Passport.query.options(
+                joinedload(Passport.user), joinedload(Passport.activity)
+            ).filter(Passport.id.in_(needed_ids)).all()
+        } if needed_ids else {}
+
         # 🟢 Admin Actions (Passport Created, Activity Created, etc.)
-        for a in AdminActionLog.query.all():
-            # Skip specific API call logs that clutter the dashboard
-            if ("API Call: GET get_kpi_data_api" in a.action or 
-                "API Call: GET get_activity_dashboard_data" in a.action):
-                continue
-                
+        # Skip the API-call audit rows that clutter the dashboard, in SQL rather than after loading.
+        for a in AdminActionLog.query.filter(
+                ~AdminActionLog.action.contains("API Call: GET get_kpi_data_api"),
+                ~AdminActionLog.action.contains("API Call: GET get_activity_dashboard_data")).all():
+
             action_text = a.action.lower()
 
             if "passport created" in action_text:
@@ -4061,7 +4067,7 @@ def get_all_activity_logs():
                 })
 
         # 🔵 Payments
-        for p in EbankPayment.query.all():
+        for p in payments:
             if p.result == "MATCHED":
                 log_type = "Interac Payment Matched"
                 # NEW: Show bank name and match score for transparency
@@ -4071,8 +4077,7 @@ def get_all_activity_logs():
                 # NEW: Get activity name from the matched passport
                 activity_name = ""
                 if p.matched_pass_id:
-                    from models import Passport
-                    passport = db.session.get(Passport, p.matched_pass_id)
+                    passport = passports_by_id.get(p.matched_pass_id)
                     if passport and passport.activity:
                         activity_name = f" for Activity '{passport.activity.name}'"
 
@@ -4105,9 +4110,8 @@ def get_all_activity_logs():
 
 
         # 🟣 Reminders
-        for r in ReminderLog.query.all():
-            from models import Passport
-            passport = db.session.get(Passport, r.passport_id)
+        for r in reminders:
+            passport = passports_by_id.get(r.passport_id)
 
             user_name = passport.user.name if passport and passport.user else "-"
             activity_name = passport.activity.name if passport and passport.activity else "-"
@@ -4122,7 +4126,7 @@ def get_all_activity_logs():
 
 
         # 🧡 User Signups
-        for s in Signup.query.all():
+        for s in Signup.query.options(joinedload(Signup.user), joinedload(Signup.activity)).all():
             user_name = s.user.name if s.user else "-"
             activity_name = s.activity.name if s.activity else "-"
             logs.append({
@@ -4260,7 +4264,8 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
 
     # Always set these URLs and support email
     from urllib.parse import quote
-    context['unsubscribe_url'] = f"{base_url}/unsubscribe?email={quote(to_email)}"
+    context['unsubscribe_url'] = (f"{base_url}/unsubscribe?email={quote(to_email)}"
+                                  f"&token={unsubscribe_token(to_email)}")
     context['privacy_url'] = f"{base_url}/privacy"
     context['base_url'] = base_url
 
@@ -4701,9 +4706,6 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                     raise RuntimeError("SMTP delivery failed — send_email() returned False")
 
                 # --- Save EmailLog after successful send ---
-                def format_dt(dt):
-                    return dt.strftime('%Y-%m-%d %H:%M') if isinstance(dt, datetime) else dt
-
                 # Extract pass data if it exists (for backward compatibility)
                 pass_code = None
                 user_name = None
@@ -4974,6 +4976,13 @@ def notify_cart_order_event(app, *, cart_order, event_type):
     if not cart_order.buyer_email:
         return
 
+    # A passport-only cart (no shop product lines) already got a full payment
+    # confirmation from the per-passport notify_pass_event emails, each with its own
+    # QR code — sending this summary too would just be a second "payment confirmed"
+    # email with nothing new to say (see MP-CART-0000011).
+    if event_type == "cart_paid" and not cart_order.orders:
+        return
+
     items = []
     for order in cart_order.orders:
         label = order.product_name
@@ -5036,6 +5045,36 @@ def notify_cart_order_event(app, *, cart_order, event_type):
 
     send_email_async(app, subject=subject, to_email=cart_order.buyer_email,
                       template_name=template_name, context=context)
+
+
+def finalize_cart_order_if_complete(app, cart_order):
+    """Mark a CartOrder paid and send its cart_paid summary once every line in it
+    (shop Orders + activity Signups) is paid. Shared by every path that can complete
+    one line of a cart at a time — the Stripe webhook, the Interac auto-match bot, and
+    the manual admin payment-linking route — so a cart is always finalized the same way
+    regardless of which line's payment arrived last.
+
+    No-ops if cart_order is missing, already paid, or still has an unpaid line.
+    Returns True if the cart was finalized here, False otherwise.
+    """
+    if not cart_order or cart_order.status == "paid":
+        return False
+
+    if not all(o.status == "paid" for o in cart_order.orders):
+        return False
+    if not all(s.paid for s in cart_order.signups):
+        return False
+
+    cart_order.status = "paid"
+    cart_order.paid_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    try:
+        notify_cart_order_event(app, cart_order=cart_order, event_type="cart_paid")
+    except Exception as e:
+        print(f"[finalize_cart_order_if_complete] Cart confirmation email failed: {e}")
+
+    return True
 
 
 def notify_signup_event(app, *, signup, activity, timestamp=None):
@@ -5878,11 +5917,10 @@ def get_financial_data_from_views(start_date=None, end_date=None, activity_filte
     params = {'start_date': start_date, 'end_date': end_date}
 
     if activity_filter:
-        # Need to get activity name for filtering since view uses account name
-        activity = Activity.query.get(activity_filter)
-        if activity:
-            trans_query += " AND project = :activity_name"
-            params['activity_name'] = activity.name
+        # Filter on activity_id, like the summary query below and the CSV export: activity
+        # names aren't unique, so filtering on `project` mixed two same-named activities' rows.
+        trans_query += " AND activity_id = :activity_id"
+        params['activity_id'] = activity_filter
 
     # Execute transaction query
     result = db.session.execute(text(trans_query), params)
@@ -6226,6 +6264,18 @@ def get_user_contact_report(search_query="", status_filter="", show_all=False):
     # Execute query to get all users
     all_user_data = query.all()
 
+    # Every contact's activity names in ONE query, keyed like the aggregate above. This used
+    # to run two queries per contact (user ids, then activities) — thousands per page view.
+    activities_by_contact = {}
+    for name, email_addr, activity_name in (
+            db.session.query(User.name, User.email, Activity.name)
+            .join(Passport, User.id == Passport.user_id)
+            .join(Activity, Activity.id == Passport.activity_id)
+            .distinct().all()):
+        names = activities_by_contact.setdefault((name, email_addr), [])
+        if activity_name not in names:
+            names.append(activity_name)
+
     # Apply filters in Python for flexibility
     users = []
     total_users = 0
@@ -6247,21 +6297,7 @@ def get_user_contact_report(search_query="", status_filter="", show_all=False):
             if not (name_match or email_match):
                 continue
 
-        # Get all User IDs with this name/email combination
-        user_ids = db.session.query(User.id).filter(
-            User.name == user.name,
-            User.email == user.email
-        ).all()
-        user_ids = [u[0] for u in user_ids]
-
-        # Get activities for all these user IDs
-        activities_query = db.session.query(
-            Activity.name
-        ).join(Passport, Activity.id == Passport.activity_id).filter(
-            Passport.user_id.in_(user_ids)
-        ).distinct()
-
-        user_activities = [a[0] for a in activities_query.all()]
+        user_activities = activities_by_contact.get((user.name, user.email), [])
 
         users.append({
             'name': user.name,
@@ -6450,6 +6486,26 @@ def get_or_create_vapid_keys():
 
 
 def send_push_notification_to_admins(title, body, url=None, tag=None):
+    """Send a push notification to every subscribed admin device, in a background thread.
+
+    Each device is an HTTP call to its push service, and this is called from the public
+    signup request — the buyer shouldn't wait on admins' phones. Same pattern as
+    send_email_async.
+    """
+    from flask import current_app
+    app = current_app._get_current_object()
+
+    def _run():
+        with app.app_context():
+            try:
+                _send_push_notification_to_admins_now(title, body, url=url, tag=tag)
+            except Exception as e:
+                print(f"⚠️ Push notification error: {e}")
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+def _send_push_notification_to_admins_now(title, body, url=None, tag=None):
     """
     Send push notification to all admins with active subscriptions.
 

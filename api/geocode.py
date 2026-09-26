@@ -4,6 +4,8 @@ import requests
 import os
 import time
 
+from decorators import admin_required
+
 geocode_api = Blueprint('geocode_api', __name__, url_prefix='/api')
 
 # ============================================================================
@@ -11,6 +13,7 @@ geocode_api = Blueprint('geocode_api', __name__, url_prefix='/api')
 # ============================================================================
 
 @geocode_api.route('/places/autocomplete', methods=['POST'])
+@admin_required  # proxies to Google Maps on our API key — admin activity form only
 def places_autocomplete():
     """
     Get address suggestions using Google Places Autocomplete API.
@@ -70,6 +73,7 @@ def places_autocomplete():
 
 
 @geocode_api.route('/places/details', methods=['POST'])
+@admin_required  # proxies to Google Maps on our API key — admin activity form only
 def places_details():
     """
     Get full address details (including coordinates) for a place_id.
@@ -128,6 +132,7 @@ def places_details():
 # ============================================================================
 
 @geocode_api.route('/geocode', methods=['POST'])
+@admin_required  # proxies to Google Maps on our API key — admin activity form only
 def geocode_address():
     """
     Geocode an address using Google Maps API or Nominatim (OpenStreetMap)

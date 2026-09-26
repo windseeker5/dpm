@@ -4,7 +4,7 @@ Only runs with `--confirm-money`.
 
 Buys ONE cart containing both a $2.00 activity passport and a $1.00 shop product — $3.00 total,
 settled with a single real Interac e-transfer. Then PAUSES for Ken to send that transfer, triggers
-the same matcher that lives behind `/test-payment-bot-now`, and verifies the money landed in the
+the same matcher the Interac Inbox "Check for new payments now" button runs, and verifies the money landed in the
 right place.
 
 Why a mixed cart rather than two separate purchases: it costs one e-transfer instead of two, and
@@ -38,7 +38,7 @@ from playwright.sync_api import sync_playwright
 
 from lib import config, financials
 from lib.activity_log import assert_log_contains
-from lib.browser import login
+from lib.browser import login, post_as_admin, thank_you_value
 from lib.fixtures import (
     create_minimal_activity,
     create_product,
@@ -167,7 +167,7 @@ def run(ctx):
         shop_page.wait_for_url(f"{ctx.base_url}/shop/order/thank-you/*", timeout=30000)
         # Cart code is the last URL segment (app.py:3746) and is what the matcher and the
         # Activity Log both reference.
-        cart_code = shop_page.url.rstrip("/").split("/")[-1]
+        cart_code = thank_you_value(shop_page.url)
         ctx.screenshot(shop_page, "shop_order_awaiting_payment")
         ctx.note(f"Placed unpaid Interac order, cart {cart_code} for ${CART_TOTAL:.2f}.")
         shop_context.close()
@@ -203,8 +203,7 @@ def run(ctx):
 
         # --- 6: run the matcher ---
         login(admin_page, base_url=ctx.base_url)  # re-affirm session in case the pause was long
-        admin_page.goto(f"{ctx.base_url}/test-payment-bot-now")
-        admin_page.wait_for_load_state("networkidle", timeout=60000)
+        post_as_admin(admin_page, "/payment-bot-matches/run", base_url=ctx.base_url)
         ctx.screenshot(admin_page, "payment_bot_run_result")
         ctx.note(f"Triggered the Interac matcher: {admin_page.inner_text('body')[:300]!r}")
 
