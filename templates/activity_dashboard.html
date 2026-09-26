@@ -515,7 +515,8 @@ div.dropdown-divider {
             </div>
             <div class="modal-footer">
               {{ button("Cancel", variant="link", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
-              <form method="GET" id="approveSignupModalForm" action="" class="w-100">
+              <form method="POST" id="approveSignupModalForm" action="" class="w-100">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 {{ button("", type="submit", id="approveSignupModalBtn", attrs={"class": "w-100"}) }}
               </form>
             </div>

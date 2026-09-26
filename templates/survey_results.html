@@ -551,7 +551,7 @@
                   <i class="ti ti-dots-vertical"></i>
                 </a>
                 <div class="dropdown-menu dropdown-menu-end">
-                  <a class="dropdown-item" href="javascript:void(0)" onclick='showIndividualResponse({{ response.id }}, "{{ (response.user.name if response.user else "Anonymous")|replace('"', '\\"') }}", {{ response.responses|safe }})'>
+                  <a class="dropdown-item" href="javascript:void(0)" data-user-name="{{ response.user.name if response.user else 'Anonymous' }}" data-response="{{ response.responses }}" onclick="showIndividualResponse(this)">
                     <i class="ti ti-eye me-2"></i>View Response
                   </a>
                 </div>
@@ -627,10 +627,19 @@
 
 {% block scripts %}
 <script>
-function showIndividualResponse(responseId, userName, responseData) {
-  document.getElementById('responseUserName').textContent = userName;
-  
+// Survey answers come from the public survey form, so they are read from an escaped data
+// attribute and escaped again before going into innerHTML — never spliced into markup raw.
+function escapeHtml(value) {
+  const div = document.createElement('div');
+  div.textContent = value == null ? '' : String(value);
+  return div.innerHTML;
+}
+
+function showIndividualResponse(link) {
+  document.getElementById('responseUserName').textContent = link.dataset.userName;
+
   try {
+    const responseData = JSON.parse(link.dataset.response || '{}');
     const questionData = JSON.parse(document.getElementById('questionData').textContent);
     
     let responseHtml = '';
@@ -644,13 +653,13 @@ function showIndividualResponse(responseId, userName, responseData) {
           <div class="d-flex align-items-start mb-2">
             <span class="badge bg-primary text-white me-2" style="font-size: 0.9rem; padding: 0.4rem 0.6rem;">Q${questionNum}</span>
             <div class="flex-grow-1">
-              <h6 class="mb-1">${question.question}</h6>
-              <div class="text-muted small">${question.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+              <h6 class="mb-1">${escapeHtml(question.question)}</h6>
+              <div class="text-muted small">${escapeHtml(question.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()))}</div>
             </div>
           </div>
           <div class="ms-4">
             <div class="p-3 bg-light rounded">
-              <strong>Answer:</strong> ${userAnswer}
+              <strong>Answer:</strong> ${escapeHtml(Array.isArray(userAnswer) ? userAnswer.join(', ') : userAnswer)}
             </div>
           </div>
         </div>

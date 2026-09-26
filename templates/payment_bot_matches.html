@@ -15,8 +15,11 @@
       <div class="mt-4 mb-3">
         <div class="d-flex justify-content-between align-items-center">
           <h1 class="page-title mb-0">Interac Inbox</h1>
-          {{ button("", variant="outline", size="icon", href=url_for('run_payment_bot_now'), icon="ti-refresh",
-             attrs={"title": "Check for new payments now", "aria-label": "Check for new payments now"}) }}
+          <form method="POST" action="{{ url_for('run_payment_bot_now') }}" class="m-0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {{ button("", variant="outline", size="icon", type="submit", icon="ti-refresh",
+               attrs={"title": "Check for new payments now", "aria-label": "Check for new payments now"}) }}
+          </form>
         </div>
       </div>
 

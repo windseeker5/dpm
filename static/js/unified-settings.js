@@ -117,12 +117,6 @@ function initializeFuzzyThreshold() {
  */
 
 /**
- * Payment Bot Test Functionality - REMOVED
- * Payment bot test now uses standard GET request with flash messages
- * See unified_settings.html line 153: <a href="/admin/unified-settings?test_payment_bot=1">
- */
-
-/**
  * Show Toast Notification - REMOVED
  * Now using standard Flask flash() messages for consistency across the entire app
  */

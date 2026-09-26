@@ -4818,6 +4818,38 @@ def task59_repair_dangling_fk_references(cursor):
 
 
 # ============================================================================
+# TASK 60: Indexes for redemptions, email lookups and date-range KPIs
+# ============================================================================
+def task60_add_lookup_and_date_indexes(cursor):
+    """Indexes the pre-production audit found missing. redemption.passport_id backs every pass
+    view and redeem (and is the fastest-growing table); user.email backs the unsubscribe and
+    contact lookups; signup.passport_id backs Passport.signups; the date columns back the KPI
+    date ranges and the newest-first list/log ordering."""
+    log("\u26a1", "TASK 60: Adding lookup and date-range indexes", Colors.BLUE)
+
+    indexes = [
+        ("redemption", "ix_redemption_passport",     "CREATE INDEX IF NOT EXISTS ix_redemption_passport ON redemption (passport_id)"),
+        ("redemption", "ix_redemption_date_used",    "CREATE INDEX IF NOT EXISTS ix_redemption_date_used ON redemption (date_used)"),
+        ("user", "ix_user_email",                    "CREATE INDEX IF NOT EXISTS ix_user_email ON user (email)"),
+        ("signup", "ix_signup_passport",             "CREATE INDEX IF NOT EXISTS ix_signup_passport ON signup (passport_id)"),
+        ("signup", "ix_signup_signed_up_at",         "CREATE INDEX IF NOT EXISTS ix_signup_signed_up_at ON signup (signed_up_at)"),
+        ("passport", "ix_passport_created_dt",       "CREATE INDEX IF NOT EXISTS ix_passport_created_dt ON passport (created_dt)"),
+        ("email_log", "ix_email_log_timestamp",      "CREATE INDEX IF NOT EXISTS ix_email_log_timestamp ON email_log (timestamp)"),
+        ("admin_action_log", "ix_admin_action_log_timestamp",
+         "CREATE INDEX IF NOT EXISTS ix_admin_action_log_timestamp ON admin_action_log (timestamp)"),
+    ]
+
+    for table, name, sql in indexes:
+        if not check_table_exists(cursor, table):
+            log("\u23ed\ufe0f ", f"  {table} missing, skipping {name}", Colors.YELLOW)
+            continue
+        cursor.execute(sql)
+        log("\u2705", f"  Index {name} created (or already existed)", Colors.GREEN)
+
+    return True
+
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -4896,6 +4928,7 @@ def main():
         ("Merge Duplicate Shop-Cart Signups", task57_merge_duplicate_shop_cart_signups),
         ("Enforce AUTOINCREMENT on Code Tables", task58_enforce_autoincrement_on_code_tables),
         ("Repair Dangling _old Foreign Keys", task59_repair_dangling_fk_references),
+        ("Lookup and Date-Range Indexes", task60_add_lookup_and_date_indexes),
     ]
 
     completed = 0

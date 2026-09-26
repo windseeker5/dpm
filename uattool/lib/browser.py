@@ -227,3 +227,47 @@ def login(page, base_url=None):
     page.fill("#password", config.ADMIN_PASSWORD)
     page.click("button[type=submit]")
     page.wait_for_url(f"{base_url}/dashboard*", timeout=15000)
+
+
+def post_as_admin(page, path, base_url=None):
+    """Submit an admin action that the app only accepts as a POST (with its CSRF token),
+    the way the real button's form does — e.g. approving a signup or running the payment bot.
+
+    The page must already be logged in. It lands wherever the app redirects after the action.
+    """
+    base_url = base_url or config.BASE_URL
+    if not page.locator('meta[name="csrf-token"]').count():
+        page.goto(f"{base_url}/dashboard")
+    with page.expect_navigation(timeout=60000):
+        page.evaluate(
+            """(action) => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = action;
+                const token = document.createElement('input');
+                token.type = 'hidden';
+                token.name = 'csrf_token';
+                token.value = document.querySelector('meta[name="csrf-token"]').content;
+                form.appendChild(token);
+                document.body.appendChild(form);
+                form.submit();
+            }""",
+            f"{base_url}{path}",
+        )
+    page.wait_for_load_state("networkidle", timeout=60000)
+
+
+def thank_you_value(url):
+    """The signup id (int) or cart code (str) behind a public thank-you page URL.
+
+    Those pages are addressed by a signed token (so strangers can't enumerate other buyers'
+    receipts), but the payload itself isn't secret — only the signature is — so it can be
+    read back here without the app's secret key.
+    """
+    from itsdangerous import URLSafeSerializer
+
+    token = url.split("?")[0].rstrip("/").split("/")[-1]
+    _valid, value = URLSafeSerializer("unused").loads_unsafe(token)
+    if value is None:
+        raise AssertionError(f"Could not read the thank-you token in {url!r}")
+    return value

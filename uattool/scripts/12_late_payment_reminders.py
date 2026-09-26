@@ -2,8 +2,8 @@
 
 Creates a payment-first activity as admin, signs up as a logged-out customer
 (Interac, left unpaid on purpose — mirrors row 02's pattern: a real customer
-is never admin-authed), then as admin triggers the real test hook at
-GET /admin/unified-settings?test_late_payment=1, which calls
+is never admin-authed), then as admin clicks the real "Send Test Reminder" button
+(Settings > Payments, a POST to /admin/unified-settings), which calls
 send_unpaid_reminders(current_app, force_send=True) for real (app.py ~6304).
 
 IMPORTANT — read utils.py:send_unpaid_reminders (~line 2463) before trusting
@@ -37,7 +37,7 @@ Desktop only.
 
 from lib import config
 from lib.activity_log import assert_log_contains
-from lib.browser import login, new_page
+from lib.browser import login, new_page, thank_you_value
 from lib.fixtures import (
     LHGI_ACTIVITY_NAME,
     LHGI_PASSPORT_TYPE,
@@ -74,7 +74,7 @@ def run(ctx):
         ctx.screenshot(guest_page, "unpaid_signup_thank_you")
 
         url = guest_page.url
-        signup_id = next((p for p in url.rstrip("/").split("/") if p.isdigit()), None)
+        signup_id = str(thank_you_value(url))
         if not signup_id:
             raise AssertionError(f"Could not parse signup_id from thank-you URL {url!r}")
 
@@ -91,7 +91,9 @@ def run(ctx):
         assert_log_contains(admin_page, activity_name, base_url=ctx.base_url)
         ctx.note(f"Confirmed Activity Log shows the 'Signup Submitted' entry for {activity_name!r}.")
 
-        admin_page.goto(f"{ctx.base_url}/admin/unified-settings?test_late_payment=1")
+        admin_page.goto(f"{ctx.base_url}/admin/unified-settings?section=payments")
+        with admin_page.expect_navigation(timeout=60000):
+            admin_page.click('button:has-text("Send Test Reminder")')
         admin_page.wait_for_load_state("networkidle", timeout=15000)
         ctx.screenshot(admin_page, "after_test_late_payment_trigger")
 

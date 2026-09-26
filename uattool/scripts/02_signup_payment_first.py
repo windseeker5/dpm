@@ -15,7 +15,7 @@ out of its own result URL.
 """
 
 from lib.activity_log import assert_log_contains
-from lib.browser import login, new_page
+from lib.browser import login, new_page, thank_you_value
 from lib.fixtures import (
     LHGI_ACTIVITY_NAME,
     LHGI_PASSPORT_TYPE,
@@ -36,7 +36,7 @@ def _submit_signup(page, ctx, activity_id, viewport_label):
     ctx.screenshot(page, f"signup_thank_you_{viewport_label}")
 
     url = page.url
-    signup_id = next((p for p in url.rstrip("/").split("/") if p.isdigit()), None)
+    signup_id = str(thank_you_value(url))
     if not signup_id:
         raise AssertionError(f"Could not parse signup_id from thank-you URL {url!r}")
 

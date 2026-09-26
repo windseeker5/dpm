@@ -9,7 +9,7 @@ step itself is desktop-only per the row's own instructions.
 """
 
 from lib.activity_log import assert_log_contains
-from lib.browser import login, new_page
+from lib.browser import login, new_page, post_as_admin, thank_you_value
 from lib.fixtures import create_minimal_activity, fill_public_signup_form
 
 
@@ -22,7 +22,7 @@ def _submit_signup(page, ctx, activity_id, viewport_label):
     ctx.screenshot(page, f"signup_thank_you_{viewport_label}")
 
     url = page.url
-    signup_id = next((p for p in url.rstrip("/").split("/") if p.isdigit()), None)
+    signup_id = str(thank_you_value(url))
     if not signup_id:
         raise AssertionError(f"Could not parse signup_id from thank-you URL {url!r}")
 
@@ -65,8 +65,7 @@ def run(ctx):
             f"(signup_id desktop={signup_id_desktop}, mobile={signup_id_mobile})."
         )
 
-        admin_page.goto(f"{ctx.base_url}/signup/approve-create-pass/{signup_id_desktop}")
-        admin_page.wait_for_load_state("networkidle", timeout=15000)
+        post_as_admin(admin_page, f"/signup/approve-create-pass/{signup_id_desktop}", base_url=ctx.base_url)
         ctx.screenshot(admin_page, "after_approval")
         ctx.note(f"Approved signup_id={signup_id_desktop} via /signup/approve-create-pass.")
 

@@ -28,7 +28,7 @@ load_dotenv(override=True)
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY', '')
 
 # 📁 API Blueprints
-from api.backup import backup_api
+from api.backup import BACKUP_DIR, migrate_legacy_backups
 from api.geocode import geocode_api
 
 
@@ -64,7 +64,7 @@ from models import Product, Order, CartOrder
 from config import Config
 
 # 🔒 Security Decorators
-from decorators import rate_limit, admin_required, log_api_call, cache_response
+from decorators import rate_limit, admin_required, cache_response
 
 # 🎯 KPI Card Component
 
@@ -136,16 +136,28 @@ db.init_app(app)
 @app.before_request
 def enable_foreign_keys():
     """Enable foreign key constraints for SQLite on every request"""
+    if request.endpoint == 'static':
+        return  # CSS/JS/images never touch the DB — don't open a connection for them
     if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
         db.session.execute(text('PRAGMA foreign_keys = ON'))
+        # With WAL, NORMAL is still crash-safe for the database file and skips an fsync on
+        # every commit that the default FULL does.
+        db.session.execute(text('PRAGMA synchronous = NORMAL'))
         # Wait up to 10s for a write lock instead of failing immediately. gunicorn runs
         # 2 workers x 4 threads (see dockerfile), and session slot claiming puts a write on
         # the public signup path — without this, two people booking at once surfaces as a
         # "database is locked" 500. Pairs with WAL mode (set by the migration).
         db.session.execute(text('PRAGMA busy_timeout = 10000'))
 
+
+@app.before_request
+def block_legacy_backup_urls():
+    # Backups used to live in static/backups/. They've moved to BACKUP_DIR, but a zip left behind
+    # (or copied back by hand) must never be served — each one is a full copy of the database.
+    if request.path.startswith("/static/backups"):
+        return "Not found", 404
+
 # 📁 Register API blueprints
-app.register_blueprint(backup_api)
 app.register_blueprint(geocode_api)
 
 @app.errorhandler(413)
@@ -182,6 +194,13 @@ if not _secret_key:
     )
 app.config["SECRET_KEY"] = _secret_key
 
+# Session cookie hardening. Lax keeps the admin cookie off cross-site POSTs and sub-requests;
+# Secure keeps it off plain http. Production runs under gunicorn (module imported as "app"),
+# while local dev is `python app.py` over http://localhost, where a Secure cookie would be dropped.
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = __name__ != "__main__"
+
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour
 
 # Register Wayne, the trusted local-first minipass data assistant.
@@ -190,11 +209,6 @@ try:
     app.register_blueprint(wayne_bp)
     print("Wayne data assistant registered successfully")
 
-    # Register Settings API Blueprint
-    from api.settings import settings_api
-    app.register_blueprint(settings_api)
-    print("Settings API registered successfully")
-
     # Geocoding is an existing AJAX API and remains CSRF-exempt.
     # Wayne is intentionally NOT exempt: its form sends a valid CSRF token.
     csrf.exempt(geocode_api)
@@ -202,21 +216,8 @@ try:
 except Exception as e:
     app.logger.error(f"Wayne registration failed: {e}", exc_info=True)
 
-@app.template_filter("hashlib_md5")
-def hashlib_md5(s):
-    return hashlib.md5(s.encode()).hexdigest()
-
-
 # ✅ Load settings only if the database is ready
 with app.app_context():
-    app.config["MAIL_SERVER"] = Config.get_setting(app, "MAIL_SERVER", "smtp.gmail.com")
-    #app.config["MAIL_PORT"] = int(Config.get_setting(app, "MAIL_PORT", 587))
-    app.config["MAIL_PORT"] = int(Config.get_setting(app, "MAIL_PORT", "587") or 587)
-    app.config["MAIL_USE_TLS"] = Config.get_setting(app, "MAIL_USE_TLS", "True") == "True"
-    app.config["MAIL_USERNAME"] = Config.get_setting(app, "MAIL_USERNAME", "")
-    app.config["MAIL_PASSWORD"] = Config.get_setting(app, "MAIL_PASSWORD", "")
-    app.config["MAIL_DEFAULT_SENDER"] = Config.get_setting(app, "MAIL_DEFAULT_SENDER", "")
-
     # Defense-in-depth for a restore done by copying a .db file onto disk directly (e.g. a
     # manual VPS deploy step) rather than through this app's own restore routes, which
     # already call this themselves — see restore_database() in api/backup.py.
@@ -938,11 +939,12 @@ def change_subscription_plan(subscription_id, new_plan, new_billing_frequency):
 
 # Global scheduler instance
 scheduler = None
+_scheduler_lock_file = None
 
 def init_scheduler(app):
     """Initialize the scheduler - called once per application instance"""
-    global scheduler
-    
+    global scheduler, _scheduler_lock_file
+
     if scheduler is not None:
         return  # Already initialized
     
@@ -956,7 +958,11 @@ def init_scheduler(app):
         # Try to acquire exclusive lock
         lock_file = open(lock_file_path, 'w')
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        
+        # Keep the handle alive for the life of the process. As a local it was garbage-collected
+        # when this function returned, which closed the file and released the lock — so every
+        # gunicorn worker started its own scheduler and the payment bot ran once per worker.
+        _scheduler_lock_file = lock_file
+
         # If we get here, we have the lock and should start the scheduler
         from utils import get_setting, send_unpaid_reminders, match_gmail_payments_to_passes
         from sqlalchemy.exc import OperationalError
@@ -1190,11 +1196,6 @@ def encode_md5(s):
     return hashlib.md5(s.strip().lower().encode('utf-8')).hexdigest()
 
 
-@app.template_filter("datetimeformat")
-def datetimeformat(value, format="%Y-%m-%d %H:%M"):
-    return value.strftime(format) if value else ""
-
-
 @app.template_filter("combine")
 def combine_dicts(dict1, dict2):
     """Combine two dictionaries (dict2 overwrites dict1)"""
@@ -1204,10 +1205,20 @@ def combine_dicts(dict1, dict2):
     return result
 
 
+_admin_exists = False
+
+
 @app.before_request
 def check_first_run():
-    if request.endpoint != 'setup' and not Admin.query.first():
-        return redirect(url_for('setup'))
+    # Once an admin exists this can never become a first run again, so stop querying the
+    # admin table on every request (static files included) after the first hit.
+    global _admin_exists
+    if _admin_exists or request.endpoint in ('setup', 'static'):
+        return
+    if Admin.query.first():
+        _admin_exists = True
+        return
+    return redirect(url_for('setup'))
 
 
 @app.template_filter("fr_history_date")
@@ -1421,7 +1432,10 @@ def unsplash_search():
     """Search for images on Unsplash"""
     import requests
     import uuid
-    
+
+    if "admin" not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
     query = request.args.get('q', '')
     page = request.args.get('page', 1, type=int)
     
@@ -1484,12 +1498,22 @@ def download_unsplash_image():
     import uuid
     import os
     from PIL import Image
-    
+    from urllib.parse import urlparse
+
+    if "admin" not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
     image_url = request.args.get('url')
-    
+
     if not image_url:
         return jsonify({'success': False, 'error': 'No image URL provided'}), 400
-    
+
+    # Only fetch from Unsplash's image CDN — otherwise this is an open proxy that can be pointed
+    # at internal services (docker network, cloud metadata) and write the response to disk.
+    parsed = urlparse(image_url)
+    if parsed.scheme != 'https' or parsed.hostname != 'images.unsplash.com':
+        return jsonify({'success': False, 'error': 'Only Unsplash images are allowed'}), 400
+
     try:
         # Download the image
         response = requests.get(image_url, timeout=30)
@@ -1522,9 +1546,11 @@ def download_unsplash_image():
                     # Save with optimization
                     img.save(file_path, 'JPEG', quality=85, optimize=True)
             except Exception as img_error:
+                # Not a readable image — don't leave the raw download in the public folder.
                 print(f"Image optimization error: {img_error}")
-                # Continue with original file if optimization fails
-            
+                os.remove(file_path)
+                return jsonify({'success': False, 'error': 'Downloaded file is not a valid image'}), 400
+
             return jsonify({
                 'success': True,
                 'filename': filename,
@@ -1625,16 +1651,13 @@ def health_check():
         db.session.commit()
         health_status['database'] = 'connected'
     except Exception as e:
-        health_status['database'] = f'error: {str(e)}'
+        # Public endpoint: log the detail, don't hand DB error text (paths, schema) to callers.
+        app.logger.error(f"Health check DB error: {e}")
+        health_status['database'] = 'error'
         health_status['status'] = 'unhealthy'
         return jsonify(health_status), 503
     
     return jsonify(health_status), 200
-
-
-@app.route("/assets/<path:filename>")
-def assets(filename):
-    return send_from_directory('assets', filename)
 
 
 @app.route("/style-guide")
@@ -2363,7 +2386,7 @@ def resend_payment_instructions(signup_id):
     return redirect(request.referrer or url_for("list_signups"))
 
 
-@app.route("/signup/approve-create-pass/<int:signup_id>")
+@app.route("/signup/approve-create-pass/<int:signup_id>", methods=["POST"])
 def approve_and_create_pass(signup_id):
     if "admin" not in session:
         return redirect(url_for("login"))
@@ -2453,11 +2476,9 @@ def approve_and_create_pass(signup_id):
     ))
     db.session.commit()
 
-    # ✅ Step 5: Sleep to ensure clean timestamps
-    time.sleep(0.5)
-
-    # ✅ Step 6: Refresh now_utc
-    now_utc = datetime.now(timezone.utc)
+    # Stamped 1s after the admin log just committed so the email sorts after it in
+    # the history (this used to sleep here, holding a gunicorn thread for nothing).
+    now_utc = datetime.now(timezone.utc) + timedelta(seconds=1)
 
     # ✅ Step 7: Send confirmation email
     notify_pass_event(
@@ -3324,94 +3345,39 @@ def signup(activity_id):
         phone = request.form.get("phone", "").strip()
         selected_passport_type_id = request.form.get("passport_type_id")
 
-        # Session scheduling: validate the chosen session BEFORE creating any rows, so a
-        # bad pick never leaves an orphaned User/Signup behind. Choosing a session here is
-        # OPTIONAL — a blank slot_id means "decide later" and is booked from the passport
-        # page after payment. A slot_id that WAS submitted but doesn't resolve to a valid,
-        # future, active slot is still a real error (stale page, tampered form, etc.).
-        chosen_slot = None
+        # A blank slot_id means "decide later" and is booked from the passport page after
+        # payment. A slot_id that WAS submitted but doesn't resolve to a valid, active slot
+        # is validated inside create_signup_and_user, along with capacity and the
+        # requested-sessions clamp for scheduled activities.
+        slot_id_raw = None
         if activity.uses_scheduling:
-            from models import ActivitySlot
-            slot_id_raw = (request.form.get("slot_id") or "").strip()
-            if slot_id_raw:
-                if slot_id_raw.isdigit():
-                    chosen_slot = ActivitySlot.query.filter_by(
-                        id=int(slot_id_raw), activity_id=activity.id, status="active"
-                    ).first()
-
-                if chosen_slot is None:
+            raw = (request.form.get("slot_id") or "").strip()
+            if raw:
+                if not raw.isdigit():
                     flash("Veuillez choisir une séance.", "error")
                     return redirect(url_for("signup", activity_id=activity_id))
-                # starts_at is naive LOCAL wall-clock, so compare against naive local now.
-                if chosen_slot.starts_at < datetime.now():
-                    flash("Cette séance est déjà passée. Veuillez en choisir une autre.", "error")
-                    return redirect(url_for("signup", activity_id=activity_id))
-
-            # A scheduled signup books at most one session at signup time; extra credits
-            # (and a deferred first session) are booked later from the passport page.
-            requested_sessions = 1
-
-        user = User(name=name, email=email, phone_number=phone)
-        db.session.add(user)
-        db.session.flush()
-
-        # Get the selected passport type
-        passport_type = None
-        if selected_passport_type_id:
-            passport_type = db.session.get(PassportType, selected_passport_type_id)
-
-        # Calculate total amount for payment-first workflow
-        unit_price = passport_type.price_per_user if passport_type else 0.0
-        requested_amount = unit_price * requested_sessions
+                slot_id_raw = int(raw)
 
         payment_method = request.form.get("payment_method", "interac")
         if payment_method not in ("interac", "stripe"):
             payment_method = "interac"
 
-        signup_record = Signup(
-            user_id=user.id,
-            activity_id=activity.id,
-            passport_type_id=selected_passport_type_id if selected_passport_type_id else None,
-            subject=f"Signup for {activity.name}" + (f" - {passport_type.name}" if passport_type else ""),
-            description=request.form.get("notes", "").strip(),
-            form_data="",
+        from utils import create_signup_and_user
+        signup_record, err = create_signup_and_user(
+            buyer_name=name,
+            buyer_email=email,
+            buyer_phone=phone,
+            activity=activity,
+            passport_type_id=selected_passport_type_id or None,
             requested_sessions=requested_sessions,
-            requested_amount=requested_amount,
+            slot_id=slot_id_raw,
             payment_method=payment_method,
-            # Stripe signups start as 'awaiting_payment' so they don't trigger the
-            # pending badge or approval flow before payment is confirmed.
-            status='stripe_processing' if payment_method == 'stripe' else 'pending'
+            notes=request.form.get("notes", "").strip(),
         )
-        db.session.add(signup_record)
-        db.session.flush()  # Get the ID before commit
-        signup_record.signup_code = f"MP-INS-{signup_record.id:07d}"
-        from utils import bump_watermark
-        bump_watermark("signup", signup_record.id)
-
-        # Session scheduling: claim the seat in the SAME transaction as the Signup, so
-        # there is never a signup without a seat, nor a seat without a signup explaining it.
-        if chosen_slot is not None:
-            from models import SlotBooking
-            from utils import claim_slot_seat, get_slot_hold_hours, SLOT_HOLD_HOURS_STRIPE
-
-            if not claim_slot_seat(chosen_slot.id):
-                # Someone took the last seat between page load and submit. Roll the whole
-                # thing back — the User and Signup disappear too, which is correct.
-                db.session.rollback()
-                flash("Cette séance vient d'être complète. Veuillez en choisir une autre.", "error")
-                return redirect(url_for("signup", activity_id=activity_id))
-
-            hold_hours = (SLOT_HOLD_HOURS_STRIPE if payment_method == "stripe"
-                          else get_slot_hold_hours())
-            db.session.add(SlotBooking(
-                slot_id=chosen_slot.id,
-                activity_id=activity.id,
-                user_id=user.id,
-                signup_id=signup_record.id,
-                status="held",
-                held_until=datetime.now(timezone.utc).replace(tzinfo=None)
-                           + timedelta(hours=hold_hours),
-            ))
+        if err:
+            db.session.rollback()
+            flash(err, "error")
+            return redirect(url_for("signup", activity_id=activity_id))
 
         db.session.commit()
 
@@ -3430,7 +3396,7 @@ def signup(activity_id):
                         'price_data': {
                             'currency': 'cad',
                             'product_data': {'name': activity.name},
-                            'unit_amount': int(round(requested_amount * 100)),
+                            'unit_amount': int(round((signup_record.requested_amount or 0) * 100)),
                         },
                         'quantity': 1,
                     }],
@@ -3454,7 +3420,7 @@ def signup(activity_id):
             notify_signup_event(app, signup=signup_record, activity=activity)
 
             flash("Signup submitted!", "success")
-            return redirect(url_for("signup_thank_you", signup_id=signup_record.id))
+            return redirect(url_for("signup_thank_you", token=_thank_you_token(signup_record.id)))
 
     return render_template("signup_form.html", activity=activity, settings=settings,
                          passport_types=passport_types, selected_passport_type=selected_passport_type,
@@ -3463,10 +3429,27 @@ def signup(activity_id):
                          format_local_datetime_label=format_local_datetime_label)
 
 
-@app.route("/signup/thank-you/<int:signup_id>")
-def signup_thank_you(signup_id):
+def _thank_you_token(value):
+    """Signed, unguessable handle for a public thank-you page. These pages show the buyer's
+    email, amount and order lines, so they must not be reachable by counting up sequential
+    ids (/signup/thank-you/1, 2, 3…) or cart codes (MP-CART-0000001…)."""
+    from itsdangerous import URLSafeSerializer
+    return URLSafeSerializer(app.config["SECRET_KEY"], salt="thank-you-page").dumps(value)
+
+
+def _thank_you_value(token):
+    from itsdangerous import URLSafeSerializer, BadSignature
+    try:
+        return URLSafeSerializer(app.config["SECRET_KEY"], salt="thank-you-page").loads(token)
+    except BadSignature:
+        return None
+
+
+@app.route("/signup/thank-you/<token>")
+def signup_thank_you(token):
     """Thank you page after successful signup"""
-    signup = db.session.get(Signup, signup_id)
+    signup_id = _thank_you_value(token)
+    signup = db.session.get(Signup, signup_id) if isinstance(signup_id, int) else None
     if not signup:
         flash("Signup not found.", "error")
         return redirect(url_for("dashboard"))
@@ -3552,6 +3535,14 @@ def _resolve_shop_cart_lines():
                 continue
             passport_type = (db.session.get(PassportType, line.get("passport_type_id"))
                               if line.get("passport_type_id") else None)
+            # Same rule create_signup_and_user enforces at checkout: the type must be an
+            # active type of this activity, never one borrowed from a cheaper activity.
+            if line.get("passport_type_id") and (
+                    passport_type is None or passport_type.activity_id != activity.id
+                    or passport_type.status != "active"):
+                resolved.append({"index": idx, "type": "activity",
+                                  "error": "Ce type de passe n'est plus disponible."})
+                continue
             sessions = max(1, int(line.get("sessions", 1)))
             unit_price = passport_type.price_per_user if passport_type else 0.0
             amount = round(unit_price * sessions, 2)
@@ -3881,7 +3872,7 @@ def shop_checkout():
                     payment_method_types=['card'],
                     line_items=stripe_line_items,
                     mode='payment',
-                    success_url=url_for('shop_order_thank_you', cart_code=cart_order.cart_code, _external=True),
+                    success_url=url_for('shop_order_thank_you', token=_thank_you_token(cart_order.cart_code), _external=True),
                     cancel_url=url_for('shop_checkout', _external=True),
                     metadata={'cart_order_id': str(cart_order.id)},
                     customer_email=buyer_email,
@@ -3902,17 +3893,18 @@ def shop_checkout():
                 print(f"[Shop Cart] cart_placed email failed: {e}")
 
             _save_shop_cart([])
-            return redirect(url_for("shop_order_thank_you", cart_code=cart_order.cart_code))
+            return redirect(url_for("shop_order_thank_you", token=_thank_you_token(cart_order.cart_code)))
 
     return render_template("shop_checkout.html", lines=lines, total=total, settings=settings,
                             stripe_enabled=stripe_enabled, cart_count=_shop_cart_item_count())
 
 
-@app.route("/shop/order/thank-you/<cart_code>")
-def shop_order_thank_you(cart_code):
+@app.route("/shop/order/thank-you/<token>")
+def shop_order_thank_you(token):
     from utils import get_setting, has_conflicting_unpaid_cart_order
 
-    cart_order = CartOrder.query.filter_by(cart_code=cart_code).first()
+    cart_code = _thank_you_value(token)
+    cart_order = CartOrder.query.filter_by(cart_code=cart_code).first() if isinstance(cart_code, str) else None
     if not cart_order:
         flash("Commande introuvable.", "error")
         return redirect(url_for("shop"))
@@ -4172,6 +4164,30 @@ def stripe_webhook():
 
     if event['type'] == 'checkout.session.completed':
         session_data = event['data']['object']
+
+        # "completed" means the buyer finished the Checkout page, not that money moved —
+        # only a payment_status of "paid" may issue passes or mark orders paid.
+        if session_data.get('payment_status') != 'paid':
+            print(f"[Stripe Webhook] Session {session_data.get('id')} completed but "
+                  f"payment_status={session_data.get('payment_status')!r}, not marking paid")
+            return jsonify({"status": "ignored_unpaid"}), 200
+
+        paid_cents = session_data.get('amount_total')
+
+        def _amount_mismatch(expected_cents, label):
+            """Log and report when Stripe charged a different total than we priced."""
+            if paid_cents is not None and int(paid_cents) == expected_cents:
+                return False
+            print(f"[Stripe Webhook] AMOUNT MISMATCH for {label}: charged {paid_cents} cents, "
+                  f"expected {expected_cents} — not marking paid")
+            db.session.add(AdminActionLog(
+                admin_email="stripe-bot@system",
+                action=(f"Stripe amount mismatch for {label}: charged ${(paid_cents or 0) / 100:.2f}, "
+                        f"expected ${expected_cents / 100:.2f}. Not marked paid — review in Stripe.")
+            ))
+            db.session.commit()
+            return True
+
         # Resolved once here: both bookkeeping branches below need the CHARGE id,
         # not the PaymentIntent id the session carries.
         resolved_charge_id = _resolve_charge_id(
@@ -4197,12 +4213,16 @@ def stripe_webhook():
                 print(f"[Stripe Webhook] CartOrder {cart_order_id} already paid, skipping")
                 return jsonify({"status": "already_processed"}), 200
 
-            cart_order.status = "paid"
-            cart_order.paid_at = datetime.now(timezone.utc)
+            # Same per-line cent rounding the cart checkout used to build its line_items.
+            expected_cents = (sum(int(round(o.amount * 100)) for o in cart_order.orders)
+                              + sum(int(round((s.requested_amount or 0) * 100)) for s in cart_order.signups))
+            if _amount_mismatch(expected_cents, f"Cart {cart_order.cart_code}"):
+                return jsonify({"status": "amount_mismatch"}), 200
 
+            now_paid_at = datetime.now(timezone.utc)
             for order in cart_order.orders:
                 order.status = "paid"
-                order.paid_at = cart_order.paid_at
+                order.paid_at = now_paid_at
 
             created_passports = []
             for signup_record in cart_order.signups:
@@ -4268,11 +4288,8 @@ def stripe_webhook():
                     db.session.add(stripe_tx)
                 db.session.commit()
 
-            try:
-                from utils import notify_cart_order_event
-                notify_cart_order_event(app, cart_order=cart_order, event_type="cart_paid")
-            except Exception as e:
-                print(f"[Stripe Webhook] Cart confirmation email failed: {e}")
+            from utils import finalize_cart_order_if_complete
+            finalize_cart_order_if_complete(app, cart_order)
 
             print(f"[Stripe Webhook] Cart {cart_order.cart_code} marked paid")
             return jsonify({"status": "ok"}), 200
@@ -4292,6 +4309,9 @@ def stripe_webhook():
             if order.status == "paid":
                 print(f"[Stripe Webhook] Order {order_id} already paid, skipping")
                 return jsonify({"status": "already_processed"}), 200
+
+            if _amount_mismatch(int(round(order.amount * 100)), f"Order {order.order_code}"):
+                return jsonify({"status": "amount_mismatch"}), 200
 
             order.status = "paid"
             order.paid_at = datetime.now(timezone.utc)
@@ -4328,6 +4348,10 @@ def stripe_webhook():
         if signup_record.paid:
             print(f"[Stripe Webhook] Signup {signup_id} already paid, skipping")
             return jsonify({"status": "already_processed"}), 200
+
+        if _amount_mismatch(int(round((signup_record.requested_amount or 0) * 100)),
+                            f"Signup {signup_record.signup_code or signup_record.id}"):
+            return jsonify({"status": "amount_mismatch"}), 200
 
         # Create passport and mark as paid
         passport = auto_create_passport_from_signup(signup_record, marked_paid_by="stripe-checkout")
@@ -4556,168 +4580,6 @@ def stripe_success():
                           activity=activity,
                           settings=settings,
                           format_slot_label=format_slot_label)
-
-
-@app.route("/payment-bot-settings", methods=["GET", "POST"])
-def payment_bot_settings():
-    """Dedicated page for Email Parser Payment Bot settings"""
-    if "admin" not in session:
-        return redirect(url_for("login"))
-    
-    # Handle test button
-    if request.form.get("action") == "test_bot":
-        try:
-            from utils import match_gmail_payments_to_passes, log_admin_action
-            print("🔧 Payment bot manual test triggered!")
-            
-            log_admin_action(f"Manual payment bot test by {session.get('admin', 'Unknown')}")
-            result = match_gmail_payments_to_passes()
-            
-            if result and isinstance(result, dict):
-                matched = result.get('matched', 0)
-                no_match = result.get('no_match', 0)
-                skipped = result.get('skipped', 0)
-                emails_found = result.get('emails_found', 0)
-
-                if matched > 0:
-                    flash(f"Test completed! {matched} payment(s) matched to passports!", "success")
-                elif no_match > 0:
-                    flash(f"Test completed! {no_match} payment(s) need manual review (no matching passport)", "warning")
-                elif emails_found > 0 and skipped > 0:
-                    flash(f"Test completed! {skipped} payment(s) already processed - no new payments.", "info")
-                else:
-                    flash("Test completed! No new payments found in inbox.", "info")
-            else:
-                flash("Test completed! No new payments found.", "info")
-                
-        except Exception as e:
-            print(f"Payment bot test error: {e}")
-            flash(f"Test failed: {str(e)}", "error")
-        
-        return redirect(url_for("payment_bot_settings"))
-    
-    if request.method == "POST":
-        # Save Email Payment Bot settings
-        bot_settings = {
-            "ENABLE_EMAIL_PAYMENT_BOT": "enable_email_payment_bot" in request.form,
-            "BANK_EMAIL_FROM": request.form.get("bank_email_from", "").strip(),
-            "BANK_EMAIL_SUBJECT": request.form.get("bank_email_subject", "").strip(),
-            "BANK_EMAIL_NAME_CONFIDANCE": request.form.get("bank_email_name_confidance", "85").strip(),
-            # OBSOLETE: gmail_label_folder_processed removed from UI on 2025-01-24
-            # "GMAIL_LABEL_FOLDER_PROCESSED": request.form.get("gmail_label_folder_processed", "InteractProcessed").strip()
-            "GMAIL_LABEL_FOLDER_PROCESSED": REMOVED_FIELD_DEFAULTS['gmail_label_folder_processed']
-        }
-        
-        for key, value in bot_settings.items():
-            existing = Setting.query.filter_by(key=key).first()
-            if existing:
-                existing.value = str(value)
-            else:
-                db.session.add(Setting(key=key, value=str(value)))
-        
-        db.session.commit()
-
-        # Log the action
-        from utils import log_admin_action
-        log_admin_action(f"Email Payment Bot Settings Updated by {session.get('admin', 'Unknown')}")
-
-        # Check if we're enabling the bot - if so, trigger immediate first run (async)
-        is_enabling = "enable_email_payment_bot" in request.form
-
-        if is_enabling:
-            # Trigger immediate payment bot run in background thread (non-blocking)
-            import threading
-            from utils import match_gmail_payments_to_passes
-
-            def run_payment_bot_async():
-                """Run payment bot in background thread"""
-                with app.app_context():
-                    try:
-                        print("🚀 Payment bot ENABLED - running first check in background...")
-                        match_gmail_payments_to_passes()
-                        print("Payment bot background check completed!")
-                    except Exception as e:
-                        print(f"Payment bot background run failed: {e}")
-
-            thread = threading.Thread(target=run_payment_bot_async, daemon=True)
-            thread.start()
-            print("🔄 Payment bot first check started in background thread")
-
-            flash("Payment Bot enabled! First email check is running now. Subsequent checks every 30 minutes.", "success")
-        else:
-            flash("Payment Bot disabled. Email checking stopped.", "success")
-
-        return redirect(url_for("payment_bot_settings"))
-    
-    # GET request - load settings
-    settings = {}
-    for setting in Setting.query.all():
-        settings[setting.key] = setting.value
-    
-    return render_template("payment_bot_settings.html", settings=settings)
-
-
-@app.route("/api/payment-bot/test-email", methods=["POST"])
-@rate_limit(max_requests=2, window=3600)  # 2 requests per hour
-def api_payment_bot_test_email():
-    """Send a test payment email (rate-limited and secure)"""
-    if "admin" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    from markupsafe import escape
-    from utils import send_email, get_setting
-    
-    # Get and sanitize inputs (NO custom From address for security)
-    sender_name = escape(request.form.get("sender_name", "").strip())[:100]
-    amount = request.form.get("amount", "").strip()
-    
-    # Validate inputs
-    if not sender_name:
-        return jsonify({"error": "Sender name is required"}), 400
-    
-    try:
-        amount_float = float(amount)
-        if amount_float <= 0 or amount_float > 10000:
-            raise ValueError
-    except (ValueError, TypeError):
-        return jsonify({"error": "Invalid amount (must be between 0 and 10000)"}), 400
-    
-    # Get payment email address from settings (use MAIL_USERNAME as the payment email)
-    payment_email = get_setting("MAIL_USERNAME", None)
-    if not payment_email:
-        return jsonify({"error": "Payment email not configured. Please set Mail Username in Email Settings."}), 500
-    
-    # Build test email content
-    subject = f"INTERAC e-Transfer: {sender_name} sent you ${amount_float:.2f} (CAD)"
-    html_body = f"""
-    <html>
-    <body>
-        <h2>Test Payment Notification</h2>
-        <p><strong>Sender:</strong> {sender_name}</p>
-        <p><strong>Amount:</strong> ${amount_float:.2f} CAD</p>
-        <p><strong>Reference:</strong> TEST-{int(time.time())}</p>
-        <hr>
-        <p><em>This is a test email sent from Minipass Payment Bot settings.</em></p>
-    </body>
-    </html>
-    """
-    
-    try:
-        # Send email ONLY to configured payment address
-        send_email(
-            subject=subject,
-            to_email=payment_email,
-            html_body=html_body
-        )
-        
-        # Log the action
-        from utils import log_admin_action
-        log_admin_action(f"Test payment email sent by {session.get('admin', 'Unknown')} - Amount: ${amount_float:.2f}")
-        
-        return jsonify({"success": True, "message": f"Test email sent to {payment_email}"}), 200
-    except Exception as e:
-        print(f"Error sending test email: {e}")
-        return jsonify({"error": "Failed to send test email"}), 500
 
 
 @app.route("/api/move-payment-email", methods=["POST"])
@@ -5028,12 +4890,11 @@ def api_create_passport_from_payment():
             print(f"EMAIL MOVE TRACEBACK: {traceback.format_exc()}")
             # Don't fail the whole operation if email move fails
 
-        # Small sleep for timestamp ordering (follows existing pattern)
-        time.sleep(0.3)
-
         # Send confirmation emails (only if user has email)
         if user_email:
-            now_utc = datetime.now(timezone.utc)
+            # Stamped 1s after the admin log just committed so the email sorts after it in
+            # the history (this used to sleep here, holding a gunicorn thread for nothing).
+            now_utc = datetime.now(timezone.utc) + timedelta(seconds=1)
             # Send "passport created" email
             notify_pass_event(
                 app=current_app._get_current_object(),
@@ -5391,6 +5252,17 @@ def link_payment_to_signup_form():
         except Exception as e:
             print(f"Could not send confirmation email (non-critical): {e}")
 
+        # If this signup belongs to a cart order, its sibling lines (other products or
+        # passports) were never touched by this manual match — finalize the cart now in
+        # case this was the last unpaid line, so it doesn't sit stuck as "awaiting_payment"
+        # forever and the buyer still gets a cart summary email when appropriate.
+        if signup.cart_order_id:
+            try:
+                from utils import finalize_cart_order_if_complete
+                finalize_cart_order_if_complete(current_app._get_current_object(), signup.cart_order)
+            except Exception as e:
+                print(f"Could not finalize cart order (non-critical): {e}")
+
         msg = f"Payment linked to signup for {holder_name} — passport {pass_code} created."
         if not email_moved:
             msg += " Warning: payment email could not be moved from inbox."
@@ -5462,34 +5334,6 @@ def api_update_passport_name(passport_id):
     flash(f"Name updated to \"{new_name}\". Will match on next sync.", "success")
 
     return jsonify({'success': True, 'old_name': old_name, 'new_name': new_name})
-
-
-@app.route("/api/payment-bot/logs", methods=["GET"])
-def api_payment_bot_logs():
-    """Get recent payment logs (sanitized for XSS prevention)"""
-    if "admin" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    from markupsafe import escape
-    
-    # Get last 10 payment logs
-    recent_payments = EbankPayment.query.order_by(EbankPayment.timestamp.desc()).limit(10).all()
-    
-    # Sanitize and format for display
-    logs = []
-    for payment in recent_payments:
-        logs.append({
-            "id": payment.id,
-            "date_sent": payment.timestamp.strftime("%Y-%m-%d %H:%M") if payment.timestamp else "Unknown",
-            "from_email": escape(payment.from_email or "Unknown"),
-            "subject": escape(payment.subject or "No subject")[:100],
-            "amount": float(payment.bank_info_amt) if payment.bank_info_amt else 0.0,
-            "bank_info_name": escape(payment.bank_info_name or "Unknown")[:50],
-            "matched_pass": bool(payment.matched_pass_id),
-            "match_confidence": payment.name_score or 0
-        })
-    
-    return jsonify({"logs": logs}), 200
 
 
 # ================================
@@ -5649,9 +5493,13 @@ def push_unsubscribe():
 
 @app.route("/setup", methods=["GET", "POST"])
 def setup():
+    # Open without login only for the very first run (no admin yet); afterwards this is the
+    # Team/Data settings page and must be admin-only, or anyone could create/delete admins.
+    if "admin" not in session and Admin.query.first():
+        return redirect(url_for("login"))
 
     ##
-    ##  POST REQUEST 
+    ##  POST REQUEST
     ##
 
     if request.method == "POST":
@@ -5687,11 +5535,10 @@ def setup():
                             avatar_file.stream, avatar_dir, prefix=prefix, max_size=(400, 400)
                         )
                     except Exception as e:
+                        # Not a readable image — skip it rather than saving the raw upload
+                        # (with its own extension) into the public static folder.
                         app.logger.error(f"Avatar optimization failed: {e}")
-                        ext = os.path.splitext(avatar_file.filename)[1]
-                        avatar_filename = f"admin_{email.replace('@', '_').replace('.', '_')}_{int(time.time())}{ext}"
-                        avatar_path = os.path.join(avatar_dir, avatar_filename)
-                        avatar_file.save(avatar_path)
+                        flash("The avatar image could not be read and was not saved.", "warning")
 
             existing = Admin.query.filter_by(email=email).first()
             if existing:
@@ -5917,21 +5764,14 @@ def setup():
 
     backup_file = request.args.get("backup_file")
 
-    backup_dir = os.path.join("static", "backups")
+    migrate_legacy_backups()
+    backup_dir = BACKUP_DIR
     backup_files = sorted(
         [f for f in os.listdir(backup_dir) if f.endswith(".zip")],
         reverse=True
     ) if os.path.exists(backup_dir) else []
 
     print("📥 Received backup_file from args:", backup_file)
-    
-    # Safely check and create static/backups directory if needed
-    if os.path.exists("static/backups"):
-        print("🗂️ Available backups in static/backups/:", os.listdir("static/backups"))
-    else:
-        print("🗂️ static/backups directory not found - creating it")
-        os.makedirs("static/backups", exist_ok=True)
-        print("🗂️ Available backups in static/backups/:", [])
 
     # The seven transactional templates, listed straight from templates/email/. This used to
     # walk email_templates/ looking for *_compiled/index.html folders; the layouts are plain
@@ -5966,48 +5806,11 @@ def unified_settings():
     if "admin" not in session:
         return redirect(url_for("login"))
     
-    # Check if this is a GET request with test_payment_bot parameter
-    if request.args.get("test_payment_bot") == "1":
-        try:
-            from utils import match_gmail_payments_to_passes, log_admin_action
-            print("🔧 GET Manual payment bot trigger activated!")
-            
-            log_admin_action(f"Manual payment bot test by {session.get('admin', 'Unknown')}")
-            result = match_gmail_payments_to_passes()
-            
-            if result and isinstance(result, dict):
-                matched = result.get('matched', 0)
-                no_match = result.get('no_match', 0)
-                skipped = result.get('skipped', 0)
-                emails_found = result.get('emails_found', 0)
-
-                if matched > 0:
-                    # Success - found and matched payments
-                    flash(f"Found {matched} payment(s) matched to passports!", "success")
-                elif no_match > 0:
-                    # Warning - found payments but couldn't match
-                    flash(f"Found {no_match} payment(s) - needs manual review (no matching passport)", "warning")
-                elif emails_found > 0 and skipped > 0:
-                    # Info - found emails but all were already processed
-                    flash(f"{skipped} payment(s) already processed - no new payments.", "info")
-                else:
-                    # Info - no payments found in inbox
-                    flash("No new payments found in inbox.", "info")
-            else:
-                flash("Payment bot completed. No emails to process.", "info")
-                
-        except Exception as e:
-            print(f"Payment bot test error: {e}")
-            flash(f"Payment bot test failed: {str(e)}", "error")
-
-        # Redirect back to payment_bot_matches page
-        return redirect(url_for("payment_bot_matches"))
-    
-    # Check if this is a GET request with test_late_payment parameter
-    if request.args.get("test_late_payment") == "1":
+    # "Send Test Reminder" button (a POST — it emails every unpaid customer).
+    if request.method == "POST" and request.form.get("action") == "test_late_payment":
         try:
             from utils import send_unpaid_reminders, log_admin_action
-            print("🔧 GET Manual late payment reminder test activated!")
+            print("🔧 Manual late payment reminder test activated!")
             
             log_admin_action(f"Manual late payment reminder test by {session.get('admin', 'Unknown')}")
             send_unpaid_reminders(current_app, force_send=True)
@@ -6031,38 +5834,6 @@ def unified_settings():
         if posted_section not in valid_sections:
             posted_section = "general"
 
-        # Check if this is a manual payment bot trigger
-        if request.form.get("action") == "test_payment_bot":
-            try:
-                from utils import match_gmail_payments_to_passes, log_admin_action
-                print("🔧 Manual payment bot trigger activated!")
-                
-                log_admin_action(f"Manual payment bot test by {session.get('admin', 'Unknown')}")
-                result = match_gmail_payments_to_passes()
-                
-                if result and isinstance(result, dict):
-                    matched = result.get('matched', 0)
-                    no_match = result.get('no_match', 0)
-                    skipped = result.get('skipped', 0)
-                    emails_found = result.get('emails_found', 0)
-
-                    if matched > 0:
-                        flash(f"Found {matched} payment(s) matched to passports!", "success")
-                    elif no_match > 0:
-                        flash(f"Found {no_match} payment(s) - needs manual review (no matching passport)", "warning")
-                    elif emails_found > 0 and skipped > 0:
-                        flash(f"{skipped} payment(s) already processed - no new payments.", "info")
-                    else:
-                        flash("No new payments found in inbox.", "info")
-                else:
-                    flash("Payment bot completed. No emails to process.", "info")
-
-            except Exception as e:
-                print(f"Payment bot test error: {e}")
-                flash(f"Payment bot test failed: {str(e)}", "error")
-
-            return redirect(url_for("unified_settings"))
-            
         try:
             # Save only the section that was submitted, so one tab cannot
             # clear settings that belong to another tab.
@@ -6690,7 +6461,7 @@ def erase_app_data():
     return redirect(url_for("setup", section="data"))
 
 
-@app.route("/generate-backup")
+@app.route("/generate-backup", methods=["POST"])
 def generate_backup():
     if "admin" not in session:
         return redirect(url_for("login"))
@@ -6754,7 +6525,7 @@ def generate_backup():
                         archive_path = os.path.relpath(file_path, start='.')
                         zipf.write(file_path, arcname=archive_path)
 
-        final_path = os.path.join("static", "backups", zip_filename)
+        final_path = os.path.join(BACKUP_DIR, zip_filename)
         os.makedirs(os.path.dirname(final_path), exist_ok=True)
 
         print(f"🛠 Moving zip from {zip_path} → {final_path}")
@@ -6762,7 +6533,7 @@ def generate_backup():
         print(f"Backup saved to: {final_path}")
 
         # Auto-cleanup: Keep only the 5 most recent backups
-        backup_dir = os.path.join("static", "backups")
+        backup_dir = BACKUP_DIR
         if os.path.exists(backup_dir):
             backup_files = sorted(
                 [f for f in os.listdir(backup_dir) if f.endswith(".zip")],
@@ -6782,6 +6553,18 @@ def generate_backup():
     return redirect(url_for("setup", section="data", backup_file=zip_filename))
 
 
+@app.route("/download-backup/<filename>")
+def download_backup(filename):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    if not filename.endswith(".zip") or "/" in filename or "\\" in filename:
+        flash("Invalid backup filename.", "danger")
+        return redirect(url_for("setup", section="data"))
+
+    return send_from_directory(os.path.abspath(BACKUP_DIR), filename, as_attachment=True)
+
+
 @app.route("/delete-backup/<filename>", methods=["POST"])
 def delete_backup(filename):
     if "admin" not in session:
@@ -6793,7 +6576,7 @@ def delete_backup(filename):
             flash("Invalid backup filename.", "danger")
             return redirect(url_for("setup", section="data"))
 
-        backup_path = os.path.join("static", "backups", filename)
+        backup_path = os.path.join(BACKUP_DIR, filename)
         if os.path.exists(backup_path):
             os.remove(backup_path)
             print(f"Backup deleted: {filename}")
@@ -6818,7 +6601,7 @@ def restore_backup(filename):
             flash("Invalid backup filename.", "danger")
             return redirect(url_for("setup", section="data"))
 
-        backup_path = os.path.join("static", "backups", filename)
+        backup_path = os.path.join(BACKUP_DIR, filename)
         if not os.path.exists(backup_path):
             flash("Backup file not found.", "danger")
             return redirect(url_for("setup", section="data"))
@@ -6886,7 +6669,7 @@ def upload_and_restore_backup():
         temp_filename = f"uploaded_backup_{timestamp}_{filename}"
         
         # Ensure backup directory exists
-        backup_dir = os.path.join("static", "backups")
+        backup_dir = BACKUP_DIR
         os.makedirs(backup_dir, exist_ok=True)
         
         # Save uploaded file
@@ -7337,12 +7120,6 @@ def show_pass(pass_code):
     # ✅ Load system settings
     settings_raw = {s.key: s.value for s in Setting.query.all()}
 
-    # ✅ Render payment instructions
-    email_info_rendered = render_template_string(
-        settings_raw.get("EMAIL_INFO_TEXT", ""),
-        hockey_pass=hockey_pass
-    )
-
     # ✅ Session scheduling: this passport's bookings + what it can still book.
     # The pass_code is the credential here — no login required, by design.
     my_bookings = []
@@ -7377,7 +7154,6 @@ def show_pass(pass_code):
         history=history,
         is_admin=is_admin,
         settings=settings_raw,
-        email_info=email_info_rendered,
         my_bookings=my_bookings,
         bookable_slots=bookable_slots,
         can_check_in=can_check_in,
@@ -7597,11 +7373,9 @@ def redeem_passport_qr(pass_code):
         ))
         db.session.commit()
 
-        # ✅ Sleep 0.5 seconds for natural separation
-        time.sleep(0.5)
-
-        # ✅ Fresh now_utc after sleep
-        now_utc = datetime.now(timezone.utc)
+        # Stamped 1s after the admin log just committed so the email sorts after it in
+        # the history (this used to sleep here, holding a gunicorn thread for nothing).
+        now_utc = datetime.now(timezone.utc) + timedelta(seconds=1)
 
         # ✅ Send confirmation email AFTER admin log
         notify_pass_event(
@@ -8091,18 +7865,11 @@ def list_activities():
     if not status and show_all_param != "true":
         status = "active"
 
-    # Query ALL activities first for statistics (before any filters)
-    all_activities = Activity.query.options(
-        db.joinedload(Activity.passports),
-        db.joinedload(Activity.passport_types)
-    ).all()
-
-    # Calculate TRUE total activities count for "All" button
+    # Filter-tab counts straight from SQL. This used to load every activity with every
+    # passport and passport type joined in, just to count statuses.
     all_activities_count = Activity.query.count()
-
-    # Calculate statistics using ALL activities (not filtered results)
-    active_activities = len([a for a in all_activities if a.status == 'active'])
-    inactive_activities = len([a for a in all_activities if a.status != 'active'])
+    active_activities = Activity.query.filter(Activity.status == 'active').count()
+    inactive_activities = all_activities_count - active_activities
 
     # Create statistics dict to pass to template
     statistics = {
@@ -8111,10 +7878,11 @@ def list_activities():
         'inactive_activities': inactive_activities,
     }
 
-    # Base query with eager loading for performance
+    # Base query with eager loading for performance. selectinload, not joinedload: a joined
+    # collection multiplies rows, so paginate()'s LIMIT cut pages short of per_page.
     query = Activity.query.options(
-        db.joinedload(Activity.passports),
-        db.joinedload(Activity.passport_types)
+        db.selectinload(Activity.passports),
+        db.selectinload(Activity.passport_types)
     ).order_by(Activity.created_dt.desc())
 
     # Apply filters
@@ -9573,7 +9341,7 @@ def payment_bot_matches():
                          current_filters=current_filters)
 
 
-@app.route("/payment-bot-matches/run")
+@app.route("/payment-bot-matches/run", methods=["POST"])
 def run_payment_bot_now():
     """Manually trigger the Gmail payment-matching bot from the Interac Inbox
     page and land back on it (with the result as a flash message), instead of
@@ -10079,6 +9847,9 @@ def mark_expense_paid(expense_id):
 @app.route("/admin/activity", methods=["GET", "POST"])
 @app.route("/admin/activity/<int:activity_id>", methods=["GET", "POST"])
 def activity_form(activity_id=None):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
     activity = db.session.get(Activity, activity_id) if activity_id else None
     is_edit = bool(activity)
 
@@ -10121,14 +9892,19 @@ def activity_form(activity_id=None):
                 flash("Image file is too large. Maximum size is 10MB.", "error")
                 return redirect(request.referrer or url_for('dashboard'))
             upload_file.seek(0)
-            ext = os.path.splitext(upload_file.filename)[1]
+            # Files land in /static and are served as-is, so only image extensions are allowed —
+            # an uploaded .html would otherwise be served from our domain (stored XSS).
+            ext = os.path.splitext(upload_file.filename)[1].lower()
+            if ext not in {".jpg", ".jpeg", ".png", ".gif", ".webp"}:
+                flash("Please upload a JPG, PNG, GIF or WebP image.", "error")
+                return redirect(request.referrer or url_for('dashboard'))
             filename = f"activity_{uuid.uuid4().hex}{ext}"
             path = os.path.join(app.static_folder, "uploads/activity_images", filename)
             upload_file.save(path)
             activity.image_filename = filename
 
         elif request.form.get("selected_image_filename"):
-            activity.image_filename = request.form.get("selected_image_filename")
+            activity.image_filename = os.path.basename(request.form.get("selected_image_filename"))
 
         db.session.commit()
         flash("Activity saved.", "success")
@@ -10337,7 +10113,6 @@ def activity_dashboard(activity_id):
     from sqlalchemy.orm import joinedload
     from sqlalchemy import or_, func
     from datetime import datetime, timezone, timedelta
-    from kpi_renderer import render_revenue_card, render_active_users_card, render_passports_created_card, render_passports_unpaid_card, render_passports_redeemed_card
 
     activity = db.session.get(Activity, activity_id)
     if not activity:
@@ -10434,9 +10209,6 @@ def activity_dashboard(activity_id):
     # Generate fiscal year data for mobile view
     mobile_kpi_data = get_kpi_data(activity_id=activity_id, period='fy')
 
-    # Get the 7-day KPI data by default (this will be the initial view)
-    current_kpi = kpi_data.get('revenue', {})
-
     # All-time revenue for the progress bar, from the SQL view so this figure matches the
     # Financial Report for the same activity. It previously summed the raw tables directly,
     # counting every Income row regardless of payment_status, so it could exceed the report.
@@ -10492,7 +10264,6 @@ def activity_dashboard(activity_id):
     
     # Unpaid passport statistics
     unpaid_passports = [p for p in all_passports if not p.paid]
-    unpaid_count = len(unpaid_passports)
     overdue_count = len([p for p in unpaid_passports if p.created_dt and not is_recent(p.created_dt, three_days_ago)])
     
     # Activity profit, from the SQL view (activity_financials was read above for the goal bar).
@@ -10505,7 +10276,6 @@ def activity_dashboard(activity_id):
     
     # Signup statistics
     pending_signups = [s for s in signups if s.status == 'pending']
-    approved_signups = [s for s in signups if s.status == 'approved']
 
     has_pending_signups = len(pending_signups) > 0
     activity_pending_signups_count = len(pending_signups)
@@ -10517,56 +10287,6 @@ def activity_dashboard(activity_id):
     _actual = float(total_paid_revenue or 0)
     revenue_progress_pct = min(round((_actual / _target * 100) if _target > 0 else 0), 100)
     
-    # Not shown on this page. This used to load every log table and filter on a key
-    # ('action') that log entries do not have, so the result was always empty.
-    activity_logs = []
-
-    # KPI data structure for the dashboard template
-    # Using the same structure from get_kpi_data() as dashboard does - no transformation
-    # The old custom structure is commented out below:
-    # kpi_data = {
-    #     'revenue': {
-    #         'current': current_kpi.get('revenue', 0),
-    #         'change_7d': current_kpi.get('revenue_change', 0),
-    #         ...
-    #     }
-    # }
-    
-    # kpi_data is already set from line 4020: kpi_data = get_kpi_data(activity_id=activity_id)
-    
-    # Dashboard statistics
-    dashboard_stats = {
-        'total_passports': len(all_passports),
-        'paid_passports': len([p for p in all_passports if p.paid]),
-        'unpaid_passports': unpaid_count,
-        'active_passports': current_kpi.get('active_users', 0),
-        'pending_signups': len(pending_signups),
-        'approved_signups': len(approved_signups),
-        'recent_signups': current_kpi.get('pending_signups', 0),
-        'total_users': len(set(p.user_id for p in all_passports))
-    }
-
-    # Load surveys for this activity (handle case where tables might not exist yet)
-    try:
-        surveys = (
-            Survey.query
-            .options(joinedload(Survey.responses))
-            .filter_by(activity_id=activity_id)
-            .order_by(Survey.created_dt.desc())
-            .all()
-        )
-    except Exception as e:
-        # If survey tables don't exist yet, return empty list
-        print(f"Warning: Survey tables not found: {e}")
-        surveys = []
-
-    # Load available survey templates for the modal
-    try:
-        survey_templates = SurveyTemplate.query.filter_by(status='active').all()
-    except Exception as e:
-        print(f"Warning: Survey template tables not found: {e}")
-        survey_templates = []
-
     # Load passport types for this activity
     from models import PassportType
     passport_types = PassportType.query.filter_by(activity_id=activity_id, status='active').all()
@@ -10748,12 +10468,6 @@ def activity_dashboard(activity_id):
             "actions": actions,
         })
 
-    # Render KPI cards with activity filter
-    revenue_card = render_revenue_card(activity_id=activity_id)
-    active_users_card = render_active_users_card(activity_id=activity_id)  
-    passports_created_card = render_passports_created_card(activity_id=activity_id)
-    passports_unpaid_card = render_passports_unpaid_card(activity_id=activity_id)
-
     # Determine if showing all (explicitly requested)
     show_all = show_all_param == "true"
 
@@ -10768,21 +10482,10 @@ def activity_dashboard(activity_id):
         activity=activity,
         signups=signups,
         passes=passports,
-        all_signups=all_signups,  # For filter counts
-        all_passports=all_passports,  # For filter counts
-        surveys=surveys,
-        survey_templates=survey_templates,
         passport_types=passport_types,
         kpi_data=kpi_data,
         mobile_kpi_data=mobile_kpi_data,
-        dashboard_stats=dashboard_stats,
-        activity_logs=activity_logs,
-        logs=activity_logs,  # Added for compatibility with copied KPI cards JavaScript
         current_datetime=datetime.now(),
-        revenue_card=revenue_card,
-        active_users_card=active_users_card,
-        passports_created_card=passports_created_card,
-        passports_unpaid_card=passports_unpaid_card,
         has_pending_signups=has_pending_signups,
         activity_pending_signups_count=activity_pending_signups_count,
         activity_approved_signups_count=activity_approved_signups_count,
@@ -11045,702 +10748,9 @@ def test_discord_webhook():
         return jsonify({"success": False, "error": "Webhook delivery failed. Check the URL and try again."}), 502
 
 
-@app.route("/api/activity-kpis/<int:activity_id>")
-@admin_required
-@rate_limit(max_requests=30, window=60)  # 30 requests per minute
-@log_api_call
-@cache_response(timeout=180)  # Cache for 3 minutes
-def get_activity_kpis_api(activity_id):
-    """Secure API endpoint to get KPI data for a specific activity and period
-    
-    Security Features:
-    - Admin authentication required
-    - Rate limiting (30 req/min)
-    - Input validation and sanitization
-    - SQL injection prevention
-    - Request logging
-    - Response caching
-    """
-    from markupsafe import escape
-    
-    # Input validation and sanitization
-    try:
-        # Validate activity_id
-        if activity_id is None or activity_id <= 0:
-            return jsonify({
-                "success": False, 
-                "error": "Invalid activity ID",
-                "code": "INVALID_ACTIVITY_ID"
-            }), 400
-        
-        # Validate and sanitize period parameter
-        period_param = request.args.get('period', '7')
-        try:
-            period = int(escape(str(period_param)))
-            if period not in [7, 30, 90, 365]:
-                period = 7  # Default fallback
-        except (ValueError, TypeError):
-            period = 7
-        
-        # Validate activity exists and user has access
-        from models import Activity
-        activity = db.session.execute(
-            text("SELECT id, name FROM activity WHERE id = :activity_id AND status = 'active'"),
-            {"activity_id": activity_id}
-        ).fetchone()
-        
-        if not activity:
-            return jsonify({
-                "success": False, 
-                "error": "Activity not found or inactive",
-                "code": "ACTIVITY_NOT_FOUND"
-            }), 404
-            
-    except Exception as e:
-        logger.error(f"Input validation error in KPI API: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": "Invalid request parameters",
-            "code": "VALIDATION_ERROR"
-        }), 400
-    
-    # Try to use new KPI Card component first, fallback to legacy implementation
-    try:
-        # Use the secure KPI Card component with validation
-        dashboard_cards = generate_dashboard_cards(
-            activity_id=activity_id,
-            period=f"{period}d",
-            device_type='desktop'
-        )
-        
-        if dashboard_cards.get('success'):
-            # Transform to expected format
-            kpi_data = {}
-            for card_id, card in dashboard_cards['cards'].items():
-                card_type = card['card_type']
-                if card_type == 'revenue':
-                    kpi_data['revenue'] = {
-                        'total': card['total'],
-                        'change': card['change'],
-                        'trend': card['trend_direction'],
-                        'percentage': card['percentage'],
-                        'trend_data': card['trend_data']
-                    }
-                elif card_type == 'active_users':
-                    kpi_data['active_users'] = {
-                        'total': card['total'],
-                        'change': card['change'],
-                        'trend': card['trend_direction'],
-                        'percentage': card['percentage'],
-                        'trend_data': card['trend_data']
-                    }
-                elif card_type == 'unpaid_passports':
-                    kpi_data['unpaid_passports'] = {
-                        'total': card['total'],
-                        'change': card['change'],
-                        'trend': card['trend_direction'],
-                        'percentage': card['percentage'],
-                        'overdue': card.get('overdue', 0),
-                        'trend_data': card['trend_data']
-                    }
-                elif card_type == 'profit':
-                    kpi_data['profit'] = {
-                        'total': card['total'],
-                        'margin': card.get('margin', 0),
-                        'change': card['change'],
-                        'trend': card['trend_direction'],
-                        'percentage': card['percentage'],
-                        'trend_data': card['trend_data']
-                    }
-            
-            return jsonify({
-                "success": True,
-                "period": period,
-                "kpi_data": kpi_data,
-                "source": "kpi_component",
-                "cache_info": {
-                    "generation_time_ms": dashboard_cards.get('generation_time_ms', 0),
-                    "cache_hit": any(card.get('cache_hit', False) for card in dashboard_cards['cards'].values())
-                }
-            })
-        
-        # Fallback to legacy implementation with enhanced security
-        logger.info(f"Falling back to legacy KPI implementation for activity {activity_id}")
-        
-    except Exception as component_error:
-        logger.warning(f"KPI component failed, using legacy: {str(component_error)}")
-    
-    # Legacy implementation with security enhancements
-    from models import Activity, Passport
-    from datetime import datetime, timezone, timedelta
-    from utils import get_kpi_data
-    import math
-    
-    try:
-        # Secure database query using parameterized query
-        activity = db.session.execute(
-            text("SELECT * FROM activity WHERE id = :activity_id AND status = 'active'"),
-            {"activity_id": activity_id}
-        ).fetchone()
-        
-        if not activity:
-            return jsonify({
-                "success": False, 
-                "error": "Activity not found",
-                "code": "ACTIVITY_NOT_FOUND"
-            }), 404
-        
-        # Map period to the key get_kpi_data expects
-        period_key = '7d'
-        if period == 30:
-            period_key = '30d'
-        elif period == 90:
-            period_key = '90d'
-
-        kpi_stats = get_kpi_data(activity_id=activity_id, period=period_key)
-
-        # get_kpi_data returns one metric per top-level key ('revenue', 'active_users', ...)
-        # for the period it was CALLED with — it has never returned period-keyed buckets. The
-        # old `kpi_stats.get(period_key, {})` therefore always produced {}, and this endpoint
-        # reported every figure as zero. Flatten to the shape the response builder below reads.
-        revenue_kpi = kpi_stats.get('revenue', {}) or {}
-        users_kpi = kpi_stats.get('active_users', {}) or {}
-        period_data = {
-            'revenue': revenue_kpi.get('current', 0),
-            'revenue_change': revenue_kpi.get('change', 0),
-            'revenue_trend': revenue_kpi.get('trend_data', []),
-            'active_users': users_kpi.get('current', 0),
-            'passport_change': users_kpi.get('change', 0),
-            'active_users_trend': users_kpi.get('trend_data', []),
-        }
-        
-        # Helper function to safely validate and clean numeric values
-        def safe_float(value, default=0.0):
-            """Convert value to float, handling None, NaN, and invalid values"""
-            try:
-                if value is None:
-                    return default
-                float_val = float(value)
-                if math.isnan(float_val) or math.isinf(float_val):
-                    return default
-                return round(float_val, 2)
-            except (TypeError, ValueError):
-                return default
-        
-        # Helper function to validate and clean trend data arrays
-        def clean_trend_data(trend_data, default_length=7):
-            """Clean trend data array, ensuring all values are valid numbers"""
-            if not isinstance(trend_data, list):
-                return [0] * default_length
-            
-            cleaned = []
-            for value in trend_data:
-                cleaned.append(safe_float(value, 0))
-            
-            # Ensure we have the right number of data points
-            if len(cleaned) < default_length:
-                cleaned.extend([0] * (default_length - len(cleaned)))
-            elif len(cleaned) > default_length:
-                cleaned = cleaned[-default_length:]
-                
-            return cleaned
-        
-        # Calculate additional activity-specific metrics
-        now = datetime.now(timezone.utc)
-        three_days_ago = now - timedelta(days=3)
-        
-        # Get all passports for unpaid statistics with proper error handling
-        try:
-            all_passports = Passport.query.filter_by(activity_id=activity_id).all()
-            unpaid_passports = [p for p in all_passports if not p.paid]
-            unpaid_count = len(unpaid_passports)
-            
-            # Helper function to safely compare dates
-            def is_recent(dt, cutoff_date):
-                if not dt:
-                    return False
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone.utc)
-                return dt >= cutoff_date
-            
-            overdue_count = len([p for p in unpaid_passports if p.created_dt and not is_recent(p.created_dt, three_days_ago)])
-        except Exception as e:
-            print(f"Error calculating unpaid passports for activity {activity_id}: {e}")
-            unpaid_count = 0
-            overdue_count = 0
-        
-        # Calculate profit (combining revenue with expenses/income)
-        try:
-            # From the SQL view, so this matches the Financial Report. It used to add raw
-            # expense/income sums on top of the view-sourced revenue, mixing two sources and
-            # double-counting income that revenue already contained.
-            from utils import get_activity_financial_summary
-            fin = get_activity_financial_summary(activity_id)
-            activity_expenses = fin['total_expenses']
-            total_income = fin['total_revenue']
-            profit = fin['net_income']
-            profit_margin = (profit / total_income * 100) if total_income > 0 else 0
-
-            # No period-over-period profit comparison is offered. The figures above are all-time
-            # (the view is queried without date bounds), so subtracting an all-time expense
-            # total from one period's revenue produced a "previous profit" with no accounting
-            # meaning, and a percentage swing off it was noise presented as a trend.
-            profit_change = 0
-        except Exception as e:
-            print(f"Error calculating profit for activity {activity_id}: {e}")
-            profit = safe_float(period_data.get('revenue', 0))
-            profit_margin = 100 if profit > 0 else 0
-            profit_change = safe_float(period_data.get('revenue_change', 0))
-        
-        # Get and clean trend data length based on period
-        trend_length = period if period in [7, 30, 90] else 7
-        
-        # Build KPI data with proper validation and cleaning
-        kpi_data = {
-            'revenue': {
-                'total': safe_float(period_data.get('revenue', 0)),
-                'change': safe_float(period_data.get('revenue_change', 0)),
-                'trend': 'up' if safe_float(period_data.get('revenue_change', 0)) > 0 else 'down' if safe_float(period_data.get('revenue_change', 0)) < 0 else 'stable',
-                'percentage': abs(safe_float(period_data.get('revenue_change', 0))),
-                'trend_data': clean_trend_data(period_data.get('revenue_trend', []), trend_length)
-            },
-            'active_users': {
-                'total': int(safe_float(period_data.get('active_users', 0))),
-                'change': safe_float(period_data.get('passport_change', 0)),
-                'trend': 'up' if safe_float(period_data.get('passport_change', 0)) > 0 else 'down' if safe_float(period_data.get('passport_change', 0)) < 0 else 'stable',
-                'percentage': abs(safe_float(period_data.get('passport_change', 0))),
-                'trend_data': clean_trend_data(period_data.get('active_users_trend', []), trend_length)
-            },
-            'unpaid_passports': {
-                'total': unpaid_count,
-                'change': 0,  # We don't track unpaid changes in the base KPI function
-                'trend': 'stable',
-                'percentage': 0,
-                'overdue': overdue_count,
-                'trend_data': [unpaid_count] * trend_length  # Simple placeholder with correct length
-            },
-            'profit': {
-                'total': safe_float(profit),
-                'margin': safe_float(profit_margin),
-                'change': safe_float(profit_change),
-                'trend': 'up' if safe_float(profit_change) > 0 else 'down' if safe_float(profit_change) < 0 else 'stable',
-                'percentage': abs(safe_float(profit_change)),
-                'trend_data': clean_trend_data(period_data.get('revenue_trend', []), trend_length)  # Use revenue trend as proxy for profit
-            }
-        }
-        
-        return jsonify({
-            "success": True,
-            "period": period,
-            "kpi_data": kpi_data
-        })
-        
-    except Exception as e:
-        # Secure error logging without exposing sensitive data
-        logger.error(f"Error in get_activity_kpis_api for activity {activity_id}: {str(e)}")
-        
-        # Log the full error for debugging but don't expose to client
-        logger.debug(f"Full traceback: {traceback.format_exc()}")
-        
-        return jsonify({
-            "success": False,
-            "error": "Internal server error",
-            "code": "INTERNAL_ERROR",
-            "details": str(e) if current_app.debug else "Please try again later",
-            "activity_id": activity_id  # Safe to include
-        }), 500
-
-
-@app.route("/api/activity-dashboard-data/<int:activity_id>")
-@admin_required
-@rate_limit(max_requests=40, window=60)  # 40 requests per minute
-@log_api_call
-def get_activity_dashboard_data(activity_id):
-    """Secure API endpoint to get filtered passport and signup data for activity dashboard
-    
-    Security Features:
-    - Admin authentication required
-    - Rate limiting (40 req/min)
-    - Input validation and sanitization
-    - SQL injection prevention
-    - Request logging
-    """
-    from markupsafe import escape
-    
-    # Input validation and sanitization
-    try:
-        # Validate activity_id
-        if activity_id is None or activity_id <= 0:
-            return jsonify({
-                "success": False, 
-                "error": "Invalid activity ID",
-                "code": "INVALID_ACTIVITY_ID"
-            }), 400
-        
-        # Validate and sanitize filter parameters
-        passport_filter = escape(str(request.args.get('passport_filter', 'active'))).strip()[:20]
-        signup_filter = escape(str(request.args.get('signup_filter', 'all'))).strip()[:20]
-        search_query = escape(str(request.args.get('q', ''))).strip()[:100]
-        
-        # Validate filter values
-        valid_passport_filters = ['all', 'unpaid', 'active']
-        valid_signup_filters = ['all', 'paid', 'unpaid', 'pending']
-
-        if passport_filter not in valid_passport_filters:
-            passport_filter = 'active'  # Default to active
-        if signup_filter not in valid_signup_filters:
-            signup_filter = 'all'
-            
-    except Exception as e:
-        logger.error(f"Input validation error in activity dashboard API: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": "Invalid request parameters",
-            "code": "VALIDATION_ERROR"
-        }), 400
-    
-    from models import Activity, Signup, Passport
-    from sqlalchemy.orm import joinedload
-    from sqlalchemy import or_
-    
-    try:
-        # Use secure parameterized query to check activity exists
-        activity = db.session.execute(
-            text("SELECT id, name FROM activity WHERE id = :activity_id AND status = 'active'"),
-            {"activity_id": activity_id}
-        ).fetchone()
-        
-        if not activity:
-            return jsonify({
-                "success": False, 
-                "error": "Activity not found or inactive",
-                "code": "ACTIVITY_NOT_FOUND"
-            }), 404
-        
-        # Get filter and search parameters (already validated above)
-        q = search_query
-        
-        # Load filtered signups
-        signups_query = (
-            Signup.query
-            .options(joinedload(Signup.user))
-            .filter_by(activity_id=activity_id)
-        )
-        
-        if signup_filter == 'paid':
-            signups_query = signups_query.filter_by(paid=True)
-        elif signup_filter == 'unpaid':
-            signups_query = signups_query.filter_by(paid=False)
-        elif signup_filter == 'pending':
-            signups_query = signups_query.filter_by(status='pending')
-        elif signup_filter == 'approved':
-            signups_query = signups_query.filter_by(status='approved')
-        
-        # IMPORTANT: On activity_dashboard, search only applies to passports, NOT signups
-        # Signups are displayed unfiltered by search query for clarity
-        
-        signups = signups_query.order_by(Signup.signed_up_at.desc()).all()
-        
-        # Load filtered passports
-        passports_query = (
-            Passport.query
-            .options(joinedload(Passport.user), joinedload(Passport.activity), joinedload(Passport.passport_type))
-            .filter(Passport.activity_id == activity_id)
-        )
-        
-        if passport_filter == 'unpaid':
-            passports_query = passports_query.filter_by(paid=False)
-        elif passport_filter == 'active':
-            # Active = has remaining uses OR unpaid
-            passports_query = passports_query.filter(
-                or_(
-                    Passport.uses_remaining > 0,
-                    Passport.paid == False
-                )
-            )
-        # 'all' - no additional filter, show all passports
-        
-        # Apply search filter if provided
-        if q:
-            passports_query = passports_query.join(User).filter(
-                or_(
-                    User.name.ilike(f"%{q}%"),
-                    User.email.ilike(f"%{q}%"),
-                    Passport.pass_code.ilike(f"%{q}%")
-                )
-            )
-        
-        passports = passports_query.order_by(Passport.created_dt.desc()).all()
-        
-        # Get all passports and signups for filter counts
-        all_passports = Passport.query.filter_by(activity_id=activity_id).all()
-        all_signups = Signup.query.filter_by(activity_id=activity_id).all()
-        
-        # Get passport types for signup template
-        from models import PassportType
-        passport_types = PassportType.query.filter_by(activity_id=activity_id).all()
-        
-        # Render the table HTML fragments
-        from flask import render_template_string
-        
-        # Passport table HTML
-        passport_html = render_template('partials/passport_table_rows.html', 
-                                      passes=passports, activity=activity)
-        
-        # Signup table HTML  
-        signup_html = render_template('partials/signup_table_rows.html',
-                                    signups=signups, passport_types=passport_types)
-        
-        # Calculate filter counts
-        passport_counts = {
-            'all': len(all_passports),
-            'unpaid': len([p for p in all_passports if not p.paid]),
-            'active': len([p for p in all_passports if p.uses_remaining > 0 or not p.paid])
-        }
-        
-        signup_counts = {
-            'all': len(all_signups),
-            'unpaid': len([s for s in all_signups if not s.paid]),
-            'paid': len([s for s in all_signups if s.paid]),
-            'pending': len([s for s in all_signups if s.status == 'pending']),
-            'approved': len([s for s in all_signups if s.status == 'approved'])
-        }
-        
-        return jsonify({
-            "success": True,
-            "passport_html": passport_html,
-            "signup_html": signup_html,
-            "passport_counts": passport_counts,
-            "signup_counts": signup_counts
-        })
-        
-    except Exception as e:
-        print(f"Error in get_activity_dashboard_data for activity {activity_id}: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": "Internal server error",
-            "details": str(e) if current_app.debug else "Please try again later"
-        }), 500
-
-@app.route("/api/global-kpis")
-@admin_required
-@rate_limit(max_requests=60, window=60)  # 60 requests per minute for global data
-@log_api_call
-@cache_response(timeout=300)  # Cache for 5 minutes
-def get_global_kpis_api():
-    """Secure API endpoint to get global KPI data for a specific period
-    
-    Security Features:
-    - Admin authentication required
-    - Rate limiting (60 req/min)
-    - Input validation and sanitization
-    - Request logging
-    - Response caching
-    """
-    from markupsafe import escape
-    
-    # Input validation and sanitization
-    try:
-        # Validate and sanitize period parameter
-        period_param = request.args.get('period', '7d')
-        period = escape(str(period_param)).strip()
-        
-        # Validate period format
-        valid_periods = ['7d', '30d', '90d']
-        if period not in valid_periods:
-            return jsonify({
-                "success": False,
-                "error": f"Invalid period. Must be one of: {', '.join(valid_periods)}",
-                "code": "INVALID_PERIOD"
-            }), 400
-            
-    except Exception as e:
-        logger.error(f"Input validation error in global KPI API: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": "Invalid request parameters",
-            "code": "VALIDATION_ERROR"
-        }), 400
-    
-    # Try to use new KPI Card component first, fallback to legacy implementation
-    try:
-        # Use the secure KPI Card component
-        dashboard_cards = generate_dashboard_cards(
-            activity_id=None,  # Global data
-            period=period,
-            device_type='desktop'
-        )
-        
-        if dashboard_cards.get('success'):
-            # Transform to expected format for global dashboard
-            kpi_data = {}
-            for card_id, card in dashboard_cards['cards'].items():
-                card_type = card['card_type']
-                
-                # Map card types to expected global KPI format
-                if card_type == 'revenue':
-                    kpi_data['revenue'] = {
-                        'total': card['total'],
-                        'change': card['change'],
-                        'trend': card['trend_direction'],
-                        'percentage': card['percentage'],
-                        'trend_data': card['trend_data']
-                    }
-                elif card_type == 'active_users':
-                    kpi_data['active_passports'] = {
-                        'total': card['total'],
-                        'change': card['change'],
-                        'trend': card['trend_direction'],
-                        'percentage': card['percentage'],
-                        'trend_data': card['trend_data']
-                    }
-                elif card_type == 'passports_created':
-                    kpi_data['passports_created'] = {
-                        'total': card['total'],
-                        'change': card['change'],
-                        'trend': card['trend_direction'],
-                        'percentage': card['percentage'],
-                        'trend_data': card['trend_data']
-                    }
-                elif card_type == 'pending_signups':
-                    kpi_data['pending_signups'] = {
-                        'total': card['total'],
-                        'change': card['change'],
-                        'trend': card['trend_direction'],
-                        'percentage': card['percentage'],
-                        'trend_data': card['trend_data']
-                    }
-            
-            return jsonify({
-                "success": True,
-                "period": period,
-                "kpi_data": kpi_data,
-                "source": "kpi_component",
-                "cache_info": {
-                    "generation_time_ms": dashboard_cards.get('generation_time_ms', 0),
-                    "cache_hit": any(card.get('cache_hit', False) for card in dashboard_cards['cards'].values())
-                }
-            })
-        
-        # Fallback to legacy implementation
-        logger.info("Falling back to legacy global KPI implementation")
-        
-    except Exception as component_error:
-        logger.warning(f"Global KPI component failed, using legacy: {str(component_error)}")
-    
-    # Legacy implementation with enhanced security
-    from utils import get_kpi_data
-    import math
-    
-    try:
-        # `period` is already one of '7d'/'30d'/'90d', which is exactly what get_kpi_data takes.
-        kpi_stats = get_kpi_data(period=period)
-
-        # get_kpi_data returns one metric per top-level key for the period it was CALLED with;
-        # it has never returned period-keyed buckets. The old `kpi_stats.get(period, {})` always
-        # produced {}, so this endpoint answered 404 "no data" no matter what was in the books.
-        revenue_kpi = kpi_stats.get('revenue', {}) or {}
-        users_kpi = kpi_stats.get('active_users', {}) or {}
-        period_data = {
-            'revenue': revenue_kpi.get('current', 0),
-            'revenue_change': revenue_kpi.get('change', 0),
-            'revenue_trend': revenue_kpi.get('trend_data', []),
-            'active_users': users_kpi.get('current', 0),
-            'passport_change': users_kpi.get('change', 0),
-            'active_users_trend': users_kpi.get('trend_data', []),
-        }
-        
-        # Helper function to safely validate and clean numeric values
-        def safe_float(value, default=0.0):
-            """Convert value to float, handling None, NaN, and invalid values"""
-            try:
-                if value is None:
-                    return default
-                float_val = float(value)
-                if math.isnan(float_val) or math.isinf(float_val):
-                    return default
-                return round(float_val, 2)
-            except (TypeError, ValueError):
-                return default
-        
-        # Helper function to validate and clean trend data arrays
-        def clean_trend_data(trend_data, default_length=7):
-            """Clean trend data array, ensuring all values are valid numbers"""
-            if not isinstance(trend_data, list):
-                return [0] * default_length
-            
-            cleaned = []
-            for value in trend_data:
-                cleaned.append(safe_float(value, 0))
-            
-            # Ensure we have the right number of data points
-            if len(cleaned) < default_length:
-                cleaned.extend([0] * (default_length - len(cleaned)))
-            elif len(cleaned) > default_length:
-                cleaned = cleaned[-default_length:]
-                
-            return cleaned
-        
-        # Determine trend data length based on period
-        period_days = {'7d': 7, '30d': 30, '90d': 90}
-        trend_length = period_days.get(period, 7)
-        
-        # Format the response to match the frontend expectations with data validation
-        kpi_data = {
-            'revenue': {
-                'total': safe_float(period_data.get('revenue', 0)),
-                'change': safe_float(period_data.get('revenue_change', 0)),
-                'trend': 'up' if safe_float(period_data.get('revenue_change', 0)) > 0 else 'down' if safe_float(period_data.get('revenue_change', 0)) < 0 else 'stable',
-                'percentage': abs(safe_float(period_data.get('revenue_change', 0))),
-                'trend_data': clean_trend_data(period_data.get('revenue_trend', []), trend_length)
-            },
-            'active_passports': {
-                'total': int(safe_float(period_data.get('active_users', 0))),
-                'change': safe_float(period_data.get('passport_change', 0)),
-                'trend': 'up' if safe_float(period_data.get('passport_change', 0)) > 0 else 'down' if safe_float(period_data.get('passport_change', 0)) < 0 else 'stable',
-                'percentage': abs(safe_float(period_data.get('passport_change', 0))),
-                'trend_data': clean_trend_data(period_data.get('active_users_trend', []), trend_length)
-            },
-            'passports_created': {
-                'total': int(safe_float(period_data.get('pass_created', 0))),
-                'change': safe_float(period_data.get('new_passports_change', 0)),
-                'trend': 'up' if safe_float(period_data.get('new_passports_change', 0)) > 0 else 'down' if safe_float(period_data.get('new_passports_change', 0)) < 0 else 'stable',
-                'percentage': abs(safe_float(period_data.get('new_passports_change', 0))),
-                'trend_data': clean_trend_data(period_data.get('pass_created_trend', []), trend_length)
-            },
-            'pending_signups': {
-                'total': int(safe_float(period_data.get('pending_signups', 0))),
-                'change': safe_float(period_data.get('signup_change', 0)),
-                'trend': 'up' if safe_float(period_data.get('signup_change', 0)) > 0 else 'down' if safe_float(period_data.get('signup_change', 0)) < 0 else 'stable',
-                'percentage': abs(safe_float(period_data.get('signup_change', 0))),
-                'trend_data': clean_trend_data(period_data.get('pending_signups_trend', []), trend_length)
-            }
-        }
-        
-        return jsonify({
-            "success": True,
-            "period": period,
-            "kpi_data": kpi_data
-        })
-        
-    except Exception as e:
-        # Secure error logging
-        logger.error(f"Error in get_global_kpis_api: {str(e)}")
-        logger.debug(f"Full traceback: {traceback.format_exc()}")
-        
-        return jsonify({
-            "success": False,
-            "error": "Internal server error",
-            "code": "INTERNAL_ERROR",
-            "details": str(e) if current_app.debug else "Please try again later",
-            "period": period if 'period' in locals() else 'unknown'
-        }), 500
-
-
 @app.route('/api/kpi-data', methods=['GET'])
 @admin_required
 @rate_limit(max_requests=30, window=60)
-@log_api_call
 @cache_response(timeout=60)
 def get_kpi_data_api():
     """
@@ -11965,11 +10975,9 @@ def create_passport():
         ))
         db.session.commit()
 
-        # 💤 Small sleep to fix timestamp ordering
-        time.sleep(0.5)
-
-        # ✅ Refresh now_utc AFTER the passport and admin log are committed
-        now_utc = datetime.now(timezone.utc)
+        # Stamped 1s after the admin log just committed so the email sorts after it in
+        # the history (this used to sleep here, holding a gunicorn thread for nothing).
+        now_utc = datetime.now(timezone.utc) + timedelta(seconds=1)
 
         # ✅ Send confirmation email
         notify_pass_event(
@@ -12113,11 +11121,9 @@ def redeem_passport(pass_code):
         ))
         db.session.commit()
 
-        # ✅ Sleep to fix timestamp natural order
-        time.sleep(0.5)
-
-        # ✅ Fresh now_utc for email timestamp
-        now_utc = datetime.now(timezone.utc)
+        # Stamped 1s after the admin log just committed so the email sorts after it in
+        # the history (this used to sleep here, holding a gunicorn thread for nothing).
+        now_utc = datetime.now(timezone.utc) + timedelta(seconds=1)
 
         # ✅ Send confirmation email
         notify_pass_event(
@@ -12212,8 +11218,9 @@ def renew_passport(pass_code):
     db.session.commit()
 
     # Send new passport email
-    time.sleep(0.5)
-    now_utc = datetime.now(timezone.utc)
+    # Stamped 1s after the admin log just committed so the email sorts after it in
+    # the history (this used to sleep here, holding a gunicorn thread for nothing).
+    now_utc = datetime.now(timezone.utc) + timedelta(seconds=1)
     notify_pass_event(
         app=current_app._get_current_object(),
         event_type="pass_created",
@@ -12276,11 +11283,9 @@ def mark_passport_paid(passport_id):
     ))
     db.session.commit()
 
-    # ✅ Step 3: Sleep to separate timestamps naturally
-    time.sleep(0.5)
-
-    # ✅ Step 4: Refresh now_utc AFTER sleep
-    now_utc = datetime.now(timezone.utc)
+    # Stamped 1s after the admin log just committed so the email sorts after it in
+    # the history (this used to sleep here, holding a gunicorn thread for nothing).
+    now_utc = datetime.now(timezone.utc) + timedelta(seconds=1)
 
     # ✅ Step 5: Send confirmation email
     notify_pass_event(
@@ -13797,32 +12802,6 @@ with app.app_context():
     except Exception as e:
         print(f"Warning: Could not initialize background tasks: {str(e)}")
 
-@app.route("/test-payment-bot-now")
-def test_payment_bot_now():
-    """SIMPLE payment bot test - just visit this URL"""
-    if "admin" not in session:
-        return "Must be logged in as admin", 401
-    
-    try:
-        print("🔧 SIMPLE payment bot test started!")
-        from utils import match_gmail_payments_to_passes
-        
-        result = match_gmail_payments_to_passes()
-        
-        if result and isinstance(result, dict):
-            message = f"Payment bot completed! {result.get('matched', 0)} payments matched."
-        else:
-            message = "Payment bot completed! No new payments found."
-            
-        print(f"Payment bot result: {message}")
-        return f"<h1>{message}</h1><p><strong>Check your dashboard logs for details.</strong></p><p><a href='/admin/unified-settings'>← Back to Settings</a></p>"
-        
-    except Exception as e:
-        error_msg = f"Payment bot failed: {str(e)}"
-        print(error_msg)
-        return f"<h1>{error_msg}</h1><p><a href='/admin/unified-settings'>← Back to Settings</a></p>"
-
-
 # ================================
 # 📧 EMAIL TEMPLATE CUSTOMIZATION ROUTES
 # ================================
@@ -15198,22 +14177,26 @@ def unsubscribe():
         '''
     
     elif request.method == 'POST':
+        from markupsafe import escape
+        from utils import unsubscribe_token_email
         email = request.form.get('email', '').strip().lower()
         token = request.form.get('token', '')
         
         if not email:
             return "Email address is required", 400
+
+        # The signed token from our email link is the only proof the requester owns this
+        # address; without it anyone could opt anyone out.
+        if unsubscribe_token_email(token) != email:
+            return ("This unsubscribe link is invalid or incomplete. Please use the "
+                    "unsubscribe link at the bottom of a recent email from us."), 400
         
         try:
-            # Find user and set opt-out
-            user = User.query.filter_by(email=email).first()
-            if user:
-                user.email_opt_out = True
-                db.session.commit()
-                message = f"Successfully unsubscribed {email} from future emails."
-            else:
-                # Even if user not found, show success message for privacy
-                message = f"Successfully unsubscribed {email} from future emails."
+            # One person has one User row per signup, all sharing the email — opt out every one.
+            User.query.filter(db.func.lower(User.email) == email).update(
+                {"email_opt_out": True}, synchronize_session=False)
+            db.session.commit()
+            message = f"Successfully unsubscribed {escape(email)} from future emails."
             
             return f'''
             <!DOCTYPE html>

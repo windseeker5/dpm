@@ -1,5 +1,5 @@
 # api/backup.py - Backup and Restore System
-from flask import Blueprint, request, jsonify, send_file, current_app
+from flask import current_app
 from datetime import datetime, timezone
 import os
 import tempfile
@@ -9,16 +9,27 @@ import sqlite3
 import glob
 import logging
 from zipfile import ZipFile
-from pathlib import Path
 
-from models import db, Setting, Admin, AdminActionLog
-from decorators import admin_required, rate_limit
-from utils import get_setting
+from models import db, Setting, Admin
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-backup_api = Blueprint('backup_api', __name__, url_prefix='/api/v1/backup')
+# Backup zips hold the full database (Stripe/SMTP secrets, customer data), so they must never
+# live under static/ — anything there is downloadable by anyone. They sit beside the DB instead
+# and are only served through the admin-guarded /download-backup/<filename> route.
+BACKUP_DIR = os.path.join('instance', 'backups')
+LEGACY_BACKUP_DIR = os.path.join('static', 'backups')
+
+
+def migrate_legacy_backups():
+    """Move any zips left in the old public static/backups/ folder into BACKUP_DIR."""
+    if not os.path.isdir(LEGACY_BACKUP_DIR):
+        return
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    for name in os.listdir(LEGACY_BACKUP_DIR):
+        if name.endswith('.zip'):
+            shutil.move(os.path.join(LEGACY_BACKUP_DIR, name), os.path.join(BACKUP_DIR, name))
 
 
 def resolve_db_path():
@@ -69,367 +80,6 @@ def snapshot_database(destination_path):
 # BACKUP OPERATIONS
 # ============================================================================
 
-@backup_api.route('/create', methods=['POST'])
-@admin_required
-@rate_limit(max_requests=5, window=300)  # 5 backups per 5 minutes
-def create_backup():
-    """Create a complete system backup"""
-    try:
-        backup_type = request.json.get('type', 'full')  # 'full', 'settings', 'data'
-        include_uploads = request.json.get('include_uploads', True)
-        
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        backup_filename = f"minipass_backup_{backup_type}_{timestamp}.zip"
-        
-        # Create temporary directory for backup
-        with tempfile.TemporaryDirectory() as temp_dir:
-            backup_path = os.path.join(temp_dir, backup_filename)
-            
-            with ZipFile(backup_path, 'w') as zipf:
-                # Always include database — via a WAL-aware snapshot, not a raw file
-                # copy, so commits still living in the -wal sidecar are included.
-                db_path = resolve_db_path()
-                if os.path.exists(db_path):
-                    snapshot_path = os.path.join(temp_dir, 'minipass_snapshot.db')
-                    snapshot_database(snapshot_path)
-                    zipf.write(snapshot_path, 'database/minipass.db')
-                
-                # Include settings export
-                settings_data = export_settings()
-                settings_file = os.path.join(temp_dir, 'settings.json')
-                with open(settings_file, 'w') as f:
-                    json.dump(settings_data, f, indent=2)
-                zipf.write(settings_file, 'settings.json')
-                
-                # Include uploads if requested
-                if include_uploads and backup_type in ['full', 'data']:
-                    upload_dir = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
-                    if os.path.exists(upload_dir):
-                        for root, dirs, files in os.walk(upload_dir):
-                            for file in files:
-                                file_path = os.path.join(root, file)
-                                arc_path = os.path.relpath(file_path, os.path.dirname(upload_dir))
-                                zipf.write(file_path, arc_path)
-                
-                # Include ALL email template files if full backup (HTML, compiled, images, JSON, etc.)
-                if backup_type == 'full':
-                    template_dir = 'templates/email_templates'
-                    if os.path.exists(template_dir):
-                        for root, dirs, files in os.walk(template_dir):
-                            for file in files:
-                                file_path = os.path.join(root, file)
-                                arc_path = os.path.relpath(file_path, 'templates')
-                                zipf.write(file_path, f'templates/{arc_path}')
-                
-                # Add backup metadata
-                metadata = {
-                    'backup_type': backup_type,
-                    'created_at': datetime.now(timezone.utc).isoformat(),
-                    'created_by': request.headers.get('X-Admin-Email', 'unknown'),
-                    'version': '1.0',
-                    'include_uploads': include_uploads
-                }
-                metadata_file = os.path.join(temp_dir, 'backup_metadata.json')
-                with open(metadata_file, 'w') as f:
-                    json.dump(metadata, f, indent=2)
-                zipf.write(metadata_file, 'backup_metadata.json')
-            
-            # Move to backup directory
-            backup_dir = os.path.join('static', 'backups')
-            os.makedirs(backup_dir, exist_ok=True)
-            final_path = os.path.join(backup_dir, backup_filename)
-            shutil.move(backup_path, final_path)
-        
-        # Log action
-        log_backup_action(f"Created {backup_type} backup: {backup_filename}")
-        
-        # Get file size
-        file_size = os.path.getsize(final_path)
-        
-        return jsonify({
-            'success': True,
-            'data': {
-                'filename': backup_filename,
-                'type': backup_type,
-                'size': file_size,
-                'created_at': datetime.now(timezone.utc).isoformat(),
-                'path': f'/static/backups/{backup_filename}'
-            }
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@backup_api.route('/list', methods=['GET'])
-@admin_required
-def list_backups():
-    """List all available backups"""
-    try:
-        backup_dir = os.path.join('static', 'backups')
-        if not os.path.exists(backup_dir):
-            return jsonify({'success': True, 'data': []})
-        
-        backups = []
-        for filename in os.listdir(backup_dir):
-            if filename.endswith('.zip'):
-                file_path = os.path.join(backup_dir, filename)
-                stat = os.stat(file_path)
-                
-                # Try to extract metadata from backup
-                metadata = {}
-                try:
-                    with ZipFile(file_path, 'r') as zipf:
-                        if 'backup_metadata.json' in zipf.namelist():
-                            with zipf.open('backup_metadata.json') as f:
-                                metadata = json.load(f)
-                except:
-                    pass  # If metadata can't be read, continue without it
-                
-                backups.append({
-                    'filename': filename,
-                    'size': stat.st_size,
-                    'created_at': datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
-                    'type': metadata.get('backup_type', 'unknown'),
-                    'version': metadata.get('version', 'unknown'),
-                    'created_by': metadata.get('created_by', 'unknown')
-                })
-        
-        # Sort by creation time (newest first)
-        backups.sort(key=lambda x: x['created_at'], reverse=True)
-        
-        return jsonify({'success': True, 'data': backups})
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@backup_api.route('/download/<filename>', methods=['GET'])
-@admin_required
-@rate_limit(max_requests=10, window=300)
-def download_backup(filename):
-    """Download a backup file"""
-    try:
-        # Validate filename to prevent path traversal
-        if not filename.endswith('.zip') or '/' in filename or '\\' in filename:
-            return jsonify({'success': False, 'error': 'Invalid filename'}), 400
-        
-        backup_path = os.path.join('static', 'backups', filename)
-        if not os.path.exists(backup_path):
-            return jsonify({'success': False, 'error': 'Backup not found'}), 404
-        
-        log_backup_action(f"Downloaded backup: {filename}")
-        
-        return send_file(
-            backup_path,
-            as_attachment=True,
-            download_name=filename,
-            mimetype='application/zip'
-        )
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@backup_api.route('/delete/<filename>', methods=['DELETE'])
-@admin_required
-@rate_limit(max_requests=10, window=300)
-def delete_backup(filename):
-    """Delete a backup file"""
-    try:
-        # Validate filename
-        if not filename.endswith('.zip') or '/' in filename or '\\' in filename:
-            return jsonify({'success': False, 'error': 'Invalid filename'}), 400
-
-        backup_path = os.path.join('static', 'backups', filename)
-        if not os.path.exists(backup_path):
-            return jsonify({'success': False, 'error': 'Backup not found'}), 404
-
-        os.remove(backup_path)
-        log_backup_action(f"Deleted backup: {filename}")
-
-        return jsonify({'success': True, 'message': f'Backup {filename} deleted'})
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@backup_api.route('/cleanup-now', methods=['POST'])
-@admin_required
-@rate_limit(max_requests=10, window=300)
-def manual_cleanup():
-    """Manually trigger cleanup of old backups (for testing/debugging)"""
-    try:
-        logger.info("[MANUAL CLEANUP] Manual cleanup endpoint called")
-
-        # Run both cleanup functions
-        cleanup_old_restore_points(keep_count=3)
-        cleanup_old_safety_backups(keep_count=3)
-
-        return jsonify({
-            'success': True,
-            'message': 'Cleanup completed. Check logs for details.'
-        })
-
-    except Exception as e:
-        logger.error(f"[MANUAL CLEANUP] Error: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-# ============================================================================
-# RESTORE OPERATIONS
-# ============================================================================
-
-@backup_api.route('/restore', methods=['POST'])
-@admin_required
-@rate_limit(max_requests=2, window=600)  # 2 restores per 10 minutes
-def restore_backup():
-    """Restore from a backup file"""
-    logger.info("[RESTORE] ========== RESTORE BACKUP FUNCTION CALLED ==========")
-
-    restore_successful = False
-    try:
-        filename = request.json.get('filename')
-        restore_type = request.json.get('type', 'full')  # 'full', 'settings', 'data'
-        confirm = request.json.get('confirm', False)
-
-        logger.info(f"[RESTORE] Filename: {filename}, Type: {restore_type}, Confirm: {confirm}")
-
-        if not confirm:
-            return jsonify({
-                'success': False,
-                'error': 'Restore confirmation required'
-            }), 400
-
-        if not filename:
-            return jsonify({'success': False, 'error': 'Filename required'}), 400
-
-        backup_path = os.path.join('static', 'backups', filename)
-        if not os.path.exists(backup_path):
-            return jsonify({'success': False, 'error': 'Backup not found'}), 404
-
-        # Create restore point before restoring
-        create_restore_point()
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            # Extract backup
-            with ZipFile(backup_path, 'r') as zipf:
-                zipf.extractall(temp_dir)
-
-            # Read metadata
-            metadata_file = os.path.join(temp_dir, 'backup_metadata.json')
-            metadata = {}
-            if os.path.exists(metadata_file):
-                with open(metadata_file, 'r') as f:
-                    metadata = json.load(f)
-
-            # Restore the database BEFORE settings: restore_database() replaces the
-            # whole file, so any setting written through the ORM first was thrown
-            # away by the swap. Applying settings.json afterwards also lets it act
-            # as an override layer on top of the restored database.
-            if restore_type in ['full', 'data']:
-                restore_database(temp_dir)
-                restore_uploads(temp_dir)
-
-            if restore_type in ['full', 'settings']:
-                restore_settings(temp_dir)
-
-            if restore_type == 'full':
-                restore_templates(temp_dir)
-
-        logger.info("[RESTORE] Restore operations completed successfully")
-        restore_successful = True
-
-        log_backup_action(f"Restored from backup: {filename} (type: {restore_type})")
-
-        return jsonify({
-            'success': True,
-            'message': f'Successfully restored {restore_type} backup',
-            'metadata': metadata
-        })
-
-    except Exception as e:
-        logger.error(f"[RESTORE] Error during restore: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-    finally:
-        # ALWAYS cleanup old backups, even if restore failed
-        # This runs after successful restore or after exception
-        if restore_successful:
-            logger.info("[RESTORE] Running cleanup in finally block...")
-            try:
-                cleanup_old_safety_backups(keep_count=3)
-                logger.info("[RESTORE] Cleanup completed successfully")
-            except Exception as cleanup_error:
-                logger.error(f"[RESTORE] Cleanup failed: {cleanup_error}", exc_info=True)
-
-@backup_api.route('/validate/<filename>', methods=['GET'])
-@admin_required
-def validate_backup(filename):
-    """Validate a backup file"""
-    try:
-        backup_path = os.path.join('static', 'backups', filename)
-        if not os.path.exists(backup_path):
-            return jsonify({'success': False, 'error': 'Backup not found'}), 404
-        
-        validation_result = {
-            'filename': filename,
-            'valid': True,
-            'errors': [],
-            'warnings': [],
-            'contents': []
-        }
-        
-        try:
-            with ZipFile(backup_path, 'r') as zipf:
-                # Check for required files
-                files = zipf.namelist()
-                validation_result['contents'] = files
-                
-                # Check for metadata
-                if 'backup_metadata.json' in files:
-                    with zipf.open('backup_metadata.json') as f:
-                        metadata = json.load(f)
-                        validation_result['metadata'] = metadata
-                else:
-                    validation_result['warnings'].append('No metadata found')
-                
-                # Check for database
-                if not any(f.startswith('database/') for f in files):
-                    validation_result['errors'].append('No database found in backup')
-                
-                # Check for settings
-                if 'settings.json' not in files:
-                    validation_result['warnings'].append('No settings export found')
-                
-                # Validate database if present
-                db_files = [f for f in files if f.startswith('database/')]
-                if db_files:
-                    try:
-                        with zipf.open(db_files[0]) as db_file:
-                            # Try to open as SQLite database
-                            temp_db_path = os.path.join(tempfile.gettempdir(), 'temp_validate.db')
-                            with open(temp_db_path, 'wb') as temp_f:
-                                temp_f.write(db_file.read())
-                            
-                            conn = sqlite3.connect(temp_db_path)
-                            cursor = conn.cursor()
-                            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-                            tables = cursor.fetchall()
-                            conn.close()
-                            os.remove(temp_db_path)
-                            
-                            validation_result['database_tables'] = [t[0] for t in tables]
-                    except Exception as e:
-                        validation_result['errors'].append(f'Database validation failed: {str(e)}')
-                
-        except Exception as e:
-            validation_result['valid'] = False
-            validation_result['errors'].append(f'Failed to read backup file: {str(e)}')
-        
-        if validation_result['errors']:
-            validation_result['valid'] = False
-        
-        return jsonify({'success': True, 'data': validation_result})
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
@@ -447,26 +97,6 @@ def export_settings():
     settings['_ADMINS'] = admins
     
     return settings
-
-def restore_settings(temp_dir):
-    """Restore settings from backup"""
-    settings_file = os.path.join(temp_dir, 'settings.json')
-    if not os.path.exists(settings_file):
-        return
-    
-    with open(settings_file, 'r') as f:
-        settings_data = json.load(f)
-    
-    # Restore settings (excluding admin accounts)
-    for key, value in settings_data.items():
-        if not key.startswith('_'):
-            setting = Setting.query.filter_by(key=key).first()
-            if setting:
-                setting.value = value
-            else:
-                db.session.add(Setting(key=key, value=value))
-    
-    db.session.commit()
 
 def restore_database(temp_dir):
     """Restore database from backup"""
@@ -596,7 +226,7 @@ def cleanup_old_restore_points(keep_count=3):
     """
     logger.info(f"[CLEANUP] Starting cleanup_old_restore_points(keep_count={keep_count})")
 
-    backup_dir = os.path.join('static', 'backups')
+    backup_dir = BACKUP_DIR
     if not os.path.exists(backup_dir):
         logger.warning(f"[CLEANUP] Backup directory does not exist: {backup_dir}")
         return
@@ -695,7 +325,7 @@ def create_restore_point():
     
     # Use the same backup creation logic but with a different name
     try:
-        backup_dir = os.path.join('static', 'backups')
+        backup_dir = BACKUP_DIR
         os.makedirs(backup_dir, exist_ok=True)
         
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -740,13 +370,3 @@ def create_restore_point():
     except Exception as e:
         print(f"Failed to create restore point: {e}")
         return None
-
-def log_backup_action(action):
-    """Log backup/restore actions"""
-    log = AdminActionLog(
-        admin_email=request.headers.get('X-Admin-Email', 'unknown'),
-        action=action,
-        timestamp=datetime.now(timezone.utc)
-    )
-    db.session.add(log)
-    db.session.commit()

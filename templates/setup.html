@@ -69,7 +69,7 @@
                     </td>
                     <td data-label="Actions" data-actions class="text-end">
                       {{ action_menu(id="backup-actions-" ~ loop.index, items=[
-                        {"label": "Download", "url": url_for('static', filename='backups/' ~ file), "attrs": {"download": "download"}},
+                        {"label": "Download", "url": url_for('download_backup', filename=file), "attrs": {"download": "download"}},
                         {"label": "Restore", "url": "#confirmRestoreModal", "attrs": {"data-bs-toggle": "modal", "onclick": "setRestoreFilename('" ~ file ~ "')"}},
                         {"type": "separator"},
                         {"label": "Delete", "url": "#confirmDeleteBackupModal", "attrs": {"data-bs-toggle": "modal", "onclick": "setDeleteFilename('" ~ file ~ "')", "data-variant": "destructive"}}
@@ -177,6 +177,9 @@
 <!-- Email Settings JavaScript -->
 <script src="{{ url_for('static', filename='js/email-settings.js') }}"></script>
 
+<form id="generateBackupForm" method="POST" action="{{ url_for('generate_backup') }}" class="d-none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
 <script>
 // Backup management functions
 function createBackup() {
@@ -189,7 +192,7 @@ function createBackup() {
     modal.show();
   } else {
     // Proceed directly with backup creation
-    window.location.href = '{{ url_for("generate_backup") }}';
+    document.getElementById('generateBackupForm').submit();
   }
 }
 
@@ -197,7 +200,7 @@ function proceedWithBackup() {
   // Close modal and proceed with backup
   const modal = bootstrap.Modal.getInstance(document.getElementById('backupLimitModal'));
   modal.hide();
-  window.location.href = '{{ url_for("generate_backup") }}';
+  document.getElementById('generateBackupForm').submit();
 }
 
 function setRestoreFilename(filename) {

@@ -37,7 +37,7 @@ from playwright.sync_api import sync_playwright
 
 from lib import config, financials
 from lib.activity_log import assert_log_contains
-from lib.browser import login
+from lib.browser import login, thank_you_value
 from lib.fixtures import create_minimal_activity, create_product, fill_public_signup_form, scenario_name
 
 STRIPE_CHECKOUT_HOST = "checkout.stripe.com"
@@ -170,7 +170,7 @@ def run(ctx):
         ctx.screenshot(shop_page, "shop_order_thank_you")
         # The cart code is the last URL segment (app.py:3725) and is what the Activity Log
         # entry names — "Stripe Payment Received: $X from ... for Cart MP-CART-0000001".
-        cart_code = shop_page.url.rstrip("/").split("/")[-1]
+        cart_code = thank_you_value(shop_page.url)
         ctx.note(f"Shop order completed, landed on {shop_page.url} (cart {cart_code}).")
         shop_page.close()
 

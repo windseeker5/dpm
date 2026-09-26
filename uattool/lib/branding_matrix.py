@@ -16,7 +16,7 @@ from urllib.parse import urljoin
 
 from . import config
 from .activity_log import assert_log_contains
-from .browser import login, new_page
+from .browser import login, new_page, post_as_admin, thank_you_value
 from .fixtures import create_minimal_activity, fill_public_signup_form, scenario_name
 
 _FIXTURE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fixtures")
@@ -197,7 +197,7 @@ def _check_signup_form(page, ctx, activity_id, activity_name, has_org_logo, has_
 def _submit_signup(page, ctx):
     page.locator("#submit-button").click()
     page.wait_for_url("**/signup/thank-you/*", timeout=15000)
-    signup_id = next((part for part in page.url.rstrip("/").split("/") if part.isdigit()), None)
+    signup_id = str(thank_you_value(page.url))
     if not signup_id:
         raise AssertionError(f"Could not parse signup id from {page.url!r}.")
     return signup_id, page.url
@@ -420,8 +420,7 @@ def run_branding_case(ctx, *, case_id, org_logo, activity_logo, cover_photo):
         approval_started = time.time()
         with new_page(viewport="desktop") as page:
             login(page, base_url=ctx.base_url)
-            page.goto(f"{ctx.base_url}/signup/approve-create-pass/{signup_id}")
-            page.wait_for_load_state("networkidle", timeout=15000)
+            post_as_admin(page, f"/signup/approve-create-pass/{signup_id}", base_url=ctx.base_url)
             assert_log_contains(page, "Signup Approved", base_url=ctx.base_url)
             assert_log_contains(page, activity_name, base_url=ctx.base_url)
             pass_code = _find_pass_code(page, ctx, activity_id)

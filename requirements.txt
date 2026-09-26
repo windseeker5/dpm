@@ -29,6 +29,7 @@ marshmallow
 
 # 🔒 Security
 bleach  # HTML sanitization for email templates
+dkimpy>=1.1  # Verify Interac payment emails are really signed by the bank sender (not spoofed)
 
 # 📱 Push Notifications
 pywebpush>=1.14.0  # Web Push protocol
