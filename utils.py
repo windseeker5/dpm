@@ -4404,7 +4404,10 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     msg["Reply-To"] = from_email
 
     if not operational:
-        if context.get('unsubscribe_url'):
+        # RFC 2369/8058: the header must be an absolute https URL. Without SITE_URL (local dev) the
+        # URL is relative, and a malformed List-Unsubscribe counts against deliverability — so the
+        # header is left out rather than sent broken (the footer link still works).
+        if context.get('unsubscribe_url', '').startswith('https://'):
             msg["List-Unsubscribe"] = f"<{context['unsubscribe_url']}>"
             msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
 
@@ -5012,14 +5015,24 @@ def notify_cart_order_event(app, *, cart_order, event_type):
     # Each line says what was bought, not just where: "Hockey League" alone didn't tell a buyer
     # whether they'd paid for a game pass or a donation. The detail line names the option,
     # what a pass includes, and quantity × unit price (see cart_line_detail).
+    # A small photo per line (the product's photo, or the activity's cover) helps a buyer
+    # recognize what they ordered. Only as an absolute https URL on the org's own site — never an
+    # attachment — so the email stays light; no photo when SITE_URL isn't https (e.g. local dev).
+    site_url = get_setting("SITE_URL", "").rstrip("/")
+    def _photo(folder, filename):
+        return f"{site_url}/static/uploads/{folder}/{filename}" if filename and site_url.startswith("https://") else None
+
     items = []
     for order in cart_order.orders:
-        items.append({"label": order.product_name, "detail": cart_line_detail(order), "amount": order.amount})
+        photo = order.product.photo_filename if order.product else None
+        items.append({"label": order.product_name, "detail": cart_line_detail(order), "amount": order.amount,
+                      "image": _photo("product_images", photo)})
 
     for signup in cart_order.signups:
         activity_name = signup.activity.name if signup.activity else "Passeport d'activité"
         items.append({"label": activity_name, "detail": cart_line_detail(signup),
-                      "amount": signup.requested_amount or 0.0})
+                      "amount": signup.requested_amount or 0.0,
+                      "image": _photo("activity_images", signup.activity.image_filename if signup.activity else None)})
 
     display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
     payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
@@ -5033,7 +5046,8 @@ def notify_cart_order_event(app, *, cart_order, event_type):
 
     # _fr_money, not "%.2f $" — the latter renders "35.00 $" with a period, which
     # disagreed with every other amount in the same email (see _fr_money's docstring).
-    rows = [{"label": item["label"], "detail": item["detail"], "value": _fr_money(item["amount"])} for item in items]
+    rows = [{"label": item["label"], "detail": item["detail"], "value": _fr_money(item["amount"]),
+             "image": item["image"]} for item in items]
     rows.append({"label": "Total", "value": _fr_money(cart_order.total_amount)})
 
     # The reference code is only for the rare case where another unpaid Interac cart order

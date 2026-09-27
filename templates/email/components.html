@@ -232,12 +232,22 @@
 #}
 {% macro rows_block(items, outer_border=True, top_margin=18, muted=False) -%}
 {% if items %}
+{# Optional per-row thumbnail (item.image = an absolute https URL on the org's site, never an
+   attachment or data: URI, so the email stays light and text-first for spam filters). When any
+   row has one, every row gets the 60px column so labels stay aligned. #}
+{% set with_images = items | selectattr("image") | list | length > 0 %}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
        style="width:100%; margin-top:{{ top_margin }}px; {% if outer_border %}border-bottom:1px solid {{ C_LINE }};{% endif %}">
   {% for item in items %}
   <tr>
-    <td style="padding:8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} font-size:13.5px; color:{{ C_BODY }}; vertical-align:baseline;">{{ item.label }}{% if item.detail %}<div style="font-size:12px; color:{{ C_LABEL }}; margin-top:2px;">{{ item.detail }}</div>{% endif %}</td>
-    <td align="right" style="padding:8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} font-size:13.5px; font-weight:{{ 400 if muted else 700 }}; color:{{ C_BODY if muted else C_INK }}; text-align:right; vertical-align:baseline; font-variant-numeric:tabular-nums;">
+    {% if with_images %}
+    <td width="60" style="width:60px; padding:8px 12px 8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} vertical-align:middle;">
+      {% if item.image %}<img src="{{ item.image }}" width="48" height="48" alt="{{ item.image_alt or item.label }}"
+           style="display:block; width:48px; height:48px; border-radius:8px; object-fit:cover; border:0;">{% endif %}
+    </td>
+    {% endif %}
+    <td style="padding:8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} font-size:13.5px; color:{{ C_BODY }}; vertical-align:{{ 'middle' if with_images else 'baseline' }};">{{ item.label }}{% if item.detail %}<div style="font-size:12px; color:{{ C_LABEL }}; margin-top:2px;">{{ item.detail }}</div>{% endif %}</td>
+    <td align="right" style="padding:8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} font-size:13.5px; font-weight:{{ 400 if muted else 700 }}; color:{{ C_BODY if muted else C_INK }}; text-align:right; vertical-align:{{ 'middle' if with_images else 'baseline' }}; font-variant-numeric:tabular-nums;">
       {{ item.value | safe }}
       {% if item.sub %}<div style="font-size:11px; font-weight:400; color:{{ C_LABEL }}; margin-top:2px;">{{ item.sub }}</div>{% endif %}
     </td>

@@ -14194,8 +14194,11 @@ def unsubscribe():
     elif request.method == 'POST':
         from markupsafe import escape
         from utils import unsubscribe_token_email
-        email = request.form.get('email', '').strip().lower()
-        token = request.form.get('token', '')
+        # request.values = form + query string. The page's form posts email/token in the body; a
+        # mail client's one-click unsubscribe (RFC 8058, the List-Unsubscribe-Post header) POSTs
+        # "List-Unsubscribe=One-Click" to the header's URL, so email/token are only in the URL.
+        email = request.values.get('email', '').strip().lower()
+        token = request.values.get('token', '')
         
         if not email:
             return "Email address is required", 400
