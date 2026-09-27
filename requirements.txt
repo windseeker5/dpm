@@ -1,35 +1,40 @@
-# 🔥 Core App
-Flask
-Flask-SQLAlchemy
-flask-migrate
+# Every library is pinned to an exact, tested version. A rebuild installs exactly these —
+# an unpinned `stripe` once pulled a new major version on the demo and broke every payment
+# (2026-09-26). Upgrade on purpose: change a version here, test locally, then deploy.
+# constraints.txt pins the libraries these pull in (Werkzeug, SQLAlchemy, Jinja2, ...).
 
-flask-wtf
-bcrypt
-gunicorn
-apscheduler
+# 🔥 Core App
+Flask==3.1.3
+Flask-SQLAlchemy==3.1.1
+flask-migrate==4.1.0
+
+flask-wtf==1.2.2
+bcrypt==5.0.0
+gunicorn==25.1.0
+apscheduler==3.11.2
 
 # 📧 Email + QR
-pillow
-qrcode[pil]
+pillow==12.1.1
+qrcode[pil]==8.2
 
 # 💳 Payments
-stripe
+stripe==14.4.1
 
 # 🔍 Fuzzy Matching, Timezones
-rapidfuzz
-pytz
+rapidfuzz==3.14.3
+pytz==2026.1.post1
 
 # 🧠 Chatbot (REST via aiohttp — no SDK clients needed)
-aiohttp>=3.8.0     # Async HTTP client for AI providers
+aiohttp==3.13.3     # Async HTTP client for AI providers
 
-premailer
-requests
-python-dotenv
-marshmallow
+premailer==3.10.0
+requests==2.32.5
+python-dotenv==1.2.2
+marshmallow==4.2.2
 
 # 🔒 Security
-bleach  # HTML sanitization for email templates
-dkimpy>=1.1  # Verify Interac payment emails are really signed by the bank sender (not spoofed)
+bleach==6.3.0  # HTML sanitization for email templates
+dkimpy==1.1.8  # Verify Interac payment emails are really signed by the bank sender (not spoofed)
 
 # 📱 Push Notifications
-pywebpush>=1.14.0  # Web Push protocol
+pywebpush==2.3.0  # Web Push protocol
