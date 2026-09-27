@@ -4922,6 +4922,32 @@ def _fr_money(amount):
     return f"{amount or 0:.2f}".replace(".", ",") + " $"
 
 
+def cart_line_detail(line, money=_fr_money):
+    """The "what exactly did I buy" line under an item of a shop order: the option chosen,
+    what a pass includes, and quantity × unit price. Shared by the order emails and the
+    order confirmation page so both always describe a line the same way.
+
+      activity pass: "Don à la FLHGI · 1 × 25,00 $"  /  "Drop-in · 4 séances · 1 × 50,00 $"
+      product:       "Taille XL · 1 × 65,00 $"
+    """
+    parts = []
+    if hasattr(line, "product_name"):  # a shop product (Order)
+        if line.size:
+            parts.append(f"Taille {line.size}")
+        qty = line.quantity or 1
+        unit = line.unit_price if line.unit_price is not None else (line.amount or 0) / qty
+    else:  # an activity pass (Signup)
+        pt = line.passport_type
+        if pt:
+            parts.append(pt.name)
+            if pt.sessions_included and pt.sessions_included > 1:
+                parts.append(f"{pt.sessions_included} séances")
+        qty = line.requested_sessions or 1
+        unit = pt.price_per_user if pt else (line.requested_amount or 0) / qty
+    parts.append(f"{qty} × {money(unit)}")
+    return " · ".join(parts)
+
+
 def notify_order_event(app, *, order, event_type):
     """Send a shop order email. event_type: 'order_placed' (Interac instructions,
     sent right after checkout) or 'order_paid' (payment confirmed)."""
@@ -4983,21 +5009,17 @@ def notify_cart_order_event(app, *, cart_order, event_type):
     if event_type == "cart_paid" and not cart_order.orders:
         return
 
+    # Each line says what was bought, not just where: "Hockey League" alone didn't tell a buyer
+    # whether they'd paid for a game pass or a donation. The detail line names the option,
+    # what a pass includes, and quantity × unit price (see cart_line_detail).
     items = []
     for order in cart_order.orders:
-        label = order.product_name
-        if order.size:
-            label += f" ({order.size})"
-        if order.quantity and order.quantity > 1:
-            label += f" x{order.quantity}"
-        items.append({"label": label, "amount": order.amount})
+        items.append({"label": order.product_name, "detail": cart_line_detail(order), "amount": order.amount})
 
     for signup in cart_order.signups:
         activity_name = signup.activity.name if signup.activity else "Passeport d'activité"
-        label = activity_name
-        if signup.requested_sessions and signup.requested_sessions > 1:
-            label += f" x{signup.requested_sessions}"
-        items.append({"label": label, "amount": signup.requested_amount or 0.0})
+        items.append({"label": activity_name, "detail": cart_line_detail(signup),
+                      "amount": signup.requested_amount or 0.0})
 
     display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
     payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
@@ -5011,7 +5033,7 @@ def notify_cart_order_event(app, *, cart_order, event_type):
 
     # _fr_money, not "%.2f $" — the latter renders "35.00 $" with a period, which
     # disagreed with every other amount in the same email (see _fr_money's docstring).
-    rows = [{"label": item["label"], "value": _fr_money(item["amount"])} for item in items]
+    rows = [{"label": item["label"], "detail": item["detail"], "value": _fr_money(item["amount"])} for item in items]
     rows.append({"label": "Total", "value": _fr_money(cart_order.total_amount)})
 
     # The reference code is only for the rare case where another unpaid Interac cart order

@@ -10844,6 +10844,14 @@ def ca_money(value):
     return f"{formatted}\u00a0$"
 
 
+@app.template_filter("cart_line_detail")
+def cart_line_detail_filter(line):
+    """Same "what exactly did I buy" line as the order emails (utils.cart_line_detail), with the
+    page's own money format."""
+    from utils import cart_line_detail
+    return cart_line_detail(line, money=ca_money)
+
+
 @app.template_filter("log_type_color")
 def log_type_color(log_type):
     """Return badge color class suffix for activity log types"""
