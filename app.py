@@ -4132,7 +4132,8 @@ def _resolve_charge_id(session_data, api_key):
         return payment_intent_id
     try:
         intent = stripe.PaymentIntent.retrieve(payment_intent_id, api_key=api_key)
-        return intent.get("latest_charge") or payment_intent_id
+        # Attribute access: newer stripe-python objects have no dict .get().
+        return getattr(intent, "latest_charge", None) or payment_intent_id
     except Exception as exc:
         print(f"[Stripe Webhook] Could not resolve charge for {payment_intent_id}: {exc}")
         return payment_intent_id
@@ -4161,6 +4162,12 @@ def stripe_webhook():
     except stripe.error.SignatureVerificationError:
         print("[Stripe Webhook] Invalid signature")
         return jsonify({"error": "Invalid signature"}), 400
+
+    # Read the event as plain JSON now that its signature is verified. Newer stripe-python
+    # versions return StripeObjects that are NOT dicts (no .get()), and requirements.txt does not
+    # pin the library — so a rebuilt container crashed here with HTTP 500 on every payment
+    # (demo, 2026-09-26). Plain dicts behave the same on every library version.
+    event = json_mod.loads(payload)
 
     if event['type'] == 'checkout.session.completed':
         session_data = event['data']['object']
