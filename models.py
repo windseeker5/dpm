@@ -396,6 +396,10 @@ class Signup(db.Model):
     # NOT a Signup.slot_id column — a second source of truth would drift on cancel/rebook.
     slot_booking = db.relationship("SlotBooking", backref="signup", uselist=False, lazy=True)
 
+    # Read by utils.cart_line_detail (shop thank-you page + order email) and
+    # signup_confirmation.html. Without it those raise / silently render nothing.
+    passport_type = db.relationship("PassportType")
+
 
 class Passport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
