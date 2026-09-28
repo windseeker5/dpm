@@ -71,9 +71,9 @@ def _context(**overrides):
         "uses_scheduling": True,
         "booked_slots": ["samedi 29 août, 08:30"],
         "history_rows": [
-            {"label": "Création", "date": "2026-01-09 09:14", "by": "kdresdell"},
+            {"label": "Passeport émis", "date": "2026-01-09 09:14", "by": "kdresdell"},
             {"label": "Paiement", "date": "2026-01-10 11:02", "by": "minipass-bot"},
-            {"label": "Participation 1", "date": "2026-01-11 18:30", "by": "kdresdell"},
+            {"label": "1re présence", "date": "2026-01-11 18:30", "by": "kdresdell"},
         ],
         "requested_amount": "50,00 $",
         "payment_email": "paiement@kdc.ca",
@@ -131,7 +131,7 @@ class EmailTemplateRenderTests(unittest.TestCase):
             with self.subTest(template=name):
                 html = render_template(f"email/{name}.html", **_context())
                 self.assertIn("Historique", html)
-                self.assertIn("Participation 1", html)
+                self.assertIn("1re présence", html)
                 self.assertIn("kdresdell", html)
 
     def test_history_block_is_omitted_when_there_is_none(self):

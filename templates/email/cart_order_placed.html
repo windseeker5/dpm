@@ -31,4 +31,21 @@
 </tr>
 {% endif %}
 {% endif %}
+{% if payment_method == 'interac' and (product_count or passport_count) %}
+{# What happens once the transfer arrives — named for what was actually bought. #}
+<tr>
+  <td class="mp-pad" style="padding:16px 32px 0 32px;">
+    <div style="font-size:13.5px; line-height:1.6; color:#4a5568;">
+      {% if passport_count %}
+      {{ "Votre passeport vous sera envoyé" if passport_count == 1 else "Vos passeports vous seront envoyés" }}
+      par courriel dès réception de votre virement.
+      {% endif %}
+      {% if product_count %}
+      Nous vous aviserons dès que {{ "votre produit sera prêt" if product_count == 1 else "vos produits seront prêts" }}
+      pour la cueillette.
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% endif %}
 {% endblock %}

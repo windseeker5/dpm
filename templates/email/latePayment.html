@@ -5,7 +5,7 @@
 {% extends "email/_base.html" %}
 {% from "email/components.html" import rows_block, status_pill, section_card, well, button, money, credit_line, interac_block %}
 
-{% set preheader = 'Votre passeport attend son paiement.' %}
+{% set preheader = 'Il reste un paiement à faire pour activer votre passeport.' %}
 {% set photo_eyebrow = 'Paiement en attente' %}
 
 {% block content %}
@@ -16,10 +16,12 @@
 
 {% set facts = [
   {'label': 'Participant', 'value': pass_data.user.name, 'sub': pass_data.user.email},
-  {'label': 'Montant', 'value': money(pass_data.sold_amt)},
-  {'label': 'Statut', 'value': status_pill(pass_data.paid)},
-  {'label': 'Crédits', 'value': credit_line(pass_data.uses_remaining, total)},
+  {'label': 'Prix', 'value': money(pass_data.sold_amt)},
+  {'label': 'Paiement', 'value': status_pill(pass_data.paid, 'Reçu', 'En attente')},
 ] %}
+{# "Présences restantes" only when the passport can be used more than once — a one-use passport
+   (a donation, a concert, a dinner) has nothing useful to count. #}
+{% if (total and total > 1) or (pass_data.uses_remaining or 0) > 1 %}{% set _ = facts.append({'label': 'Présences restantes', 'value': credit_line(pass_data.uses_remaining, total)}) %}{% endif %}
 {% if location %}{% set _ = facts.append({'label': 'Lieu', 'value': location}) %}{% endif %}
 
 <tr>

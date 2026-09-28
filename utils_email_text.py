@@ -62,7 +62,9 @@ EMAIL_TEXT_VARIABLES = [
     ("organization_name", "Your organization's name"),
     ("amount", "Amount as a number, e.g. for '%.2f'|format(amount)"),
     ("amount_display", "Amount preformatted for display, e.g. 50,00 $"),
-    ("credits_remaining", "Credits left on the passport"),
+    ("credits_remaining", "Présences left on the passport"),
+    ("event_date", "Today's date when the email is sent, e.g. 27 septembre"),
+    ("event_time", "The time when the email is sent, e.g. 19 h 30"),
     ("is_paid", "True when the passport is paid"),
     ("payment_email", "Address the customer should send payment to"),
     ("pass_code", "The passport's code"),
@@ -146,7 +148,18 @@ def build_email_text_context(
 
     sessions = list(sessions or [])
 
+    # When the email is sent, in local time and Quebec style: "27 septembre" / "19 h 30". Used by
+    # the check-in email ("votre passeport vient d'être utilisé le {{ event_date }} à
+    # {{ event_time }}"), which goes out the moment the passport is scanned.
+    from datetime import datetime, timezone
+    from utils import utc_to_local, _FR_MONTHS
+    now_local = utc_to_local(datetime.now(timezone.utc))
+    event_date = f"{now_local.day} {_FR_MONTHS.get(now_local.month, '')}"
+    event_time = f"{now_local.hour} h {now_local.minute:02d}"
+
     context = {
+        "event_date": event_date,
+        "event_time": event_time,
         "user_name": user_name,
         "user_email": user_email,
         "user_phone": user_phone,

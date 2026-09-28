@@ -1,7 +1,9 @@
 FROM python:3.11
 WORKDIR /app
 COPY . .
-RUN pip install -r requirements.txt
+# Exact versions only (requirements.txt + constraints.txt): a rebuild must never pull a newer library
+# than the one tested — an unpinned stripe did exactly that on the demo on 2026-09-26.
+RUN pip install -r requirements.txt -c constraints.txt
 
 # Create non-root user and set ownership
 # UID 1000 matches typical Linux user IDs for compatibility

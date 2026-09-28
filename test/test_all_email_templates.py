@@ -133,8 +133,8 @@ def sample_history_rows():
     return [
         {'label': 'Creation', 'date': '2026-01-15 09:12', 'by': 'admin'},
         {'label': 'Paiement', 'date': '2026-01-16 14:03', 'by': 'minipass-bot'},
-        {'label': 'Participation 1', 'date': '2026-01-20 18:30', 'by': 'kdresdell'},
-        {'label': 'Participation 2', 'date': '2026-01-27 18:26', 'by': 'kdresdell'},
+        {'label': '1re présence', 'date': '2026-01-20 18:30', 'by': 'kdresdell'},
+        {'label': '2e présence', 'date': '2026-01-27 18:26', 'by': 'kdresdell'},
     ]
 
 

@@ -55,21 +55,21 @@
   email, so they get their own titled section, not prose.
 #}
 {% macro interac_block(requested_amount, payment_email, base_url='') -%}
-<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_INK }}; margin:16px 0 8px 0;">Instructions de paiement</div>
+<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_INK }}; margin:16px 0 8px 0;">Comment payer</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{{ C_WELL }}"
        style="width:100%; background-color:{{ C_WELL }}; border-radius:8px; margin-bottom:16px;">
   <tr>
     <td style="padding:16px 20px 20px 20px;">
       <div style="font-size:13.5px; line-height:1.6; color:{{ C_BODY }}; padding-bottom:12px;">
-        Effectuez un virement Interac avec les détails <span style="white-space:nowrap;">ci-dessous</span>.
+        Envoyez un virement Interac avec ces informations&nbsp;:
       </div>
       {% if base_url %}
       <img src="{{ base_url }}/static/images/email/interac-logo.jpg" width="40" height="40" alt="Interac"
            style="display:block; width:40px; height:40px; border-radius:7px; border:0; margin-bottom:12px;">
       {% endif %}
       {{ rows_block([
-        {'label': 'Montant à transférer', 'value': requested_amount},
-        {'label': 'Destinataire', 'value': payment_email},
+        {'label': 'Montant', 'value': requested_amount},
+        {'label': 'À envoyer à', 'value': payment_email},
       ], outer_border=False, top_margin=0) }}
     </td>
   </tr>
@@ -232,12 +232,22 @@
 #}
 {% macro rows_block(items, outer_border=True, top_margin=18, muted=False) -%}
 {% if items %}
+{# Optional per-row thumbnail (item.image = an absolute https URL on the org's site, never an
+   attachment or data: URI, so the email stays light and text-first for spam filters). When any
+   row has one, every row gets the 60px column so labels stay aligned. #}
+{% set with_images = items | selectattr("image") | list | length > 0 %}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
        style="width:100%; margin-top:{{ top_margin }}px; {% if outer_border %}border-bottom:1px solid {{ C_LINE }};{% endif %}">
   {% for item in items %}
   <tr>
-    <td style="padding:8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} font-size:13.5px; color:{{ C_BODY }}; vertical-align:baseline;">{{ item.label }}</td>
-    <td align="right" style="padding:8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} font-size:13.5px; font-weight:{{ 400 if muted else 700 }}; color:{{ C_BODY if muted else C_INK }}; text-align:right; vertical-align:baseline; font-variant-numeric:tabular-nums;">
+    {% if with_images %}
+    <td width="60" style="width:60px; padding:8px 12px 8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} vertical-align:middle;">
+      {% if item.image %}<img src="{{ item.image }}" width="48" height="48" alt="{{ item.image_alt or item.label }}"
+           style="display:block; width:48px; height:48px; border-radius:8px; object-fit:cover; border:0;">{% endif %}
+    </td>
+    {% endif %}
+    <td style="padding:8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} font-size:13.5px; color:{{ C_BODY }}; vertical-align:{{ 'middle' if with_images else 'baseline' }};">{{ item.label }}{% if item.detail %}<div style="font-size:12px; color:{{ C_LABEL }}; margin-top:2px;">{{ item.detail }}</div>{% endif %}</td>
+    <td align="right" style="padding:8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} font-size:13.5px; font-weight:{{ 400 if muted else 700 }}; color:{{ C_BODY if muted else C_INK }}; text-align:right; vertical-align:{{ 'middle' if with_images else 'baseline' }}; font-variant-numeric:tabular-nums;">
       {{ item.value | safe }}
       {% if item.sub %}<div style="font-size:11px; font-weight:400; color:{{ C_LABEL }}; margin-top:2px;">{{ item.sub }}</div>{% endif %}
     </td>
@@ -249,11 +259,11 @@
 
 
 {# Payment status — the one place colour is semantically load-bearing, not decorative. #}
-{% macro status_pill(paid) -%}
+{% macro status_pill(paid, paid_text='Payé', unpaid_text='Non payé') -%}
 {% if paid %}
-<span style="display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; padding:4px 12px; border-radius:100px; white-space:nowrap; color:{{ C_PAID }}; background-color:{{ C_PAID_BG }};">Payé</span>
+<span style="display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; padding:4px 12px; border-radius:100px; white-space:nowrap; color:{{ C_PAID }}; background-color:{{ C_PAID_BG }};">{{ paid_text }}</span>
 {% else %}
-<span style="display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; padding:4px 12px; border-radius:100px; white-space:nowrap; color:{{ C_UNPAID }}; background-color:{{ C_UNPAID_BG }};">Non payé</span>
+<span style="display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; padding:4px 12px; border-radius:100px; white-space:nowrap; color:{{ C_UNPAID }}; background-color:{{ C_UNPAID_BG }};">{{ unpaid_text }}</span>
 {% endif %}
 {%- endmacro %}
 
@@ -286,7 +296,7 @@
 
 {#
   A titled section, built via {% call %} so it can hold anything (a rows_block() list or a
-  qr_block()). Used for every section in a pass-style email — Votre passeport, Code d'accès,
+  qr_block()). Used for every section in a pass-style email — Votre passeport, Votre code QR,
   Séances, Historique — so none can drift apart, or from templates/pass.html's .pass-well.
 
   The title sits above the content, not inside a box. No fill and no padding: hairlines and

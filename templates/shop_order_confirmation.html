@@ -90,8 +90,8 @@
       {% for order in cart_order.orders %}
       <div class="list-group-item d-flex align-items-start justify-content-between gap-3 px-0">
         <div class="min-w-0">
-          <div class="fw-bold">{{ order.product_name }}{% if order.size %} ({{ order.size }}){% endif %}</div>
-          <div class="text-secondary small">Quantité : {{ order.quantity }}</div>
+          <div class="fw-bold">{{ order.product_name }}</div>
+          <div class="text-secondary small">{{ order | cart_line_detail }}</div>
         </div>
         <div class="fw-bold text-nowrap">{{ order.amount | ca_money }}</div>
       </div>
@@ -100,7 +100,7 @@
       <div class="list-group-item d-flex align-items-start justify-content-between gap-3 px-0">
         <div class="min-w-0">
           <div class="fw-bold">{{ signup.activity.name if signup.activity else "Passeport d'activité" }}</div>
-          {% if signup.passport_type %}<div class="text-secondary small">{{ signup.passport_type.name }}</div>{% endif %}
+          <div class="text-secondary small">{{ signup | cart_line_detail }}</div>
         </div>
         <div class="fw-bold text-nowrap">{{ signup.requested_amount | ca_money }}</div>
       </div>

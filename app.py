@@ -4132,7 +4132,8 @@ def _resolve_charge_id(session_data, api_key):
         return payment_intent_id
     try:
         intent = stripe.PaymentIntent.retrieve(payment_intent_id, api_key=api_key)
-        return intent.get("latest_charge") or payment_intent_id
+        # Attribute access: newer stripe-python objects have no dict .get().
+        return getattr(intent, "latest_charge", None) or payment_intent_id
     except Exception as exc:
         print(f"[Stripe Webhook] Could not resolve charge for {payment_intent_id}: {exc}")
         return payment_intent_id
@@ -4161,6 +4162,12 @@ def stripe_webhook():
     except stripe.error.SignatureVerificationError:
         print("[Stripe Webhook] Invalid signature")
         return jsonify({"error": "Invalid signature"}), 400
+
+    # Read the event as plain JSON now that its signature is verified. Newer stripe-python
+    # versions return StripeObjects that are NOT dicts (no .get()), and requirements.txt does not
+    # pin the library — so a rebuilt container crashed here with HTTP 500 on every payment
+    # (demo, 2026-09-26). Plain dicts behave the same on every library version.
+    event = json_mod.loads(payload)
 
     if event['type'] == 'checkout.session.completed':
         session_data = event['data']['object']
@@ -10837,6 +10844,14 @@ def ca_money(value):
     return f"{formatted}\u00a0$"
 
 
+@app.template_filter("cart_line_detail")
+def cart_line_detail_filter(line):
+    """Same "what exactly did I buy" line as the order emails (utils.cart_line_detail), with the
+    page's own money format."""
+    from utils import cart_line_detail
+    return cart_line_detail(line, money=ca_money)
+
+
 @app.template_filter("log_type_color")
 def log_type_color(log_type):
     """Return badge color class suffix for activity log types"""
@@ -13369,16 +13384,16 @@ def email_preview(activity_id):
         # Sample history, in the {label, date, by} shape utils._build_history_rows() produces
         # for real sends, so the preview shows the same table customers receive.
         base_context['history_rows'] = [
-            {'label': 'Création', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
-            {'label': 'Paiement', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
+            {'label': 'Passeport émis', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
+            {'label': 'Paiement reçu', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
         ]
         if template_type == 'redeemPass':
             base_context['history_rows'].append(
-                {'label': 'Participation 1', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
+                {'label': '1re présence', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
             )
         if template_type == 'latePayment':
             # Real history for an unpaid pass has no Paiement row (utils._build_history_rows).
-            base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement']
+            base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement reçu']
 
     # Get merged context with activity customizations (preserves email blocks)
     context = get_email_context(activity, template_type, base_context)
@@ -13569,16 +13584,16 @@ def email_preview_live(activity_id):
 
         # Same {label, date, by} shape as a real send (utils._build_history_rows).
         base_context['history_rows'] = [
-            {'label': 'Création', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
-            {'label': 'Paiement', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
+            {'label': 'Passeport émis', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
+            {'label': 'Paiement reçu', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
         ]
         if template_type == 'redeemPass':
             base_context['history_rows'].append(
-                {'label': 'Participation 1', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
+                {'label': '1re présence', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
             )
         if template_type == 'latePayment':
             # Real history for an unpaid pass has no Paiement row (utils._build_history_rows).
-            base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement']
+            base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement reçu']
 
     # Add special context for signup_payment_first template
     elif template_type == 'signup_payment_first':
@@ -13930,16 +13945,16 @@ def test_email_template(activity_id):
             # Every pass template carries the history table, in the same {label, date, by}
             # shape a real send builds (utils._build_history_rows).
             base_context['history_rows'] = [
-                {'label': 'Création', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
-                {'label': 'Paiement', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
+                {'label': 'Passeport émis', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
+                {'label': 'Paiement reçu', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
             ]
             if template_type == 'redeemPass':
                 base_context['history_rows'].append(
-                    {'label': 'Participation 1', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
+                    {'label': '1re présence', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
                 )
             if template_type == 'latePayment':
                 # Real history for an unpaid pass has no Paiement row (utils._build_history_rows).
-                base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement']
+                base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement reçu']
             
             print(f"Added email blocks for {template_type}")
             print(f"   owner_html: {len(base_context.get('owner_html', ''))} chars")
@@ -14179,8 +14194,11 @@ def unsubscribe():
     elif request.method == 'POST':
         from markupsafe import escape
         from utils import unsubscribe_token_email
-        email = request.form.get('email', '').strip().lower()
-        token = request.form.get('token', '')
+        # request.values = form + query string. The page's form posts email/token in the body; a
+        # mail client's one-click unsubscribe (RFC 8058, the List-Unsubscribe-Post header) POSTs
+        # "List-Unsubscribe=One-Click" to the header's URL, so email/token are only in the URL.
+        email = request.values.get('email', '').strip().lower()
+        token = request.values.get('token', '')
         
         if not email:
             return "Email address is required", 400

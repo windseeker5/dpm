@@ -9,15 +9,23 @@
   repeating the passport details.
 #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import rows_block, status_pill, money %}
+{% from "email/components.html" import rows_block, money %}
 
 {% set preheader = 'Paiement reçu — votre commande est confirmée.' %}
 {% set photo_eyebrow = 'Paiement reçu' %}
 
 {% block content %}
+{# Paid is said in words at the top, not as a "PAYÉ" pill inside the price list, where it was
+   easy to miss. The last row built by notify_cart_order_event is the total. #}
 <tr>
-  <td class="mp-pad" style="padding:20px 32px 0 32px;">
-    {{ rows_block(rows + [{'label': 'Statut', 'value': status_pill(true)}]) }}
+  <td class="mp-pad" style="padding:24px 32px 0 32px;">
+    <div style="font-size:18px; font-weight:700; color:#15192c; line-height:1.35;">Paiement reçu — merci&nbsp;!</div>
+    {% if cart_code %}<div style="font-size:13.5px; color:#4a5568; margin-top:4px;">Votre commande {{ cart_code }} est payée.</div>{% endif %}
+  </td>
+</tr>
+<tr>
+  <td class="mp-pad" style="padding:8px 32px 0 32px;">
+    {{ rows_block(rows[:-1] + [dict(rows[-1], label='Total payé')]) }}
   </td>
 </tr>
 {% if product_count or passport_count %}
