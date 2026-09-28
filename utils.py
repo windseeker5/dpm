@@ -180,6 +180,32 @@ def has_conflicting_unpaid_signup(signup, activity, earlier_only=False):
     return False
 
 
+# How often the Interac payment bot checks the inbox (Settings > Payments). The scheduler
+# ticks every PAYMENT_BOT_TICK_MINUTES and runs the bot only when payment_bot_due() says so,
+# so a change takes effect on the next tick without rescheduling (which would only reach
+# the one gunicorn worker that holds the scheduler lock).
+PAYMENT_BOT_INTERVAL_CHOICES = (10, 20, 30, 60)
+PAYMENT_BOT_DEFAULT_INTERVAL = 30
+PAYMENT_BOT_TICK_MINUTES = 5
+
+
+def payment_bot_interval_minutes(value):
+    """Stored setting → one of PAYMENT_BOT_INTERVAL_CHOICES; anything else → the default."""
+    try:
+        minutes = int(value)
+    except (TypeError, ValueError):
+        return PAYMENT_BOT_DEFAULT_INTERVAL
+    return minutes if minutes in PAYMENT_BOT_INTERVAL_CHOICES else PAYMENT_BOT_DEFAULT_INTERVAL
+
+
+def payment_bot_due(last_run, now, interval_minutes):
+    """True if the bot should run on this tick. Ticks drift by a few seconds, so allow one
+    minute of slack — otherwise a 30-minute interval would wait until the 35-minute tick."""
+    if last_run is None:
+        return True
+    return (now - last_run) >= timedelta(minutes=interval_minutes - 1)
+
+
 def has_conflicting_unpaid_cart_order(cart_order, earlier_only=False):
     """Shop-cart equivalent of has_conflicting_unpaid_signup() — same rule (same normalized
     buyer name AND same total amount among other unpaid Interac cart orders), applied to

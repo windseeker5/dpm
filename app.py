@@ -972,15 +972,25 @@ def init_scheduler(app):
         with app.app_context():
             try:
                 # Payment bot setup - ALWAYS register job, check setting at runtime
+                from utils import (payment_bot_interval_minutes, payment_bot_due,
+                                   PAYMENT_BOT_TICK_MINUTES)
+                payment_bot_last_run = [None]  # only this process runs the scheduler (lock above)
+
                 def run_payment_bot():
-                    """Payment bot job that checks setting at runtime (no restart needed to enable/disable)"""
+                    """Payment bot job that checks setting at runtime (no restart needed to enable/disable
+                    or to change the interval)"""
                     with app.app_context():
                         # Check setting at runtime - this allows dynamic enable/disable without restart
                         if get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False") != "True":
-                            print("⚪ Payment bot scheduled run: DISABLED (skipping)")
                             return
 
-                        print("🟢 Payment bot scheduled run: ENABLED (checking emails...)")
+                        interval = payment_bot_interval_minutes(get_setting("PAYMENT_BOT_INTERVAL_MINUTES"))
+                        now = datetime.now(timezone.utc)
+                        if not payment_bot_due(payment_bot_last_run[0], now, interval):
+                            return
+                        payment_bot_last_run[0] = now
+
+                        print(f"🟢 Payment bot scheduled run: ENABLED, every {interval} min (checking emails...)")
                         try:
                             match_gmail_payments_to_passes()
                             # Auto-cleanup duplicates after processing
@@ -990,7 +1000,8 @@ def init_scheduler(app):
                             print(f"Payment bot error: {e}")
 
                 # Always register the job - it will check the setting each time it runs
-                scheduler.add_job(run_payment_bot, trigger="interval", minutes=30, id="email_payment_bot")
+                scheduler.add_job(run_payment_bot, trigger="interval", minutes=PAYMENT_BOT_TICK_MINUTES,
+                                  id="email_payment_bot")
                 current_setting = get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False")
                 print(f"📅 Email Payment Bot scheduler registered (currently {'ENABLED' if current_setting == 'True' else 'DISABLED'}, checks setting each run)")
 
@@ -5947,6 +5958,13 @@ def unified_settings():
                     "GMAIL_LABEL_FOLDER_PROCESSED": REMOVED_FIELD_DEFAULTS['gmail_label_folder_processed'],
                     "DISPLAY_PAYMENT_EMAIL": request.form.get("display_payment_email", "").strip()
                 }
+                # Only when the field was posted: the select sits inside the section that is
+                # hidden while the bot is off, but hidden fields still submit — this guards
+                # against any other form posting section=payments without it.
+                if "payment_bot_interval_minutes" in request.form:
+                    from utils import payment_bot_interval_minutes
+                    bot_settings["PAYMENT_BOT_INTERVAL_MINUTES"] = payment_bot_interval_minutes(
+                        request.form.get("payment_bot_interval_minutes"))
             
             for key, value in bot_settings.items():
                 existing = Setting.query.filter_by(key=key).first()

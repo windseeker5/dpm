@@ -165,6 +165,16 @@
 
           <div id="bot-enabled-content"{% if settings.get('ENABLE_EMAIL_PAYMENT_BOT') != 'True' %} class="d-none"{% endif %}>
             <div class="mt-3">
+              {% set bot_interval = settings.get('PAYMENT_BOT_INTERVAL_MINUTES', '30') %}
+              {% call select(id="payment-bot-interval", name="payment_bot_interval_minutes",
+                             label="Check for New Payments Every",
+                             description="How often Minipass looks in the payment inbox for new Interac transfers.") %}
+                {% for minutes in (10, 20, 30, 60) %}
+                <option value="{{ minutes }}"{% if bot_interval == minutes|string %} selected{% endif %}>{{ minutes }} minutes</option>
+                {% endfor %}
+              {% endcall %}
+            </div>
+            <div class="mt-3">
             {% call collapsible_section(id="interac-advanced", title="Advanced Interac Settings",
                                          description="Matching sensitivity and notification details.", icon="ti-adjustments") %}
               <div class="d-flex flex-column gap-3">
