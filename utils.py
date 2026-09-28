@@ -6630,6 +6630,7 @@ def _send_push_notification_to_admins_now(title, body, url=None, tag=None):
 
 def send_discord_announcement(subject, message_html, activity_name, webhook_url):
     """Post an announcement to a Discord channel via webhook."""
+    import html
     import re
     import requests
 
@@ -6641,6 +6642,7 @@ def send_discord_announcement(subject, message_html, activity_name, webhook_url)
     text = re.sub(r'<i>(.*?)</i>', r'*\1*', text, flags=re.DOTALL)
     text = re.sub(r'<li>(.*?)</li>', r'• \1\n', text, flags=re.DOTALL)
     text = re.sub(r'<[^>]+>', '', text)   # strip remaining tags
+    text = html.unescape(text)            # &eacute; → é (Discord shows entities raw)
     text = text.strip()
 
     payload = {
