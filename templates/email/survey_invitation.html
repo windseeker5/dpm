@@ -13,7 +13,7 @@
 {% if survey_url %}
 <tr>
   <td class="mp-pad" align="center" style="padding:24px 32px 0 32px;">
-    {{ button(survey_url, 'Répondre au formulaire') }}
+    {{ button(survey_url, cta_text or 'Répondre au sondage') }}
     {% if question_count %}
     <div style="padding-top:10px; font-size:13.5px; color:#5f6779; line-height:1.5;">
       {{ question_count }} questions · environ deux minutes

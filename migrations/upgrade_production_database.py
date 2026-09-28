@@ -4849,6 +4849,89 @@ def task60_add_lookup_and_date_indexes(cursor):
     return True
 
 
+def task61_clear_pre_quebec_rewrite_email_copy(cursor):
+    """Let activities inherit the 2026-09 Quebec-French email wording.
+
+    Same approach as task 45: an activity's stored email_templates shadows
+    config/email_defaults.json. Only a subject/title/admin_message/cta_text that still hashes
+    to the exact previous default is cleared; anything an owner wrote is left untouched.
+    """
+    log("✔️ ", "TASK 61: Clearing unmodified pre-rewrite email copy", Colors.BLUE)
+
+    if not check_column_exists(cursor, 'activity', 'email_templates'):
+        log("⏭️ ", "  activity.email_templates doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    # sha256 of every subject/title/admin_message/cta_text default before the 2026-09 rewrite.
+    OLD_DEFAULT_HASHES = {
+        "0d4ba711f379cc7b423866daf04f576094f778947d39987d72560a5922fad764",
+        "1dc49b4fb315886e9fe39e7e3044560ff8e334c849e615bde23254dde7564569",
+        "23153e6e372bb665d250b5965d41d5e9fff6fdc0b237ddebe0108227acbfd2e1",
+        "3233842c3634f51b662801184c94553979862e9991dd9190fc89866a0fba3906",
+        "40ff3d974680f454d3734ced8d2d3715452f8faf8466dd0357b7d07ab6299846",
+        "4b45a42f30bbda10200653b7d077b8cb47a851b9b9a4323b8a717bbdc42a03bc",
+        "4d3215c9207ea30f24bdcd448b31d627d8ba5acc05d37a155803f622b56695b2",
+        "504f305f3da7f00d008832f62dfb802934f7be5e5f02f126b8f97f673c37ac4f",
+        "55f160b7adc64165a3c3dfde4f8e95ab7a5060d67c01caaa01570a430372c215",
+        "5d32d66a724f9a2355b4c91c2ea08c12b3d312f5ce3db4276411c1716ea6ee5a",
+        "659be658f16c7fde6ba705623dfe5dee7eb39785299f29ff31783e80bcbfa4dc",
+        "7d9a8cf19ea84c543337752ffe786c15436483f2be47c7e39c13dbf9c0581b88",
+        "8c273041d67742991e9c153999efc2fec4d851c94b1d571e70eb3650dcb956c2",
+        "8f9f9b08ec0d1a6a81b17a3886ff739659eb2cea7e55d17ed08c44f903b9c5bf",
+        "90f7d0a2c6888e56481b623fb0311026f287d036eb7e836ee8b0ed67efa58679",
+        "b60b24f268751429b6ed478bedd873b50d32356e2068f71a12ec544a67884aeb",
+        "c885125cd4333499351ee80b1e350b6acd0cf2b89bd85c943e897f798e021777",
+        "c96c136466d419ba542a755c55330c111ea8b345141c714f9f1c04b000607893",
+        "cda69897212a2c58ee8cfe88e216e84fa3e2d301f692bd77d3f7a2807ac21ac8",
+        "d29d65e43ad3450cd7691ebcf231334e5008508fc72616daef7e1e3d91217c1f",
+        "f6213ceca0efa752dbcb46a5b398d870b78448297a12be818235d4d8882c95ac",
+    }
+    COPY_FIELDS = ('subject', 'title', 'admin_message', 'cta_text')
+
+    cursor.execute(
+        "SELECT id, name, email_templates FROM activity "
+        "WHERE email_templates IS NOT NULL AND email_templates != ''"
+    )
+    activities_changed = 0
+    fields_cleared = 0
+
+    for activity_id, activity_name, raw in cursor.fetchall():
+        try:
+            stored = json.loads(raw)
+        except (ValueError, TypeError):
+            log("⚠️ ", f"  Activity {activity_id} has unreadable email_templates, skipping", Colors.YELLOW)
+            continue
+        if not isinstance(stored, dict):
+            continue
+
+        changed = False
+        for template_key in list(stored.keys()):
+            fields = stored.get(template_key)
+            if not isinstance(fields, dict):
+                continue
+            for field in COPY_FIELDS:
+                value = fields.get(field)
+                if isinstance(value, str) and hashlib.sha256(value.encode('utf-8')).hexdigest() in OLD_DEFAULT_HASHES:
+                    del fields[field]
+                    fields_cleared += 1
+                    changed = True
+            # Nothing custom left -> drop the key so the activity fully inherits defaults.
+            if not any(v for v in fields.values()):
+                del stored[template_key]
+                changed = True
+
+        if changed:
+            cursor.execute(
+                "UPDATE activity SET email_templates = ? WHERE id = ?",
+                (json.dumps(stored, ensure_ascii=False) if stored else None, activity_id)
+            )
+            activities_changed += 1
+            log("✅", f"  {activity_name}: now uses the new default wording", Colors.GREEN)
+
+    log("✅", f"  {activities_changed} activity(ies) updated, {fields_cleared} old default field(s) cleared", Colors.GREEN)
+    return True
+
+
 # ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
@@ -4929,6 +5012,7 @@ def main():
         ("Enforce AUTOINCREMENT on Code Tables", task58_enforce_autoincrement_on_code_tables),
         ("Repair Dangling _old Foreign Keys", task59_repair_dangling_fk_references),
         ("Lookup and Date-Range Indexes", task60_add_lookup_and_date_indexes),
+        ("Email Copy: Quebec-French Rewrite", task61_clear_pre_quebec_rewrite_email_copy),
     ]
 
     completed = 0

@@ -2,8 +2,8 @@
 {% extends "email/_base.html" %}
 {% from "email/components.html" import rows_block, status_pill, qr_block, section_card, well, button, money, credit_line %}
 
-{% set preheader = 'Nous avons bien reçu votre paiement.' %}
-{% set photo_eyebrow = 'Paiement confirmé' %}
+{% set preheader = 'Nous avons bien reçu votre paiement — votre passeport est actif.' %}
+{% set photo_eyebrow = 'Paiement reçu' %}
 
 {% block content %}
 
@@ -13,10 +13,12 @@
 
 {% set facts = [
   {'label': 'Participant', 'value': pass_data.user.name, 'sub': pass_data.user.email},
-  {'label': 'Montant', 'value': money(pass_data.sold_amt)},
-  {'label': 'Statut', 'value': status_pill(pass_data.paid)},
-  {'label': 'Crédits', 'value': credit_line(pass_data.uses_remaining, total)},
+  {'label': 'Prix', 'value': money(pass_data.sold_amt)},
+  {'label': 'Paiement', 'value': status_pill(pass_data.paid, 'Reçu', 'En attente')},
 ] %}
+{# "Présences restantes" only when the passport can be used more than once — a one-use passport
+   (a donation, a concert, a dinner) has nothing useful to count. #}
+{% if (total and total > 1) or (pass_data.uses_remaining or 0) > 1 %}{% set _ = facts.append({'label': 'Présences restantes', 'value': credit_line(pass_data.uses_remaining, total)}) %}{% endif %}
 {% if location %}{% set _ = facts.append({'label': 'Lieu', 'value': location}) %}{% endif %}
 
 <tr>
@@ -30,8 +32,8 @@
 {% if show_qr_code %}
 <tr>
   <td class="mp-pad" style="padding:0 32px;">
-    {% call well("Code d'accès") %}
-      {{ qr_block('cid:qr_code', pass_data.pass_code, "Présentez ce code ou la référence à l'accueil") }}
+    {% call well('Votre code QR') %}
+      {{ qr_block('cid:qr_code', pass_data.pass_code, 'Présentez ce code QR à votre arrivée.') }}
     {% endcall %}
   </td>
 </tr>
@@ -54,7 +56,7 @@
     {% for slot in booked_slots %}
       {% set _ = seance_items.append({'label': 'Séance ' ~ loop.index if booked_slots | length > 1 else 'Séance', 'value': slot}) %}
     {% endfor %}
-    {{ section_card('Séances' if booked_slots | length > 1 else 'Séance', seance_items) }}
+    {{ section_card('Vos séances' if booked_slots | length > 1 else 'Votre séance', seance_items) }}
   </td>
 </tr>
 {% endif %}

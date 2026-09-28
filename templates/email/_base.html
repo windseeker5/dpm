@@ -138,16 +138,16 @@
           <tr>
             <td class="mp-pad" align="center" style="padding:0 32px; font-size:12px; line-height:1.7; color:{{ c_label }};">
               {% if support_email %}
-              <div>Une question? <a href="mailto:{{ support_email }}" style="color:{{ accent }};">{{ support_email }}</a></div>
+              <div>Des questions? Écrivez-nous&nbsp;: <a href="mailto:{{ support_email }}" style="color:{{ accent }};">{{ support_email }}</a></div>
               {% endif %}
               <div>{{ organization_name }}{% if organization_address %} · {{ organization_address }}{% endif %}</div>
               <div style="padding-top:6px;">
                 {% if unsubscribe_url %}<a href="{{ unsubscribe_url }}" style="color:{{ c_label }}; text-decoration:underline;">Se désabonner</a>{% endif %}
                 {% if unsubscribe_url and privacy_url %} · {% endif %}
-                {% if privacy_url %}<a href="{{ privacy_url }}" style="color:{{ c_label }}; text-decoration:underline;">Confidentialité</a>{% endif %}
+                {% if privacy_url %}<a href="{{ privacy_url }}" style="color:{{ c_label }}; text-decoration:underline;">Politique de confidentialité</a>{% endif %}
               </div>
               {% if activity_name %}
-              <div style="padding-top:6px; color:{{ c_label }};">Vous recevez ce courriel car vous êtes inscrit à {{ activity_name }}.</div>
+              <div style="padding-top:6px; color:{{ c_label }};">Vous recevez ce courriel parce que vous participez à {{ activity_name }}.</div>
               {% endif %}
             </td>
           </tr>

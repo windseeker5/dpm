@@ -13384,16 +13384,16 @@ def email_preview(activity_id):
         # Sample history, in the {label, date, by} shape utils._build_history_rows() produces
         # for real sends, so the preview shows the same table customers receive.
         base_context['history_rows'] = [
-            {'label': 'Création', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
-            {'label': 'Paiement', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
+            {'label': 'Passeport émis', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
+            {'label': 'Paiement reçu', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
         ]
         if template_type == 'redeemPass':
             base_context['history_rows'].append(
-                {'label': 'Participation 1', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
+                {'label': '1re présence', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
             )
         if template_type == 'latePayment':
             # Real history for an unpaid pass has no Paiement row (utils._build_history_rows).
-            base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement']
+            base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement reçu']
 
     # Get merged context with activity customizations (preserves email blocks)
     context = get_email_context(activity, template_type, base_context)
@@ -13584,16 +13584,16 @@ def email_preview_live(activity_id):
 
         # Same {label, date, by} shape as a real send (utils._build_history_rows).
         base_context['history_rows'] = [
-            {'label': 'Création', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
-            {'label': 'Paiement', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
+            {'label': 'Passeport émis', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
+            {'label': 'Paiement reçu', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
         ]
         if template_type == 'redeemPass':
             base_context['history_rows'].append(
-                {'label': 'Participation 1', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
+                {'label': '1re présence', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
             )
         if template_type == 'latePayment':
             # Real history for an unpaid pass has no Paiement row (utils._build_history_rows).
-            base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement']
+            base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement reçu']
 
     # Add special context for signup_payment_first template
     elif template_type == 'signup_payment_first':
@@ -13945,16 +13945,16 @@ def test_email_template(activity_id):
             # Every pass template carries the history table, in the same {label, date, by}
             # shape a real send builds (utils._build_history_rows).
             base_context['history_rows'] = [
-                {'label': 'Création', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
-                {'label': 'Paiement', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
+                {'label': 'Passeport émis', 'date': '9 janv., 09:14', 'by': 'kdresdell'},
+                {'label': 'Paiement reçu', 'date': '10 janv., 11:02', 'by': 'minipass-bot'},
             ]
             if template_type == 'redeemPass':
                 base_context['history_rows'].append(
-                    {'label': 'Participation 1', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
+                    {'label': '1re présence', 'date': '11 janv., 18:30', 'by': 'kdresdell'}
                 )
             if template_type == 'latePayment':
                 # Real history for an unpaid pass has no Paiement row (utils._build_history_rows).
-                base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement']
+                base_context['history_rows'] = [r for r in base_context['history_rows'] if r['label'] != 'Paiement reçu']
             
             print(f"Added email blocks for {template_type}")
             print(f"   owner_html: {len(base_context.get('owner_html', ''))} chars")

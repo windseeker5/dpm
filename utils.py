@@ -1043,17 +1043,17 @@ def _build_history_rows(history):
             return rows
 
         if history.get("created"):
-            rows.append({"label": "Création",
+            rows.append({"label": "Passeport émis",
                          "date": _when(history["created"]),
                          "by": _who(history.get("created_by"))})
 
         if history.get("paid"):
-            rows.append({"label": "Paiement",
+            rows.append({"label": "Paiement reçu",
                          "date": _when(history["paid"]),
                          "by": _who(history.get("paid_by"))})
 
         for i, r in enumerate(history.get("redemptions") or [], start=1):
-            rows.append({"label": f"Participation {i}",
+            rows.append({"label": f"{i}{'re' if i == 1 else 'e'} présence",
                          "date": _when(r.get("date", "")),
                          "by": _who(r.get("by"))})
 
