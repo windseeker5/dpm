@@ -103,6 +103,12 @@
   opacity: 0.75;
 }
 
+/* Spots left on a capacity-limited activity turns red once nothing is left */
+.stat-minimal.stat-full,
+.stat-minimal.stat-full i {
+  color: var(--mp-destructive);
+}
+
 /* Clickable stat (location, discord) */
 .stat-clickable {
   cursor: pointer;

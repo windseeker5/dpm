@@ -161,7 +161,11 @@
                 <div class="card-body text-center p-4 p-md-5">
                   {{ status_mark("ti-calendar-off", variant="danger", class_="mb-3") }}
                   <h2 class="h2 mb-2" id="sold-out-title">Cette activité est complète</h2>
+                  {% if remaining_capacity %}
+                  <p class="text-secondary mb-0">Il ne reste que {{ remaining_capacity }} place{{ 's' if remaining_capacity > 1 }} pour {{ activity.name }}, pas assez pour ce passeport.</p>
+                  {% else %}
                   <p class="text-secondary mb-0">Toutes les places pour {{ activity.name }} ont été réservées.</p>
+                  {% endif %}
                 </div>
               </section>
               {% else %}
@@ -471,7 +475,7 @@
 
 <script>
 var unitPrice = {{ signup_price }};
-var maxQty = {{ remaining_capacity if remaining_capacity is not none else 10 }};
+var maxQty = {{ max_qty if max_qty is not none else 10 }};
 var currentQty = 1;
 var usesScheduling = {{ 'true' if activity.uses_scheduling else 'false' }};
 var firstStepLabel = usesScheduling ? 'Séance' : 'Réservation';

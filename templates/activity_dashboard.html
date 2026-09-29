@@ -16,7 +16,7 @@
 {% block title %}Activity Dashboard - {{ activity.name }}{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/activity-header-clean.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/activity-header-clean.css') }}?v=2">
 <style>
 /* Component styles loaded via base.html */
 
@@ -210,6 +210,14 @@ div.dropdown-divider {
                 items=pt_items
               ) }}
             </div>
+
+            <!-- Spots left - only on activities with a capacity limit (utils.get_remaining_capacity) -->
+            {% if remaining_capacity is not none %}
+            <div class="stat-minimal{% if remaining_capacity <= 0 %} stat-full{% endif %}">
+              <i class="ti ti-armchair"></i>
+              <span>{% if remaining_capacity <= 0 %}Full{% else %}{{ remaining_capacity }} spot{{ 's' if remaining_capacity != 1 }} left{% endif %}</span>
+            </div>
+            {% endif %}
 
             <!-- Survey Rating - Only show if survey responses exist -->
             {% if survey_rating is not none %}

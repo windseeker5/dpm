@@ -81,8 +81,82 @@
     </div>
   </div>
 </div>
+
+{# "Mark as Ready…" and "Send a message…" (Actions menu): one popup, filled by openOrderMessage(). #}
+{% from 'macros/form_dialog.html' import form_dialog %}
+{% from 'macros/textarea.html' import textarea %}
+{% from 'macros/input.html' import text_input %}
+{% from 'macros/checkbox.html' import checkbox %}
+{% call form_dialog(id="order-message-dialog", title="Mark as Ready",
+     description="The order moves to Ready. The customer is emailed your message.",
+     confirm_label="Confirm", confirm_id="order-message-confirm") %}
+  <form id="order-message-form" method="POST" class="mp-form-fields">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="return_status" value="{{ status_filter }}">
+    <input type="hidden" name="status" id="order-message-status">
+    <div class="d-flex justify-content-between gap-3 p-2 rounded bg-light small" id="order-message-summary"></div>
+    {{ textarea(id="order-message-text", name="message", label="Message to the customer", rows=4) }}
+    {{ text_input(id="order-message-tracking", name="tracking_number", label="Tracking number (optional)",
+       placeholder="e.g. Postes Canada 7023 4611 0098 4521",
+       description="Only if you ship it. It's added to the email.") }}
+    {{ checkbox(id="order-message-notify", name="notify", label="Email the customer", checked=True) }}
+  </form>
+{% endcall %}
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/mp-table-toolbar.js') }}?v=1.0"></script>
+<script>
+  (function () {
+    var dialog = document.getElementById('order-message-dialog');
+    var form = document.getElementById('order-message-form');
+    var title = document.getElementById('order-message-dialog-title');
+    var description = dialog.querySelector('.mp-form-dialog__header p');
+    var notifyLabel = dialog.querySelector('label[for="order-message-notify"]');
+
+    window.openOrderMessage = function (el) {
+      var d = el.dataset;
+      var ready = d.orderMode === 'ready';
+      var firstName = (d.buyerName || '').split(' ')[0];
+      form.action = d.orderUrl;
+      document.getElementById('order-message-status').value = ready ? 'ready' : '';
+      title.textContent = ready ? 'Mark as Ready' : 'Send a message';
+      if (description) {
+        description.textContent = ready
+          ? 'The order moves to Ready. The customer is emailed your message.'
+          : 'The customer is emailed your message. The order status does not change.';
+      }
+      var summary = document.getElementById('order-message-summary');
+      summary.replaceChildren();
+      [d.buyerName + ' · ' + d.item, d.amount].forEach(function (text) {
+        var span = document.createElement('span');
+        span.textContent = text;
+        summary.appendChild(span);
+      });
+      document.getElementById('order-message-text').value = ready
+        ? 'Bonjour ' + firstName + ', votre commande ' + d.orderCode + ' est prête ! Vous pouvez venir la chercher.'
+        : '';
+      document.getElementById('order-message-tracking').value = '';
+      var notify = document.getElementById('order-message-notify');
+      notify.checked = true;
+      notify.disabled = !d.buyerEmail;
+      if (notifyLabel) {
+        notifyLabel.textContent = d.buyerEmail ? 'Email the customer (' + d.buyerEmail + ')' : 'No email address on this order';
+      }
+      bootstrap.Modal.getOrCreateInstance(dialog).show();
+      setTimeout(function () { document.getElementById('order-message-text').focus(); }, 300);
+    };
+
+    // An email needs a message: the browser asks for one before the form is sent.
+    var text = document.getElementById('order-message-text');
+    var notifyBox = document.getElementById('order-message-notify');
+    function syncRequired() { text.required = notifyBox.checked; }
+    notifyBox.addEventListener('change', syncRequired);
+
+    document.getElementById('order-message-confirm').addEventListener('click', function () {
+      syncRequired();
+      form.requestSubmit();
+    });
+  })();
+</script>
 {% endblock %}

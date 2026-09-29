@@ -39,6 +39,17 @@
 </tr>
 {% endif %}
 
+{% if is_donation %}
+<tr>
+  <td class="mp-pad" style="padding:0 32px;">
+    {# A donation (passport type with 0 sessions) has no QR — thank the donor instead. #}
+    {% call well('Merci') %}
+      <div style="font-size:13.5px; line-height:1.6; color:#4a5568;">Merci pour votre don&nbsp;!</div>
+    {% endcall %}
+  </td>
+</tr>
+{% endif %}
+
 {% if pass_url %}
 <tr>
   <td class="mp-pad" style="padding:0 32px 16px 32px;">
