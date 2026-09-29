@@ -1345,7 +1345,7 @@ def resend_email(log_id):
         flash(f"Email resent to {log.to_email}.", "success")
         return redirect(request.referrer or url_for("activity_log"))
 
-    if base in ("order_placed", "order_paid", "cart_order_placed", "cart_order_paid", "subscription_notification"):
+    if base in ("order_placed", "order_paid", "order_message", "cart_order_placed", "cart_order_paid", "subscription_notification"):
         flash("This type of email can't be resent yet.", "warning")
         return redirect(request.referrer or url_for("activity_log"))
 
@@ -3323,9 +3323,14 @@ def signup(activity_id):
     settings = {s.key: s.value for s in Setting.query.all()}
 
     # Check capacity for quantity-limited activities
-    from utils import get_remaining_capacity
+    from utils import get_remaining_capacity, max_passports_that_fit
     remaining_capacity = get_remaining_capacity(activity_id)
-    is_sold_out = remaining_capacity is not None and remaining_capacity <= 0
+    # Each signup form sells one passport type. Its quantity picker stops at how many of
+    # THAT type still fit (a 4-session Famille needs 4 places), and the form shows "complet"
+    # when not even one fits. A 0-session type (a donation) is never capped.
+    signup_passport_type = selected_passport_type or (passport_types[0] if len(passport_types) == 1 else None)
+    max_qty = max_passports_that_fit(remaining_capacity, signup_passport_type)
+    is_sold_out = max_qty is not None and max_qty < 1
 
     # Session scheduling: per-slot seats replace the activity-level capacity entirely
     # (get_remaining_capacity returns None for these). Slot fullness does NOT set
@@ -3339,17 +3344,9 @@ def signup(activity_id):
         available_slots = get_available_slots(activity_id)
 
     if request.method == "POST":
-        # Check capacity again on POST to prevent race conditions
-        remaining_capacity = get_remaining_capacity(activity_id)
+        # Capacity is re-checked inside create_signup_and_user, once the passport type
+        # (and so its sessions per passport) is known.
         requested_sessions = int(request.form.get("requested_sessions", 1))
-
-        if remaining_capacity is not None:
-            if remaining_capacity <= 0:
-                flash("Sorry, this activity is sold out.", "error")
-                return redirect(url_for("signup", activity_id=activity_id))
-            if requested_sessions > remaining_capacity:
-                flash(f"Only {remaining_capacity} spots remaining. Please reduce your quantity.", "error")
-                return redirect(url_for("signup", activity_id=activity_id))
 
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip()
@@ -3435,7 +3432,7 @@ def signup(activity_id):
 
     return render_template("signup_form.html", activity=activity, settings=settings,
                          passport_types=passport_types, selected_passport_type=selected_passport_type,
-                         remaining_capacity=remaining_capacity, is_sold_out=is_sold_out,
+                         remaining_capacity=remaining_capacity, is_sold_out=is_sold_out, max_qty=max_qty,
                          available_slots=available_slots, format_slot_label=format_slot_label,
                          format_local_datetime_label=format_local_datetime_label)
 
@@ -3663,7 +3660,15 @@ def shop_activity(activity_id):
     settings = {s.key: s.value for s in Setting.query.all()}
     passport_types = PassportType.query.filter_by(activity_id=activity.id, status='active').all()
     remaining_capacity = get_remaining_capacity(activity.id)
-    is_sold_out = remaining_capacity is not None and remaining_capacity <= 0
+    # How many of each type still fit (a 4-session Famille needs 4 places; None = no cap, e.g.
+    # a 0-session donation). A type that no longer fits is shown but can't be picked; the page
+    # is sold out only when nothing fits at all.
+    from utils import max_passports_that_fit
+    max_qty_by_type = {str(pt.id): max_passports_that_fit(remaining_capacity, pt) for pt in passport_types}
+    if passport_types:
+        is_sold_out = all(m is not None and m < 1 for m in max_qty_by_type.values())
+    else:
+        is_sold_out = remaining_capacity is not None and remaining_capacity <= 0
 
     available_slots = []
     if activity.uses_scheduling:
@@ -3707,17 +3712,24 @@ def shop_activity(activity_id):
                 f"{pt.sessions_included} {'séance incluse' if pt.sessions_included == 1 else 'séances incluses'}"
                 if pt.sessions_included else None
             ),
+            "disabled": max_qty_by_type[str(pt.id)] is not None and max_qty_by_type[str(pt.id)] < 1,
         }
         for pt in passport_types
     ]
+    for o in passport_type_options:
+        if o["disabled"]:
+            o["description"] = "Complet"
+    # Preselect the first passport that can still be bought, keeping the owner's order.
+    default_option = next((o for o in passport_type_options if not o["disabled"]),
+                          passport_type_options[0] if passport_type_options else None)
     passport_type_prices = {option["value"]: option["amount"] for option in passport_type_options}
     # Raw (unformatted) unit prices for the quantity-stepper's client-side total math —
     # passport_type_prices above holds ca_money()-formatted strings, which can't be
     # multiplied in JS.
     passport_type_raw_prices = {str(pt.id): float(pt.price_per_user) for pt in passport_types}
     default_unit_price = (
-        passport_type_raw_prices.get(passport_type_options[0]["value"])
-        if passport_type_options else float(activity.price_per_user)
+        passport_type_raw_prices.get(default_option["value"])
+        if default_option else float(activity.price_per_user)
     )
 
     return render_template("shop_activity.html", activity=activity, settings=settings,
@@ -3725,8 +3737,9 @@ def shop_activity(activity_id):
                             passport_type_prices=passport_type_prices,
                             passport_type_raw_prices=passport_type_raw_prices,
                             default_unit_price=default_unit_price,
+                            default_passport_type_value=default_option["value"] if default_option else None,
                             display_location=_short_location(activity),
-                            remaining_capacity=remaining_capacity,
+                            remaining_capacity=remaining_capacity, max_qty_by_type=max_qty_by_type,
                             is_sold_out=is_sold_out, available_slots=available_slots,
                             format_slot_label=format_slot_label, cart_count=_shop_cart_item_count())
 
@@ -4039,16 +4052,43 @@ def list_orders():
         color = ORDER_STATUS_COLORS.get(order.status, "secondary")
         label = ORDER_STATUS_LABELS.get(order.status, order.status)
 
+        from utils import _order_item_label
+        # "Mark as Ready…" and "Send a message…" open the message popup (orders.html);
+        # the other statuses change straight away, as before.
+        popup_data = {
+            "data-order-url": url_for("send_order_message", order_id=order.id),
+            "data-order-code": order.order_code or f"#{order.id}",
+            "data-buyer-name": order.buyer_name or "",
+            "data-buyer-email": order.buyer_email or "",
+            "data-item": _order_item_label(order),
+            "data-amount": f"${order.amount:.2f}",
+        }
         other_statuses = [s for s in ORDER_STATUS_LABELS if s != order.status]
-        actions = [
-            {"label": f"Mark as {ORDER_STATUS_LABELS[s]}",
-             "icon": f'<i class="ti {ORDER_STATUS_ICONS[s]}"></i>',
-             "attrs": {
-                "onclick": (f"document.getElementById('order-status-input-{order.id}').value='{s}';"
-                            f"document.getElementById('order-status-form-{order.id}').submit();"),
-                **({"data-variant": "destructive"} if s == "cancelled" else {}),
-            }} for s in other_statuses
-        ]
+        actions = []
+        for s in other_statuses:
+            if s == "cancelled":
+                actions.append({"label": "Send a message…", "icon": '<i class="ti ti-mail"></i>',
+                                "attrs": {**popup_data, "data-order-mode": "message",
+                                          "onclick": "openOrderMessage(this); return false;"}})
+                actions.append({"type": "separator"})
+            if s == "ready":
+                actions.append({"label": "Mark as Ready…", "icon": f'<i class="ti {ORDER_STATUS_ICONS[s]}"></i>',
+                                "attrs": {**popup_data, "data-order-mode": "ready",
+                                          "onclick": "openOrderMessage(this); return false;"}})
+                continue
+            actions.append({
+                "label": f"Mark as {ORDER_STATUS_LABELS[s]}",
+                "icon": f'<i class="ti {ORDER_STATUS_ICONS[s]}"></i>',
+                "attrs": {
+                    "onclick": (f"document.getElementById('order-status-input-{order.id}').value='{s}';"
+                                f"document.getElementById('order-status-form-{order.id}').submit();"),
+                    **({"data-variant": "destructive"} if s == "cancelled" else {}),
+                }})
+        if order.status == "cancelled":
+            actions.append({"type": "separator"})
+            actions.append({"label": "Send a message…", "icon": '<i class="ti ti-mail"></i>',
+                            "attrs": {**popup_data, "data-order-mode": "message",
+                                      "onclick": "openOrderMessage(this); return false;"}})
 
         status_cell = (
             f'<span class="badge bg-{color}-lt text-{color}-lt-fg">{escape(label)}</span>'
@@ -4064,8 +4104,9 @@ def list_orders():
         if order.cart_order_id:
             cart = db.session.get(CartOrder, order.cart_order_id)
             if cart:
-                order_cell += (f'<div class="text-muted small">Part of cart '
-                               f'<a href="{url_for("list_orders", q=cart.cart_code)}">{escape(cart.cart_code or ("#" + str(cart.id)))}</a></div>')
+                # The cart code is the reference the buyer writes in their Interac transfer.
+                order_cell += (f'<div class="text-muted small">Payment ref '
+                               f'{escape(cart.cart_code or ("#" + str(cart.id)))}</div>')
 
         rows.append({
             "id": order.id,
@@ -4086,7 +4127,7 @@ def list_orders():
             "mobile_badges": [
                 {"text": label, "variant": color},
                 {"text": f"${order.amount:.2f}", "variant": "secondary"},
-            ] + ([{"text": f"Cart {cart.cart_code}", "variant": "azure"}] if order.cart_order_id and cart else []),
+            ] + ([{"text": f"Ref {cart.cart_code}", "variant": "secondary"}] if order.cart_order_id and cart else []),
             "actions": actions,
         })
 
@@ -4110,20 +4151,78 @@ def update_order_status(order_id):
         flash("Invalid status.", "error")
         return redirect(url_for("list_orders"))
 
+    _set_order_status(order, new_status)
+    db.session.commit()
+    flash("Order updated.", "success")
+    return redirect(url_for("list_orders", status=request.form.get("return_status", "")))
+
+
+def _set_order_status(order, new_status):
     order.status = new_status
     # ready/picked_up are post-payment states, so stamp paid_at for those too — an admin can
     # move an order straight to "ready" without passing through "paid", and the financial views
     # date product revenue by paid_at.
     if new_status in ("paid", "ready", "picked_up") and not order.paid_at:
         order.paid_at = datetime.now(timezone.utc)
-
     db.session.add(AdminActionLog(
         admin_email=session.get("admin"),
         action=f"Order {order.order_code} status changed to {new_status}"
     ))
+
+
+@app.route("/admin/orders/<int:order_id>/message", methods=["POST"])
+def send_order_message(order_id):
+    """The /admin/orders popup: "Mark as Ready…" (status=ready) or "Send a message…" (no
+    status). Optionally emails the buyer the admin's message and a tracking number."""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    return_url = url_for("list_orders", status=request.form.get("return_status", ""))
+    order = db.session.get(Order, order_id)
+    if not order:
+        flash("Order not found.", "error")
+        return redirect(return_url)
+
+    new_status = request.form.get("status") or None
+    message = (request.form.get("message") or "").strip()
+    tracking_number = (request.form.get("tracking_number") or "").strip()
+    notify = request.form.get("notify") == "on"
+
+    if new_status and new_status != "ready":
+        flash("Invalid status.", "error")
+        return redirect(return_url)
+    if notify and not message:
+        flash("Write a message to email the customer.", "error")
+        return redirect(return_url)
+    if notify and not order.buyer_email:
+        flash("This order has no email address to write to.", "error")
+        return redirect(return_url)
+    if not new_status and not notify:
+        flash("Nothing to do: tick 'Email the customer' to send the message.", "warning")
+        return redirect(return_url)
+
+    if new_status:
+        _set_order_status(order, new_status)
+    if notify:
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin"),
+            action=f"Order {order.order_code}: message emailed to {order.buyer_email}"
+                   + (f" (tracking {tracking_number})" if tracking_number else "")
+        ))
     db.session.commit()
-    flash("Order updated.", "success")
-    return redirect(url_for("list_orders", status=request.form.get("return_status", "")))
+
+    if notify:
+        from utils import notify_order_message
+        notify_order_message(app, order=order, message=message, tracking_number=tracking_number,
+                             ready=new_status == "ready")
+
+    if new_status and notify:
+        flash(f"Order marked Ready and {order.buyer_email} was emailed.", "success")
+    elif new_status:
+        flash("Order marked Ready.", "success")
+    else:
+        flash(f"Message sent to {order.buyer_email}.", "success")
+    return redirect(return_url)
 
 
 def _resolve_charge_id(session_data, api_key):
@@ -4717,7 +4816,7 @@ def api_get_passport_types(activity_id):
             "id": pt.id,
             "name": pt.name,
             "price": pt.price_per_user or 0,
-            "sessions": pt.sessions_included or 1
+            "sessions": pt.sessions_included if pt.sessions_included is not None else 1
         } for pt in passport_types]
 
         return jsonify(result), 200
@@ -4801,7 +4900,8 @@ def api_create_passport_from_payment():
         sold_amt = float(amount) if amount is not None else (passport_type.price_per_user or 0)
 
         # Use provided sessions or default to passport type sessions
-        uses_remaining = int(sessions) if sessions is not None else (passport_type.sessions_included or 1)
+        uses_remaining = int(sessions) if sessions is not None else (
+            passport_type.sessions_included if passport_type.sessions_included is not None else 1)
 
         # Create Passport (paid=True since we're creating from a payment)
         passport = Passport(
@@ -10502,9 +10602,13 @@ def activity_dashboard(activity_id):
     org_logo_url = f"{_site_url}/static/uploads/{_logo_filename}" if _logo_filename else ""
     org_name = get_setting('ORG_NAME', '')
 
+    from utils import get_remaining_capacity
+    remaining_capacity = get_remaining_capacity(activity.id)
+
     return render_template(
         "activity_dashboard.html",
         activity=activity,
+        remaining_capacity=remaining_capacity,
         signups=signups,
         passes=passports,
         passport_types=passport_types,

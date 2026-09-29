@@ -645,8 +645,8 @@
      description="Amount each user pays for this passport type",
      attrs={"step": "0.01", "min": "0", "required": "required"}) }}
   {{ text_input(id="newPassportTypeSessions", label="Sessions Included", type="number", value="1",
-     description="Number of sessions included in this price",
-     attrs={"min": "1", "required": "required"}) }}
+     description="For a one-time event, 1 session = 1 person (a family of 4 = 4). Use 0 for a donation.",
+     attrs={"min": "0", "required": "required"}) }}
 {% endcall %}
 
 <!-- Edit Passport Type Dialog -->
@@ -663,8 +663,8 @@
      description="Amount each user pays for this passport type",
      attrs={"step": "0.01", "min": "0", "required": "required"}) }}
   {{ text_input(id="editPassportTypeSessions", label="Sessions Included", type="number",
-     description="Number of sessions included in this price",
-     attrs={"min": "1", "required": "required"}) }}
+     description="For a one-time event, 1 session = 1 person (a family of 4 = 4). Use 0 for a donation.",
+     attrs={"min": "0", "required": "required"}) }}
 {% endcall %}
 
 <!-- Add Income Modal -->
@@ -1281,7 +1281,7 @@
       const safeId = window.mpEditableCollection.escape(id);
       const safeName = window.mpEditableCollection.escape(passportType.name || 'New Passport Type');
       const safePrice = window.mpEditableCollection.escape(passportType.price_per_user || '0.00');
-      const safeSessions = window.mpEditableCollection.escape(passportType.sessions_included || '1');
+      const safeSessions = window.mpEditableCollection.escape(passportType.sessions_included ?? '1');
       const isExisting = id && !id.toString().startsWith('new_');
       const signupUrl = isExisting && '{{ activity.id if activity }}'
         ? `{{ url_for('signup', activity_id=activity.id, _external=True) if activity }}?passport_type_id=${id}` : '';
@@ -1360,7 +1360,7 @@
 
       document.getElementById('editPassportTypeName').value = passportType.name || '';
       document.getElementById('editPassportTypePrice').value = passportType.price_per_user || '0.00';
-      document.getElementById('editPassportTypeSessions').value = passportType.sessions_included || '1';
+      document.getElementById('editPassportTypeSessions').value = passportType.sessions_included ?? '1';
 
       editPassportTypeModal.show();
     }

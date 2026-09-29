@@ -85,7 +85,7 @@
       name="passport_type_id",
       label="Choisissez votre passeport",
       columns=1,
-      selected=passport_type_options[0].value,
+      selected=default_passport_type_value,
       options=passport_type_options,
       required=True
     ) }}
@@ -130,7 +130,7 @@
     <div class="mp-shop-total">
       <span class="text-secondary">Total</span>
       <span class="mp-shop-total__amount" id="shop-activity-total">
-        {{ passport_type_options[0].amount if passport_type_options else activity.price_per_user | ca_money }}
+        {{ passport_type_prices[default_passport_type_value] if passport_type_options else activity.price_per_user | ca_money }}
       </span>
     </div>
     {{ button("Ajouter au panier", type="submit", size="lg", attrs={"class": "w-100"}) }}
@@ -144,7 +144,19 @@
     var priceLabels = {{ passport_type_prices | tojson }};
     var rawPrices = {{ passport_type_raw_prices | tojson }};
     var basePrice = {{ default_unit_price | tojson }};
-    var maxQty = {{ remaining_capacity if remaining_capacity is not none else 10 }};
+    /* How many of each passport type still fit (null = no cap). A 4-session Famille needs
+       4 places, so its maximum is places left ÷ 4. */
+    var maxQtyByType = {{ max_qty_by_type | tojson }};
+    var defaultTypeId = {{ default_passport_type_value | tojson }};
+    var fallbackMax = {{ remaining_capacity if remaining_capacity is not none else 10 }};
+    function maxFor(typeId) {
+      if (typeId && typeId in maxQtyByType) {
+        var m = maxQtyByType[typeId];
+        return m === null ? 10 : m;
+      }
+      return fallbackMax;
+    }
+    var maxQty = maxFor(defaultTypeId);
     var currentQty = 1;
     var unitPrice = basePrice;
 
@@ -166,6 +178,12 @@
     if (form) {
       form.addEventListener('change', function (event) {
         if (event.target.name !== 'passport_type_id') return;
+        maxQty = maxFor(event.target.value);
+        if (currentQty > Math.max(1, Math.min(maxQty, 10))) {
+          currentQty = Math.max(1, Math.min(maxQty, 10));
+          if (qtyDisplay) qtyDisplay.value = currentQty;
+          if (hiddenQty) hiddenQty.value = currentQty;
+        }
         var raw = rawPrices[event.target.value];
         if (typeof raw === 'number') {
           unitPrice = raw;

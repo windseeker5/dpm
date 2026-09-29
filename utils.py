@@ -542,38 +542,67 @@ def get_remaining_capacity(activity_id):
     """
     Calculate remaining capacity for a quantity-limited activity.
 
-    Returns the number of spots/sessions still available for signup.
-    For non-limited activities, returns None.
+    Capacity is counted in sessions: a Famille passport with 4 sessions takes 4 places, a
+    donation passport with 0 sessions takes none. Sessions are counted at sale and never given
+    back, so each passport counts its sessions left PLUS its check-ins (QR scans) — scanning
+    people in at the door doesn't reopen places. Unpaid ('pending') signups hold their
+    sessions too, so a payment-first activity can't be oversold while e-transfers arrive.
 
     Args:
         activity_id: The activity ID to check capacity for
 
     Returns:
-        int or None: Remaining spots, or None if not quantity-limited
+        int or None: Remaining places, or None if not quantity-limited
     """
-    from models import Activity, Passport
-    from sqlalchemy import func
+    from models import Activity
+    from sqlalchemy import text
 
     activity = Activity.query.get(activity_id)
     if not activity or not activity.is_quantity_limited or not activity.max_sessions:
         return None
 
     # Session scheduling: per-slot capacity is the sole admission control, so this
-    # activity-level number is meaningless here — and worse, it would invert. This function
-    # subtracts SUM(uses_remaining), and scheduled activities decrement uses_remaining at
-    # BOOKING time, so every booking would make the activity look like it had one MORE spot
-    # free, silently reopening a sold-out activity. Return None and let the slots govern.
+    # activity-level number is meaningless here. Scheduled activities also hand credits
+    # back when a booking is cancelled, which this count doesn't model. Return None and
+    # let the slots govern.
     if activity.uses_scheduling:
         return None
 
-    # Sum all uses_remaining from active passports for this activity
-    # This counts total sessions sold/reserved
-    total_sold = db.session.query(func.coalesce(func.sum(Passport.uses_remaining), 0))\
-        .filter(Passport.activity_id == activity_id)\
-        .scalar()
+    sold = db.session.execute(text("""
+        SELECT COALESCE(SUM(p.uses_remaining), 0)
+               + (SELECT COUNT(*) FROM redemption r
+                    JOIN passport rp ON rp.id = r.passport_id
+                   WHERE rp.activity_id = :aid)
+          FROM passport p
+         WHERE p.activity_id = :aid
+    """), {"aid": activity_id}).scalar() or 0
 
+    held = db.session.execute(text("""
+        SELECT COALESCE(SUM(COALESCE(pt.sessions_included, 1) * COALESCE(s.requested_sessions, 1)), 0)
+          FROM signup s
+          LEFT JOIN passport_type pt ON pt.id = s.passport_type_id
+         WHERE s.activity_id = :aid AND s.status = 'pending' AND s.passport_id IS NULL
+    """), {"aid": activity_id}).scalar() or 0
+
+    total_sold = int(sold) + int(held)
     remaining = activity.max_sessions - total_sold
     return max(0, remaining)
+
+
+def max_passports_that_fit(remaining_capacity, passport_type):
+    """
+    How many passports of this type can still be bought: places left ÷ sessions per passport
+    (8 places left and a 4-session Famille = 2). None means no limit — the activity isn't
+    quantity-limited, or the type has 0 sessions (a donation takes no place).
+    """
+    if remaining_capacity is None:
+        return None
+    sessions = passport_type.sessions_included if passport_type else None
+    if sessions is None:
+        sessions = 1
+    if sessions == 0:
+        return None
+    return remaining_capacity // sessions
 
 
 # ============================================================================
@@ -1633,13 +1662,6 @@ def create_signup_and_user(*, buyer_name, buyer_email, buyer_phone, activity,
 
     requested_sessions = max(1, int(requested_sessions or 1))
 
-    remaining_capacity = get_remaining_capacity(activity.id)
-    if remaining_capacity is not None:
-        if remaining_capacity <= 0:
-            return None, f"« {activity.name} » est complet."
-        if requested_sessions > remaining_capacity:
-            return None, f"Il ne reste que {remaining_capacity} place(s) pour « {activity.name} »."
-
     chosen_slot = None
     if activity.uses_scheduling:
         # A scheduled signup books at most one session at signup time, same as the
@@ -1665,6 +1687,17 @@ def create_signup_and_user(*, buyer_name, buyer_email, buyer_phone, activity,
             return None, f"Ce type de passe n'est plus disponible pour « {activity.name} »."
     elif PassportType.query.filter_by(activity_id=activity.id, status="active").first():
         return None, f"Veuillez choisir un type de passe pour « {activity.name} »."
+
+    # Places needed = quantity × sessions per passport. A 0-session type (a donation) needs
+    # no place, so it stays on sale even when the event is full.
+    sessions_per_passport = passport_type.sessions_included if passport_type else None
+    places_needed = requested_sessions * (1 if sessions_per_passport is None else sessions_per_passport)
+    remaining_capacity = get_remaining_capacity(activity.id)
+    if remaining_capacity is not None and places_needed > remaining_capacity:
+        if remaining_capacity <= 0:
+            return None, f"« {activity.name} » est complet."
+        return None, f"Il ne reste que {remaining_capacity} place(s) pour « {activity.name} »."
+
     unit_price = passport_type.price_per_user if passport_type else 0.0
     requested_amount = round(unit_price * requested_sessions, 2)
 
@@ -4977,6 +5010,56 @@ def cart_line_detail(line, money=_fr_money):
     return " · ".join(parts)
 
 
+def _order_item_label(order):
+    """'KD Hood (XL) × 2' — how an order line is named in its emails."""
+    label = order.product_name
+    if order.size:
+        label += f" ({order.size})"
+    if order.quantity and order.quantity > 1:
+        label += f" × {order.quantity}"
+    return label
+
+
+def _shop_email_branding():
+    """Org name/address/logo for shop emails. No `activity=` is passed to send_email_async for
+    a shop Order (it isn't tied to one), so get_email_context() never sets these — without
+    them the logo silently disappears. /owner-logo with no activity_id falls back to the
+    org-level logo, same pattern as send_survey_invitation_email()."""
+    return {
+        "organization_name": get_setting("ORG_NAME", "minipass"),
+        "organization_address": get_setting("ORG_ADDRESS", ""),
+        "owner_logo_url": f"{get_setting('SITE_URL', '').rstrip('/')}/owner-logo",
+    }
+
+
+def notify_order_message(app, *, order, message, tracking_number="", ready=False):
+    """Email the buyer a message the admin wrote about their order — when marking it Ready
+    ("votre commande est prête") or from "Send a message…" on /admin/orders. One simple
+    email (email/order_message.html); the admin's text is the body, the order details follow."""
+    from utils import send_email_async
+
+    if not order.buyer_email:
+        return False
+
+    if ready:
+        subject = f"Votre commande {order.order_code} est prête"
+    else:
+        subject = f"Message concernant votre commande {order.order_code}"
+
+    context = {
+        "order_code": order.order_code,
+        "item_label": _order_item_label(order),
+        "amount": order.amount,
+        "message": message,
+        "tracking_number": tracking_number,
+        "ready": ready,
+        **_shop_email_branding(),
+    }
+    send_email_async(app, subject=subject, to_email=order.buyer_email,
+                     template_name="email/order_message.html", context=context)
+    return True
+
+
 def notify_order_event(app, *, order, event_type):
     """Send a shop order email. event_type: 'order_placed' (Interac instructions,
     sent right after checkout) or 'order_paid' (payment confirmed)."""
@@ -4985,11 +5068,7 @@ def notify_order_event(app, *, order, event_type):
     if not order.buyer_email:
         return
 
-    item_label = order.product_name
-    if order.size:
-        item_label += f" ({order.size})"
-    if order.quantity and order.quantity > 1:
-        item_label += f" × {order.quantity}"
+    item_label = _order_item_label(order)
 
     display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
     payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
@@ -5007,14 +5086,7 @@ def notify_order_event(app, *, order, event_type):
         "amount": order.amount,
         "payment_method": order.payment_method,
         "payment_email": payment_email,
-        # No `activity=` is passed to send_email_async below (a shop Order isn't tied to
-        # one), so get_email_context() never runs and owner_logo_url/organization_name are
-        # never set otherwise — the logo silently disappears. /owner-logo with no
-        # activity_id already falls back to the org-level logo, same pattern used in
-        # send_survey_invitation_email().
-        "organization_name": get_setting("ORG_NAME", "minipass"),
-        "organization_address": get_setting("ORG_ADDRESS", ""),
-        "owner_logo_url": f"{get_setting('SITE_URL', '').rstrip('/')}/owner-logo",
+        **_shop_email_branding(),
     }
 
     send_email_async(app, subject=subject, to_email=order.buyer_email,
@@ -5404,6 +5476,13 @@ def _build_pass_event_email(event_type, pass_data, activity, admin_email=None, t
     if show_qr_code and has_custom_template:
         show_qr_code = activity.email_templates[template_type].get('show_qr_code', True)
 
+    # A passport TYPE set up with 0 sessions is a donation: nothing to scan at the door, so no
+    # QR, and the email thanks the donor instead. Checked on the type, not uses_remaining, so a
+    # hockey passport that has used its last session is never mistaken for a donation.
+    is_donation = bool(pass_data.passport_type and pass_data.passport_type.sessions_included == 0)
+    if is_donation:
+        show_qr_code = False
+
     # Owner branding: the activity's own logo, then the organization's, then nothing (the
     # layout falls back to the activity name).
     _BASE_URL = get_setting('SITE_URL', '').rstrip('/')
@@ -5419,6 +5498,7 @@ def _build_pass_event_email(event_type, pass_data, activity, admin_email=None, t
         "pass_data": pass_data,
         "activity_name": activity.name if activity else "",
         "show_qr_code": show_qr_code,
+        "is_donation": is_donation,
         "owner_logo_url": _owner_logo_url,
         # hero_is_photo is computed by get_email_context() below, once, for every caller.
         # The customer has no account, so the passport page is their only durable way back in.
