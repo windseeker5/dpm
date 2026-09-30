@@ -5483,16 +5483,13 @@ def _build_pass_event_email(event_type, pass_data, activity, admin_email=None, t
     if is_donation:
         show_qr_code = False
 
-    # Owner branding: the activity's own logo, then the organization's, then nothing (the
-    # layout falls back to the activity name).
+    # Owner branding: always the permanent /owner-logo address, never the logo file itself.
+    # The org logo file gets a new random name on every upload and is deleted when the logo is
+    # removed, so a direct file link breaks every email already in an inbox. /owner-logo picks
+    # the activity's own logo, then the organization's, then a generated letter — at the moment
+    # the email is opened.
     _BASE_URL = get_setting('SITE_URL', '').rstrip('/')
-    _activity_logo_path = os.path.join("static/uploads", f"{activity.id}_owner_logo.png") if activity else None
-    if _activity_logo_path and os.path.exists(_activity_logo_path):
-        _owner_logo_url = f"{_BASE_URL}/static/uploads/{activity.id}_owner_logo.png"
-    else:
-        _org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
-        _org_logo_path = os.path.join("static/uploads", _org_logo_filename)
-        _owner_logo_url = f"{_BASE_URL}/static/uploads/{_org_logo_filename}" if os.path.exists(_org_logo_path) else None
+    _owner_logo_url = f"{_BASE_URL}/owner-logo" + (f"?activity_id={activity.id}" if activity else "")
 
     base_context = {
         "pass_data": pass_data,
