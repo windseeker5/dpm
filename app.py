@@ -10772,11 +10772,12 @@ def send_announcement(activity_id):
     logo_src = None
 
     if include_logo == "1":
-        import os
         site_url = get_setting("SITE_URL", "").rstrip("/")
-        logo_filename = get_setting("LOGO_FILENAME")
-        if logo_filename:
-            logo_src = f"{site_url}/static/uploads/{logo_filename}"
+        if get_setting("LOGO_FILENAME"):
+            # The permanent /owner-logo address, never the file itself: the logo file gets a new
+            # random name on every upload and is deleted when removed, which would break the
+            # image in every announcement already sent.
+            logo_src = f"{site_url}/owner-logo"
 
     passports_query = Passport.query.options(
         joinedload(Passport.user)
