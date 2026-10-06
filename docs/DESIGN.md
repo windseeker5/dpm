@@ -13,6 +13,9 @@ colors:
   destructive: "oklch(0.577 0.245 27.325)"
   success: "#10b981"
   warning: "#f59e0b"
+  demo-dark-background: "#0b0f19"
+  demo-dark-border: "#1f2937"
+  demo-dark-foreground: "#e5e7eb"
 typography:
   display:
     fontFamily: "Anton, sans-serif"
@@ -30,6 +33,35 @@ typography:
     fontSize: "1.25rem"
     fontWeight: 600
     lineHeight: 1.3
+  h3:
+    fontFamily: "Inter, sans-serif"
+    fontSize: "1.125rem"
+    fontWeight: 600
+    lineHeight: 1.3
+  caption:
+    fontFamily: "Inter, sans-serif"
+    fontSize: "0.75rem"
+    fontWeight: 400
+    lineHeight: 1.4
+  mono:
+    fontFamily: "SF Mono, Monaco, Cascadia Code, Roboto Mono, monospace"
+    fontSize: "0.75rem"
+  h4:
+    fontFamily: "Inter, sans-serif"
+    fontSize: "1rem"
+    fontWeight: 600
+  icon-md:
+    fontFamily: "Tabler Icons"
+    fontSize: "1.375rem"
+  icon-2xl:
+    fontFamily: "Tabler Icons"
+    fontSize: "2rem"
+  icon-lg:
+    fontFamily: "Tabler Icons"
+    fontSize: "3rem"
+  icon-xl:
+    fontFamily: "Tabler Icons"
+    fontSize: "6rem"
   h5-label:
     fontFamily: "Inter, sans-serif"
     fontSize: "0.875rem"

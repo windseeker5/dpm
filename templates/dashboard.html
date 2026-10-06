@@ -123,7 +123,7 @@
             {% for activity in activities %}
             <div class="col-md-3 mb-3">
               <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="text-decoration-none text-reset d-block h-100">
-                <div class="card activity-card h-100" style="border-radius: 12px;">
+                <div class="card activity-card h-100" style="border-radius: var(--mp-radius-md);">
                   <!-- Activity Image with share button overlay -->
                   <div class="position-relative">
                     {% if activity.image_filename %}
@@ -142,7 +142,7 @@
                     <!-- Multiple passport types: show dropdown (macros/action_menu.html) -->
                     {% call dropdown_menu(
                       id="activity-share-" ~ activity.id,
-                      trigger='<i class="ti ti-link" style="font-size: 1.15rem;"></i>',
+                      trigger='<i class="ti ti-link" style="font-size: 1.125rem;"></i>',
                       main_attrs={"style": "position: absolute; top: 0.5rem; right: 0.5rem; z-index: 10;"},
                       trigger_attrs={"class": "share-btn-circle", "style": "background: rgba(255,255,255,0.45); backdrop-filter: blur(4px); border-radius: 50%; width: 2.5rem; height: 2.5rem; display: flex; align-items: center; justify-content: center; color: #4a5a6b; cursor: pointer; border: none;", "title": "Copy signup link", "onclick": "event.preventDefault(); event.stopPropagation();"},
                       popover_attrs={"data-align": "end", "onclick": "event.preventDefault(); event.stopPropagation();"}
@@ -162,7 +162,7 @@
                          data-signup-url="{{ url_for('signup', activity_id=activity.id, _external=True) }}"
                          onclick="event.preventDefault(); event.stopPropagation(); copySignupLink(this)"
                          title="Copy signup link">
-                      <i class="ti ti-link" style="font-size: 1.15rem;"></i>
+                      <i class="ti ti-link" style="font-size: 1.125rem;"></i>
                     </div>
                     {% endif %}
                   </div>
@@ -171,7 +171,7 @@
                       <h3 class="card-title mb-0" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-wrap: balance;">{{ activity.name }}</h3>
                     </div>
                     <div class="d-flex align-items-center justify-content-between mt-auto pt-2">
-                      <div class="activity-status-text" style="font-size: .8125rem;">
+                      <div class="activity-status-text" style="font-size: .875rem;">
                         {{ activity.active_passports }} active{% if activity.pending_signups > 0 %} · <span class="status-dot status-yellow" style="margin-bottom: 1px;"></span> {{ activity.pending_signups }} pending{% endif %}
                       </div>
                       <span class="badge badge-outline badge-pill activity-workflow-chip">
@@ -187,20 +187,20 @@
             <!-- Add Activity Placeholder - Skeleton design with clickable card -->
             <div class="col-md-3 mb-3 d-none d-md-block">
               <a href="{{ url_for('create_activity') }}" style="text-decoration: none;" class="d-block h-100">
-                <div class="card h-100" style="border-radius: 12px; overflow: hidden; background-color: #f1f5f9; border: 1px dashed #d1d5db; cursor: pointer; position: relative;">
+                <div class="card h-100" style="border-radius: var(--mp-radius-md); overflow: hidden; background-color: var(--mp-muted); border: 1px dashed var(--mp-border); cursor: pointer; position: relative;">
                   <!-- Plus icon centered in ENTIRE card (not just card-body) -->
-                  <i class="ti ti-plus" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 6rem; color: #94a3b8; z-index: 1;"></i>
+                  <i class="ti ti-plus" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 6rem; color: var(--mp-muted-foreground); z-index: 1;"></i>
                   <!-- Placeholder Image -->
                   <div class="img-responsive img-responsive-21x9 card-img-top"
-                       style="background-color: #f1f5f9;">
+                       style="background-color: var(--mp-muted);">
                   </div>
-                  <div class="card-body d-flex flex-column" style="background-color: #f1f5f9;">
+                  <div class="card-body d-flex flex-column" style="background-color: var(--mp-muted); padding: 1rem;">
                     <!-- Invisible elements to maintain card-body height matching real cards -->
                     <div class="mb-2">
                       <h3 class="card-title mb-0" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; visibility: hidden;"></h3>
                     </div>
                     <div class="d-flex align-items-center justify-content-between mt-auto pt-2" style="visibility: hidden;">
-                      <div style="font-size: .8125rem;">4 active · 1 pending</div>
+                      <div style="font-size: .875rem;">4 active · 1 pending</div>
                       <span class="badge badge-outline badge-pill">Review First</span>
                     </div>
                   </div>
@@ -213,11 +213,11 @@
 
         <!-- Mobile Layout -->
         <div class="d-md-none">
-          <div class="d-flex overflow-auto pb-2" id="mobileActivitiesScroll" style="scroll-snap-type: x mandatory;">
+          <div class="d-flex pb-2" id="mobileActivitiesScroll">
             {% for activity in activities %}
             <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
               <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="text-decoration-none text-reset d-block h-100">
-                <div class="card activity-card h-100" style="border-radius: 12px;">
+                <div class="card activity-card h-100" style="border-radius: var(--mp-radius-md);">
                   <!-- Activity Image with share button overlay -->
                   <div class="position-relative">
                     {% if activity.image_filename %}
@@ -236,7 +236,7 @@
                     <!-- Multiple passport types: show dropdown (macros/action_menu.html) -->
                     {% call dropdown_menu(
                       id="activity-share-" ~ activity.id,
-                      trigger='<i class="ti ti-link" style="font-size: 1.15rem;"></i>',
+                      trigger='<i class="ti ti-link" style="font-size: 1.125rem;"></i>',
                       main_attrs={"style": "position: absolute; top: 0.5rem; right: 0.5rem; z-index: 10;"},
                       trigger_attrs={"class": "share-btn-circle", "style": "background: rgba(255,255,255,0.45); backdrop-filter: blur(4px); border-radius: 50%; width: 2.5rem; height: 2.5rem; display: flex; align-items: center; justify-content: center; color: #4a5a6b; cursor: pointer; border: none;", "title": "Copy signup link", "onclick": "event.preventDefault(); event.stopPropagation();"},
                       popover_attrs={"data-align": "end", "onclick": "event.preventDefault(); event.stopPropagation();"}
@@ -256,7 +256,7 @@
                          data-signup-url="{{ url_for('signup', activity_id=activity.id, _external=True) }}"
                          onclick="event.preventDefault(); event.stopPropagation(); copySignupLink(this)"
                          title="Copy signup link">
-                      <i class="ti ti-link" style="font-size: 1.15rem;"></i>
+                      <i class="ti ti-link" style="font-size: 1.125rem;"></i>
                     </div>
                     {% endif %}
                   </div>
@@ -265,7 +265,7 @@
                       <h3 class="card-title mb-0" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-wrap: balance;">{{ activity.name }}</h3>
                     </div>
                     <div class="d-flex align-items-center justify-content-between mt-auto pt-2">
-                      <div class="activity-status-text" style="font-size: .8125rem;">
+                      <div class="activity-status-text" style="font-size: .875rem;">
                         {{ activity.active_passports }} active{% if activity.pending_signups > 0 %} · <span class="status-dot status-yellow" style="margin-bottom: 1px;"></span> {{ activity.pending_signups }} pending{% endif %}
                       </div>
                       <span class="badge badge-outline badge-pill activity-workflow-chip">
@@ -281,20 +281,20 @@
             <!-- Mobile placeholder - matches desktop: only shown when there's room for more -->
             <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
               <a href="{{ url_for('create_activity') }}" style="text-decoration: none;" class="d-block h-100">
-                <div class="card h-100" style="border-radius: 12px; overflow: hidden; background-color: #f1f5f9; border: 1px dashed #d1d5db; cursor: pointer; position: relative;">
+                <div class="card h-100" style="border-radius: var(--mp-radius-md); overflow: hidden; background-color: var(--mp-muted); border: 1px dashed var(--mp-border); cursor: pointer; position: relative;">
                   <!-- Plus icon centered in ENTIRE card (not just card-body) -->
-                  <i class="ti ti-plus" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 6rem; color: #94a3b8; z-index: 1;"></i>
+                  <i class="ti ti-plus" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 6rem; color: var(--mp-muted-foreground); z-index: 1;"></i>
                   <!-- Placeholder Image -->
                   <div class="img-responsive img-responsive-21x9 card-img-top"
-                       style="background-color: #f1f5f9;">
+                       style="background-color: var(--mp-muted);">
                   </div>
-                  <div class="card-body pt-3 pb-3 d-flex flex-column" style="background-color: #f1f5f9;">
+                  <div class="card-body pt-3 pb-3 d-flex flex-column px-3" style="background-color: var(--mp-muted);">
                     <!-- Invisible elements to maintain card-body height matching real cards -->
                     <div class="mb-2">
                       <h3 class="card-title mb-0" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; visibility: hidden;"></h3>
                     </div>
                     <div class="d-flex align-items-center justify-content-between mt-auto pt-2" style="visibility: hidden;">
-                      <div style="font-size: .8125rem;">4 active · 1 pending</div>
+                      <div style="font-size: .875rem;">4 active · 1 pending</div>
                       <span class="badge badge-outline badge-pill">Review First</span>
                     </div>
                   </div>
@@ -368,7 +368,7 @@
           </div>
           {% else %}
           <div class="text-center py-5">
-            <div class="mb-3"><i class="ti ti-search" style="font-size: 48px; color: #6c757d;"></i></div>
+            <div class="mb-3"><i class="ti ti-search" style="font-size: 48px; color: var(--mp-muted-foreground);"></i></div>
             <h3 class="mb-2">No history matches your filters</h3>
             <p class="text-muted mb-3">Try adjusting your search or filter selection.</p>
             {{ button("Clear all filters", variant="link", href=url_for('dashboard')) }}
@@ -387,6 +387,17 @@
 {% block scripts %}
 {% from 'macros/buttons.html' import button %}
 <style>
+/* Mobile activities carousel — swipe sideways only, no visible scrollbars (same as the KPI carousel) */
+#mobileActivitiesScroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+#mobileActivitiesScroll::-webkit-scrollbar {
+  display: none;
+}
 /* Mobile KPI Styles (DEAD SIMPLE) */
 @media (max-width: 767.98px) {
   .mobile-kpi-container {
@@ -429,7 +440,7 @@
   }
   
   .mobile-dot.active {
-    background: #495057;
+    background: var(--mp-foreground);
   }
 }
 </style>
@@ -642,7 +653,7 @@ function copySignupLink(el) {
       el.style.background = 'rgba(255,255,255,0.45)';
       el.style.borderColor = 'transparent';
       el.style.color = '#4a5a6b';
-      el.innerHTML = '<i class="ti ti-link" style="font-size: 1.15rem;"></i>';
+      el.innerHTML = '<i class="ti ti-link" style="font-size: 1.125rem;"></i>';
     }, 2000);
   });
 }
