@@ -136,6 +136,11 @@
     root.refresh();
     state.trigger.setAttribute('aria-expanded', 'true');
     state.popover.setAttribute('aria-hidden', 'false');
+    // On phones the fixed bottom nav can cover the lower part of a menu —
+    // bring it fully into view (scroll-margin on the popover clears the nav).
+    if (window.matchMedia('(max-width: 767.98px)').matches) {
+      requestAnimationFrame(() => state.popover.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+    }
     if (state.items.length > 0 && initialSelection) {
       setActiveItem(state, initialSelection === 'last' ? state.items.length - 1 : 0);
     }

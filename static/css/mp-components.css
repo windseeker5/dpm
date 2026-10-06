@@ -368,6 +368,9 @@
   .mp-action-menu [role="menuitem"] {
     min-height: 44px;
   }
+  .mp-action-menu > [data-popover] {
+    scroll-margin-bottom: 120px; /* clear the fixed bottom nav */
+  }
   .mp-action-menu > button {
     min-width: 44px;
     min-height: 44px;
@@ -440,7 +443,7 @@
   font-size: var(--minipass-text-sm, 0.875rem);
   font-weight: var(--minipass-font-normal, 400);
   line-height: 1.5;
-  color: var(--minipass-gray-600, #4b5563);
+  color: var(--minipass-gray-600);
 }
 
 /*
@@ -686,7 +689,7 @@
   font-weight: var(--minipass-font-normal, 400);
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: var(--minipass-gray-600, #4b5563);
+  color: var(--minipass-gray-600);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -721,11 +724,11 @@
 }
 
 .mp-kpi-card__trend.is-down {
-  color: var(--minipass-danger, #ef4444);
+  color: var(--minipass-danger);
 }
 
 .mp-kpi-card__trend.is-flat {
-  color: var(--minipass-gray-600, #4b5563);
+  color: var(--minipass-gray-600);
 }
 
 /* Period dropdown trigger — small text button, not a .mp-btn variant (no
@@ -740,7 +743,7 @@
   padding: 0.125rem 0.25rem;
   border-radius: var(--mp-radius-sm);
   font-size: var(--minipass-text-xs, 0.75rem);
-  color: var(--minipass-gray-600, #4b5563);
+  color: var(--minipass-gray-600);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -812,7 +815,7 @@
      from its border, since its own shadow is nearly invisible
      (--tblr-box-shadow-card is 4% opacity). Match that, not a heavier
      shadow. */
-  border: 1px solid var(--minipass-gray-300, #d1d5db);
+  border: 1px solid var(--minipass-gray-300);
   border-radius: var(--mp-radius-md);
   box-shadow: var(--minipass-shadow-default, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1));
   text-align: center;
@@ -823,7 +826,7 @@
   font-weight: var(--minipass-font-normal, 400);
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: var(--minipass-gray-600, #4b5563);
+  color: var(--minipass-gray-600);
 }
 
 .mp-kpi-card-mobile__value {
@@ -835,7 +838,7 @@
 
 .mp-kpi-card-mobile__period {
   font-size: var(--minipass-text-xs, 0.75rem);
-  color: var(--minipass-gray-600, #4b5563);
+  color: var(--minipass-gray-600);
 }
 
 /* Settings shell — shared horizontal navigation and calm form surface. */
@@ -1012,20 +1015,20 @@
 .mp-avatar-initials[data-size="sm"] {
   width: 2rem;
   height: 2rem;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
 }
 
 .mp-avatar-initials:not([data-size]),
 .mp-avatar-initials[data-size="md"] {
   width: 2.5rem;
   height: 2.5rem;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 .mp-avatar-initials[data-size="lg"] {
   width: 3rem;
   height: 3rem;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
 }
 
 /* avatar_photo() (macros/avatar.html) — same size steps as the initials
@@ -1154,7 +1157,7 @@
   color: var(--mp-foreground);
   opacity: 1;
   pointer-events: auto;
-  transition: width 150ms ease, opacity 150ms ease, padding 150ms ease;
+  transition: opacity 150ms ease;
 }
 
 .mp-table-toolbar__search-input:focus-visible {
@@ -1255,7 +1258,7 @@
   lines, footer count), the .table-hover row tint, and the
   .card-footer/pagination background. All four turned out to be genuine
   Tabler defaults, each pulling from a *different* Tabler CSS variable —
-  .table thead th hardcodes color:var(--tblr-secondary) (#6c7a91) directly
+  .table thead th hardcodes the Tabler secondary colour directly
   (a different token from the one below, despite the near-identical name),
   .text-muted uses --tblr-secondary-color (an rgba(24,36,51,.75) overlay),
   .table-hover uses --tblr-table-hover-bg (rgba(emphasis-color,.075), a
@@ -1395,8 +1398,8 @@
 
 .mp-table-mobile-card__secondary {
   margin-top: 0.125rem;
-  font-size: 0.8125rem;
-  color: var(--minipass-gray-600, #4b5563);
+  font-size: 0.875rem;
+  color: var(--minipass-gray-600);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1411,7 +1414,7 @@
 
 .mp-table-mobile-card__detail {
   margin-top: 0.5rem;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--mp-foreground);
   white-space: normal;
 }
@@ -1643,7 +1646,6 @@ a.mp-page-btn:hover {
   height: 100%;
   border-radius: inherit;
   background: var(--mp-brand-primary);
-  transition: width 300ms ease;
 }
 
 /*
@@ -1723,7 +1725,7 @@ a.mp-page-btn:hover {
   border-radius: var(--mp-radius-sm);
   background: var(--mp-muted);
   color: var(--mp-muted-foreground);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: SF Mono, Monaco, Cascadia Code, Roboto Mono, monospace;
   font-size: 0.75rem;
   font-weight: 500;
 }
@@ -1803,7 +1805,7 @@ a.mp-page-btn:hover {
 .mp-field__description {
   margin: 0;
   color: var(--mp-muted-foreground);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 /*
@@ -2039,7 +2041,7 @@ a.mp-page-btn:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.25rem;
 }
 
@@ -2101,7 +2103,7 @@ a.mp-page-btn:hover {
   align-items: center;
   gap: 0.1875rem;
   color: var(--mp-muted-foreground);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.25rem;
   white-space: nowrap;
 }
@@ -2156,7 +2158,7 @@ a.mp-page-btn:hover {
   height: 1rem;
   margin-top: 0.125rem;
   border: 1px solid var(--mp-border);
-  border-radius: 4px;
+  border-radius: var(--mp-radius-sm);
   background: var(--mp-background);
   cursor: pointer;
 }
@@ -2373,7 +2375,7 @@ a.mp-page-btn:hover {
 .mp-choice-card__description,
 .mp-choice-card__meta {
   color: var(--mp-muted-foreground);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.35;
 }
 
@@ -2393,7 +2395,7 @@ a.mp-page-btn:hover {
 .mp-choice-cards__error,
 .mp-choice-cards__empty {
   margin: 0.625rem 0 0;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.35;
 }
 
@@ -2686,9 +2688,12 @@ a.mp-page-btn:hover {
 }
 
 .mp-theme-demo[data-theme="dark"] {
-  background: #0b0f19;
-  border-color: #1f2937;
-  color: #e5e7eb;
+  --mp-demo-dark-background: #0b0f19;
+  --mp-demo-dark-border: #1f2937;
+  --mp-demo-dark-foreground: #e5e7eb;
+  background: var(--mp-demo-dark-background);
+  border-color: var(--mp-demo-dark-border);
+  color: var(--mp-demo-dark-foreground);
 }
 
 /*
@@ -2705,7 +2710,7 @@ a.mp-page-btn:hover {
   border: 1px solid var(--mp-border);
   border-radius: var(--mp-radius-md);
   background: var(--mp-background);
-  box-shadow: 0 18px 48px rgb(15 23 42 / 0.2);
+  box-shadow: 0 18px 48px color-mix(in oklab, var(--mp-foreground) 20%, transparent);
 }
 
 .mp-form-dialog__content {
@@ -2783,7 +2788,7 @@ a.mp-page-btn:hover {
 }
 
 .mp-collapsible-section__title {
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 
@@ -2791,7 +2796,7 @@ a.mp-page-btn:hover {
   display: block;
   margin-top: 0.125rem;
   color: var(--mp-muted-foreground);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 .mp-collapsible-section__icon {
@@ -2822,7 +2827,7 @@ a.mp-page-btn:hover {
     overflow: hidden;
     max-height: 0;
     opacity: 0;
-    transition: max-height 220ms ease, opacity 160ms ease, content-visibility 220ms allow-discrete;
+    transition: opacity 160ms ease, content-visibility 220ms allow-discrete;
   }
 
   .mp-collapsible-section[open]::details-content {
@@ -2886,7 +2891,7 @@ a.mp-page-btn:hover {
 
 .mp-editable-collection__empty p {
   margin-top: 0.125rem;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 .mp-editable-collection__qr {
@@ -2922,7 +2927,7 @@ a.mp-page-btn:hover {
   border-radius: var(--mp-radius-md);
   background: color-mix(in oklch, var(--mp-muted) 45%, var(--mp-background));
   color: var(--mp-muted-foreground);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 .mp-location-status[data-tone="error"],
@@ -3011,7 +3016,7 @@ a.mp-page-btn:hover {
 .mp-form-subsection__heading p {
   margin-top: 0.125rem;
   color: var(--mp-muted-foreground);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 .mp-subtle-disclosure {
@@ -3344,7 +3349,7 @@ a.mp-page-btn:hover {
 
 .mp-scanner-live-badge #rec-label {
   color: #fff;
-  font-size: 10px;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.05em;
 }
@@ -3437,7 +3442,7 @@ a.mp-page-btn:hover {
 
 .mp-code-block__label {
   color: var(--mp-muted-foreground);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -3460,7 +3465,7 @@ a.mp-page-btn:hover {
 .mp-code-block__hint {
   margin: 0;
   color: var(--mp-muted-foreground);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.4;
 }
 
@@ -3498,7 +3503,7 @@ a.mp-page-btn:hover {
 .mp-pair-list dd {
   margin: 0;
   min-width: 0;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 600;
   text-align: right;
   overflow-wrap: anywhere;
@@ -3507,4 +3512,44 @@ a.mp-page-btn:hover {
 .mp-pair-list dd.mp-pair-list__amount {
   font-size: 1.125rem;
   font-variant-numeric: tabular-nums;
+}
+
+/*
+  Touch targets — on phones every tappable control is at least 44x44px
+  (WCAG 2.5.5 / Apple HIG). Desktop sizes are untouched. Buttons and tabs
+  grow in height; icon-only controls grow in both directions.
+*/
+@media (max-width: 767.98px) {
+  .mp-btn:not([data-size]),
+  .mp-btn[data-size="default"],
+  .mp-btn[data-size="sm"],
+  .mp-btn[data-size="lg"] {
+    min-height: 44px;
+  }
+  .mp-btn[data-size="icon"] {
+    width: 44px;
+    height: 44px;
+  }
+  .mp-filter-btn {
+    height: 44px;
+  }
+  .mp-table-toolbar__search-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .mp-btn[data-size="icon-sm"] {
+    width: 44px;
+    height: 44px;
+  }
+  .mp-action-menu [role="menuitem"] {
+    min-height: 44px;
+  }
+  .share-btn-circle {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .header-menu-toggle {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
