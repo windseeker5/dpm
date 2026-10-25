@@ -2163,7 +2163,12 @@ def list_signups():
         if signup.passport_type_id:
             passport_type = next((pt for pt in passport_types if pt.id == signup.passport_type_id), None)
             if passport_type:
-                qty_cell = str(signup.requested_sessions or passport_type.sessions_included)
+                # Places held, same math as get_remaining_capacity: a Famille (4 sessions) ordered
+                # once holds 4 places. Donations (0 sessions) hold none, so they keep the dash.
+                sessions = passport_type.sessions_included if passport_type.sessions_included is not None else 1
+                people = (signup.requested_sessions or 1) * sessions
+                if people:
+                    qty_cell = str(people)
 
         mobile_badges = [status_badge]
         if signup.requested_amount:
