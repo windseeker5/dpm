@@ -4933,6 +4933,88 @@ def task61_clear_pre_quebec_rewrite_email_copy(cursor):
 
 
 # ============================================================================
+# TASK 62: Add Any Column models.py Has That the Database Lacks
+# ============================================================================
+def _sqlite_default_literal(column, dialect):
+    """SQL literal for a column's plain default, or None if it has none (or a callable one)."""
+    if column.server_default is not None:
+        value = column.server_default.arg
+        if not isinstance(value, str):
+            return str(value.compile(dialect=dialect))
+    elif column.default is None or not column.default.is_scalar:
+        return None
+    else:
+        value = column.default.arg
+    if isinstance(value, bool):
+        return '1' if value else '0'
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        return "'" + value.replace("'", "''") + "'"
+    return None
+
+
+def task62_add_columns_missing_from_models(cursor):
+    """Compare every table and column in models.py with the database and add what is missing.
+
+    The tasks above only add the columns someone remembered to list. survey_template.is_default
+    (added 2026-09) was never listed, so databases older than that kept the new code without the
+    column and every login crashed. This task closes that gap for any future column: a missing
+    column is added when that is safe (nullable, or a plain default to fill existing rows).
+    A missing table, or a NOT NULL column with no plain default, stops the upgrade instead of
+    letting the app start against a database it cannot use.
+    """
+    log("🧩", "TASK 62: Checking the database against models.py", Colors.BLUE)
+
+    try:
+        from sqlalchemy.dialects import sqlite as sqlite_dialect
+        import models
+    except ImportError as e:
+        raise RuntimeError(f"Cannot load models.py to check the schema ({e}). "
+                           "Install flask_sqlalchemy for this python3, then run the upgrade again.")
+
+    dialect = sqlite_dialect.dialect()
+    added = 0
+    problems = []
+
+    for table in models.db.metadata.sorted_tables:
+        if not check_table_exists(cursor, table.name):
+            problems.append(f"table '{table.name}' is missing")
+            continue
+
+        for column in table.columns:
+            if check_column_exists(cursor, table.name, column.name):
+                continue
+
+            col_type = column.type.compile(dialect=dialect)
+            default = _sqlite_default_literal(column, dialect)
+
+            if default is not None:
+                not_null = "" if column.nullable else " NOT NULL"
+                sql = f"ALTER TABLE {table.name} ADD COLUMN {column.name} {col_type}{not_null} DEFAULT {default}"
+            elif column.nullable:
+                sql = f"ALTER TABLE {table.name} ADD COLUMN {column.name} {col_type}"
+            else:
+                problems.append(f"'{table.name}.{column.name}' is NOT NULL with no plain default; add it with its own task")
+                continue
+
+            cursor.execute(sql)
+            added += 1
+            log("✅", f"  Added missing column '{table.name}.{column.name}' ({col_type}, default {default or 'NULL'})", Colors.GREEN)
+
+    if problems:
+        for problem in problems:
+            log("❌", f"  {problem}", Colors.RED)
+        raise RuntimeError(f"{len(problems)} schema gap(s) between models.py and the database")
+
+    if added:
+        log("✅", f"  {added} missing column(s) added; database now matches models.py", Colors.GREEN)
+    else:
+        log("⏭️ ", "  Database already matches models.py", Colors.YELLOW)
+    return True
+
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -5012,6 +5094,8 @@ def main():
         ("Repair Dangling _old Foreign Keys", task59_repair_dangling_fk_references),
         ("Lookup and Date-Range Indexes", task60_add_lookup_and_date_indexes),
         ("Email Copy: Quebec-French Rewrite", task61_clear_pre_quebec_rewrite_email_copy),
+        # After every hand-written task, so it only catches columns none of them added.
+        ("Columns Missing From models.py", task62_add_columns_missing_from_models),
         # Runs last so it verifies the final schema; earlier it checked for columns
         # that later tasks had not created yet.
         ("Verification", task6_verify_schema),
