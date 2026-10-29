@@ -2707,9 +2707,9 @@ def find_carts_for_payment(name, amount, reply_to_email=None, transfer_message=N
       1. cart code (MP-CART-xxxxxxx) in the transfer message, on a cart of exactly this amount
       2. payer name close to the buyer name, on a cart of exactly this amount
       3. payer email (Reply-To) equals the buyer email, on exactly one cart of this amount —
-         a relative paying for the order (Stéphane pays Charlotte Carignan's)
+         a relative paying for the order (a parent pays their teen's order)
       4. payer email's open carts ADD UP to the amount — a family that checked out once per
-         person and paid once (Janis Fortin: $100 + $40 + $40 = $180)
+         person and paid once ($100 + $40 + $40 ordered, one $180 e-transfer)
 
     Returns (carts, name_score, rule); carts is [] when nothing fits.
     """
