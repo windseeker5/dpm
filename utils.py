@@ -2692,6 +2692,89 @@ def cleanup_duplicate_payment_logs_auto():
         db.session.rollback()
 
 
+def _cart_has_unpaid_lines(cart):
+    """True while a cart still has something to pay for. Carts whose signups an admin
+    approved by hand stay 'awaiting_payment' forever, so they must not soak up a payment."""
+    return (any(not s.paid for s in cart.signups)
+            or any(o.status != "paid" for o in cart.orders))
+
+
+def find_carts_for_payment(name, amount, reply_to_email=None, transfer_message=None,
+                           email_body=None, threshold=85):
+    """Pick the awaiting-payment Interac cart(s) one e-transfer pays for.
+
+    Tried in order, first hit wins:
+      1. cart code (MP-CART-xxxxxxx) in the transfer message, on a cart of exactly this amount
+      2. payer name close to the buyer name, on a cart of exactly this amount
+      3. payer email (Reply-To) equals the buyer email, on exactly one cart of this amount —
+         a relative paying for the order (a parent pays their teen's order)
+      4. payer email's open carts ADD UP to the amount — a family that checked out once per
+         person and paid once ($100 + $40 + $40 ordered, one $180 e-transfer)
+
+    Returns (carts, name_score, rule); carts is [] when nothing fits.
+    """
+    from models import CartOrder
+    from rapidfuzz import fuzz
+    import unicodedata
+
+    def _norm(text):
+        if not text:
+            return ""
+        decomposed = unicodedata.normalize('NFD', text)
+        return ''.join(c for c in decomposed if unicodedata.category(c) != 'Mn').lower().strip()
+
+    amount = float(amount)
+    pending_carts = CartOrder.query.filter_by(
+        status="awaiting_payment", payment_method="interac"
+    ).filter(CartOrder.total_amount == amount).all()
+
+    if pending_carts:
+        cart_code_match = None
+        for pattern_src in (transfer_message, email_body):
+            if pattern_src:
+                code_search = re.search(r'MP-CART-(\d{7})', pattern_src)
+                if code_search:
+                    cart_code_match = f"MP-CART-{code_search.group(1)}"
+                    break
+        if cart_code_match:
+            cart = next((c for c in pending_carts if c.cart_code == cart_code_match), None)
+            if cart:
+                return [cart], 100, "code"
+
+        cart_scores = sorted(
+            ((c, fuzz.ratio(_norm(name), _norm(c.buyer_name))) for c in pending_carts),
+            key=lambda pair: pair[1], reverse=True
+        )
+        if cart_scores and cart_scores[0][1] >= threshold and (
+            len(cart_scores) == 1 or (cart_scores[0][1] - cart_scores[1][1]) >= 5
+        ):
+            return [cart_scores[0][0]], cart_scores[0][1], "name"
+
+    payer_email = (reply_to_email or "").strip().lower()
+    if not payer_email:
+        return [], 0, None
+
+    def _same_email(cart):
+        return (cart.buyer_email or "").strip().lower() == payer_email
+
+    def _score(carts):
+        return max(fuzz.ratio(_norm(name), _norm(c.buyer_name)) for c in carts)
+
+    by_email = [c for c in pending_carts if _same_email(c) and _cart_has_unpaid_lines(c)]
+    if len(by_email) == 1:
+        return by_email, _score(by_email), "email"
+    if len(by_email) > 1:
+        return [], 0, None  # same person, several carts of this exact amount: let an admin pick
+
+    open_carts = [c for c in CartOrder.query.filter_by(
+        status="awaiting_payment", payment_method="interac").all()
+        if _same_email(c) and _cart_has_unpaid_lines(c)]
+    if len(open_carts) > 1 and round(sum(c.total_amount for c in open_carts), 2) == round(amount, 2):
+        return open_carts, _score(open_carts), "sum"
+
+    return [], 0, None
+
+
 def match_gmail_payments_to_passes():
     """Exclusive-lock wrapper around _match_gmail_payments_to_passes_impl().
 
@@ -2934,53 +3017,19 @@ def _match_gmail_payments_to_passes_impl():
             from models import CartOrder
             from utils import auto_create_passport_from_signup, finalize_cart_order_if_complete
 
-            pending_carts = CartOrder.query.filter_by(
-                status="awaiting_payment", payment_method="interac"
-            ).filter(CartOrder.total_amount == payment_amount).all()
+            matched_carts, cart_best_score, cart_rule = find_carts_for_payment(
+                name, payment_amount, reply_to_email=reply_to_email,
+                transfer_message=transfer_message, email_body=email_body, threshold=threshold,
+            )
 
-            if pending_carts:
-                # NOTE: not using the module-level normalize_name() here — this same
-                # function later has a `def normalize_name(...)` of its own further down
-                # this loop body, which makes the name function-local for this whole
-                # function regardless of textual order, so calling it up here (before that
-                # def has executed on this iteration) would raise UnboundLocalError.
-                def _norm(text):
-                    if not text:
-                        return ""
-                    decomposed = unicodedata.normalize('NFD', text)
-                    return ''.join(c for c in decomposed if unicodedata.category(c) != 'Mn').lower().strip()
-
-                matched_cart = None
-                cart_code_match = None
-                for pattern_src in (transfer_message, email_body):
-                    if pattern_src:
-                        code_search = re.search(r'MP-CART-(\d{7})', pattern_src)
-                        if code_search:
-                            cart_code_match = f"MP-CART-{code_search.group(1)}"
-                            break
-
-                if cart_code_match:
-                    matched_cart = next((c for c in pending_carts if c.cart_code == cart_code_match), None)
-
-                cart_best_score = 100
-                if not matched_cart:
-                    cart_scores = sorted(
-                        ((c, fuzz.ratio(_norm(name), _norm(c.buyer_name)))
-                         for c in pending_carts),
-                        key=lambda pair: pair[1], reverse=True
-                    )
-                    if cart_scores and cart_scores[0][1] >= threshold and (
-                        len(cart_scores) == 1 or (cart_scores[0][1] - cart_scores[1][1]) >= 5
-                    ):
-                        matched_cart, cart_best_score = cart_scores[0]
-
-                if matched_cart:
-                    now_paid_at = datetime.now(timezone.utc)
+            if matched_carts:
+                now_paid_at = datetime.now(timezone.utc)
+                created_passports = []
+                for matched_cart in matched_carts:
                     for order in matched_cart.orders:
                         order.status = "paid"
                         order.paid_at = now_paid_at
 
-                    created_passports = []
                     for signup_record in matched_cart.signups:
                         if signup_record.paid:
                             continue
@@ -2990,51 +3039,59 @@ def _match_gmail_payments_to_passes_impl():
                         if new_passport:
                             created_passports.append((signup_record, new_passport))
 
-                    db.session.add(EbankPayment(
-                        from_email=from_email,
-                        reply_to_email=reply_to_email,
-                        subject=subject,
-                        bank_info_name=name,
-                        bank_info_amt=amt,
-                        matched_cart_order_id=matched_cart.id,
-                        matched_name=matched_cart.buyer_name,
-                        matched_amt=matched_cart.total_amount,
-                        name_score=int(cart_best_score),
-                        result="MATCHED",
-                        mark_as_paid=True,
-                        note=(f"Matched to cart order {matched_cart.cart_code} "
-                              f"({len(matched_cart.orders)} product line(s), "
-                              f"{len(matched_cart.signups)} passport line(s))."),
-                        email_received_date=email_received_date,
-                        email_uid=uid,
-                    ))
-                    db.session.commit()
+                cart_codes = ", ".join(c.cart_code for c in matched_carts)
+                product_lines = sum(len(c.orders) for c in matched_carts)
+                passport_lines = sum(len(c.signups) for c in matched_carts)
+                how = {"email": " by payer email",
+                       "sum": " by payer email (their orders add up to this payment)"}.get(cart_rule, "")
+                order_word = "cart order" if len(matched_carts) == 1 else f"{len(matched_carts)} cart orders"
+                buyer_names = ", ".join(dict.fromkeys(c.buyer_name for c in matched_carts))
 
-                    if uid:
-                        try:
-                            mail.uid("COPY", uid, processed_folder)
-                            mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
-                        except Exception as move_err:
-                            print(f"   Could not move matched cart email: {move_err}")
+                db.session.add(EbankPayment(
+                    from_email=from_email,
+                    reply_to_email=reply_to_email,
+                    subject=subject,
+                    bank_info_name=name,
+                    bank_info_amt=amt,
+                    matched_cart_order_id=matched_carts[0].id,
+                    matched_name=buyer_names,
+                    matched_amt=sum(c.total_amount for c in matched_carts),
+                    name_score=int(cart_best_score),
+                    result="MATCHED",
+                    mark_as_paid=True,
+                    note=(f"Matched to {order_word} {cart_codes}{how} "
+                          f"({product_lines} product line(s), {passport_lines} passport line(s))."),
+                    email_received_date=email_received_date,
+                    email_uid=uid,
+                ))
+                db.session.commit()
 
-                    for signup_record, new_passport in created_passports:
-                        try:
-                            notify_pass_event(
-                                app=current_app._get_current_object(),
-                                event_type="payment_received",
-                                pass_data=new_passport,
-                                activity=new_passport.activity,
-                                admin_email="minipass-bot@system",
-                                timestamp=datetime.now(timezone.utc),
-                            )
-                        except Exception as e:
-                            print(f"   Passport email failed for signup {signup_record.id}: {e}")
+                if uid:
+                    try:
+                        mail.uid("COPY", uid, processed_folder)
+                        mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
+                    except Exception as move_err:
+                        print(f"   Could not move matched cart email: {move_err}")
 
+                for signup_record, new_passport in created_passports:
+                    try:
+                        notify_pass_event(
+                            app=current_app._get_current_object(),
+                            event_type="payment_received",
+                            pass_data=new_passport,
+                            activity=new_passport.activity,
+                            admin_email="minipass-bot@system",
+                            timestamp=datetime.now(timezone.utc),
+                        )
+                    except Exception as e:
+                        print(f"   Passport email failed for signup {signup_record.id}: {e}")
+
+                for matched_cart in matched_carts:
                     finalize_cart_order_if_complete(current_app._get_current_object(), matched_cart)
 
-                    results["matched"] += 1
-                    print(f"   ✅ Matched cart order {matched_cart.cart_code} for {matched_cart.buyer_name} (${amt})")
-                    continue
+                results["matched"] += 1
+                print(f"   ✅ Matched {order_word} {cart_codes} for {buyer_names} (${amt})")
+                continue
 
             # Unpaid passports for exactly this amount, filtered in SQL with their user loaded —
             # this used to load every unpaid passport for every email, then look up each user.

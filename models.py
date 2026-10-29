@@ -628,10 +628,6 @@ class AnnouncementLog(db.Model):
     recipient_count = db.Column(db.Integer, default=0)
 
 
-# ✅ Place index right after the model class
-db.Index('ix_signup_status', Signup.status)
-
-
 # ================================
 # 📋 SURVEY SYSTEM MODELS
 # ================================
