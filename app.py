@@ -2194,6 +2194,9 @@ def list_signups():
                     "data-user-name": user_name, "data-approve-url": approve_url,
                     "data-workflow-type": "standard",
                 }})
+            change_qty = change_quantity_action(signup)
+            if change_qty:
+                actions.append(change_qty)
             actions.append({"type": "separator"})
         delete_name = escape(signup.user.email or signup.user.name or 'Unknown user')
         actions.append({"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {
@@ -2402,6 +2405,104 @@ def resend_payment_instructions(signup_id):
     return redirect(request.referrer or url_for("list_signups"))
 
 
+def signup_quantity_editable(signup):
+    """True while an admin can still fix the quantity on a signup: nothing paid, no passport
+    made yet. Stripe signups are excluded (the checkout session already holds the old
+    amount), and so are scheduled activities (always 1 per signup, the seat is booked)."""
+    return (
+        signup.status == "pending"
+        and signup.passport_id is None
+        and not signup.paid
+        and signup.payment_method != "stripe"
+        and not (signup.activity and signup.activity.uses_scheduling)
+    )
+
+
+def signup_unit_price(signup):
+    """Price of one item on this signup, as the buyer was quoted it. Taken from the signup's
+    own amount, not the passport type, so a price edited since the signup doesn't change it."""
+    if signup.requested_amount and signup.requested_sessions:
+        return round(signup.requested_amount / signup.requested_sessions, 2)
+    return signup.passport_type.price_per_user if signup.passport_type else 0.0
+
+
+def change_quantity_action(signup):
+    """Action Menu item that opens #changeSignupQuantityModal, or None if not editable."""
+    if not signup_quantity_editable(signup):
+        return None
+    from markupsafe import escape
+    return {"label": "Change Quantity", "icon": '<i class="ti ti-pencil"></i>', "attrs": {
+        "data-bs-toggle": "modal", "data-bs-target": "#changeSignupQuantityModal",
+        "data-user-name": escape(signup.user.name if signup.user else 'this user'),
+        "data-quantity": signup.requested_sessions or 1,
+        "data-unit-price": f"{signup_unit_price(signup):.2f}",
+        "data-update-url": url_for('change_signup_quantity', signup_id=signup.id),
+    }}
+
+
+@app.route("/signup/<int:signup_id>/change-quantity", methods=["POST"])
+def change_signup_quantity(signup_id):
+    """Fix a buyer's mistake (ordered 5, wanted 4) before payment: new quantity, new amount,
+    and the cart total the Interac bot matches against follows."""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    back = request.referrer or url_for("list_signups")
+    signup = db.session.get(Signup, signup_id)
+    if not signup:
+        flash("Signup not found.", "error")
+        return redirect(back)
+    if not signup_quantity_editable(signup):
+        flash("This signup can't be changed — only unpaid signups without a passport can.", "warning")
+        return redirect(back)
+
+    new_qty = request.form.get("requested_sessions", type=int)
+    if not new_qty or new_qty < 1:
+        flash("Quantity must be at least 1.", "error")
+        return redirect(back)
+
+    old_qty = signup.requested_sessions or 1
+    if new_qty == old_qty:
+        flash("Quantity unchanged.", "info")
+        return redirect(back)
+
+    # Going up takes more places: same capacity rule as a new signup. Going down frees them.
+    if new_qty > old_qty:
+        from utils import get_remaining_capacity
+        sessions = signup.passport_type.sessions_included if signup.passport_type else None
+        extra_places = (new_qty - old_qty) * (1 if sessions is None else sessions)
+        remaining = get_remaining_capacity(signup.activity_id)
+        if remaining is not None and extra_places > remaining:
+            flash(f"Not enough room: only {remaining} place(s) left for this activity.", "error")
+            return redirect(back)
+
+    old_amount = signup.requested_amount or 0.0
+    new_amount = round(signup_unit_price(signup) * new_qty, 2)
+    signup.requested_sessions = new_qty
+    signup.requested_amount = new_amount
+
+    # The cart total is what the Interac bot matches the e-transfer against. Shift it by the
+    # difference, so other lines in the same cart (products, other passports) stay counted.
+    cart = signup.cart_order
+    if cart and cart.status == "awaiting_payment":
+        cart.total_amount = round((cart.total_amount or 0.0) + new_amount - old_amount, 2)
+
+    admin_email = session.get("admin", "unknown")
+    holder_name = signup.user.name if signup.user else "Unknown"
+    db.session.add(AdminActionLog(
+        admin_email=admin_email,
+        action=(
+            f"Changed signup {signup.signup_code or '#' + str(signup.id)} for {holder_name}:"
+            f" quantity {old_qty} → {new_qty}, amount ${old_amount:.2f} → ${new_amount:.2f}"
+            f" by {admin_email}."
+        )
+    ))
+    db.session.commit()
+
+    flash(f"{holder_name}: quantity changed from {old_qty} to {new_qty}. New amount: ${new_amount:.2f}.", "success")
+    return redirect(back)
+
+
 @app.route("/signup/approve-create-pass/<int:signup_id>", methods=["POST"])
 def approve_and_create_pass(signup_id):
     if "admin" not in session:
@@ -2441,15 +2542,24 @@ def approve_and_create_pass(signup_id):
         passport_type = db.session.get(PassportType, signup.passport_type_id)
     else:
         passport_type = PassportType.query.filter_by(activity_id=signup.activity_id).first()
-    
+
+    # Honour the quantity the buyer ordered (3 tickets = 3× the places and 3× the price),
+    # like auto_create_passport_from_signup() does on the Interac path. This used to take
+    # one ticket's price and places, so a 3 × $60 signup became a 1 × $60 passport.
+    qty = signup.requested_sessions or 1
+    sessions_per_unit = (passport_type.sessions_included
+                         if passport_type and passport_type.sessions_included is not None else 1)
+    unit_price = passport_type.price_per_user if passport_type else 0.0
+    sold_amt = signup.requested_amount if signup.requested_amount else (unit_price or 0.0) * qty
+
     passport = Passport(
         pass_code=generate_pass_code(),
         user_id=signup.user_id,
         activity_id=signup.activity_id,
         passport_type_id=passport_type.id if passport_type else None,
         passport_type_name=passport_type.name if passport_type else None,  # Preserve type name
-        sold_amt=passport_type.price_per_user if passport_type else 0.0,
-        uses_remaining=passport_type.sessions_included if passport_type else 1,
+        sold_amt=sold_amt,
+        uses_remaining=sessions_per_unit * qty,
         created_by=current_admin.id if current_admin else None,
         created_dt=now_utc,
         paid=signup.paid,
@@ -4904,8 +5014,9 @@ def api_create_passport_from_payment():
         # Use provided amount or default to passport type price
         sold_amt = float(amount) if amount is not None else (passport_type.price_per_user or 0)
 
-        # Use provided sessions or default to passport type sessions
-        uses_remaining = int(sessions) if sessions is not None else (
+        # Use provided sessions or default to passport type sessions. 0 is valid (a donation
+        # takes no place); a negative number is not.
+        uses_remaining = max(0, int(sessions)) if sessions is not None else (
             passport_type.sessions_included if passport_type.sessions_included is not None else 1)
 
         # Create Passport (paid=True since we're creating from a payment)
@@ -8179,6 +8290,7 @@ def list_activities():
             "avatar_name": activity.name,
             "avatar_url": url_for('static', filename='uploads/activity_images/' + activity.image_filename) if activity.image_filename else None,
             "primary": activity.name,
+            "link_url": url_for('activity_dashboard', activity_id=activity.id),
             "secondary": (activity.description or '')[:50] + ('...' if activity.description and len(activity.description) > 50 else ''),
             "badges": badges,
             "mobile_badges": mobile_badges,
@@ -10580,6 +10692,9 @@ def activity_dashboard(activity_id):
                     "data-user-name": s_user_name, "data-approve-url": approve_url,
                     "data-workflow-type": "standard",
                 }})
+            change_qty = change_quantity_action(signup)
+            if change_qty:
+                actions.append(change_qty)
             actions.append({"type": "separator"})
         s_delete_name = escape((signup.user.email if signup.user else None) or (signup.user.name if signup.user else None) or 'Unknown user')
         actions.append({"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {

@@ -1396,6 +1396,18 @@
   white-space: nowrap;
 }
 
+/* Data Table row link (row.link_url): the avatar and name open the row's page.
+   Looks like plain text until hovered, so linked and unlinked tables match. */
+.mp-row-link {
+  color: inherit;
+  text-decoration: none;
+}
+.mp-row-link:hover,
+.mp-row-link:focus-visible {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .mp-table-mobile-card__secondary {
   margin-top: 0.125rem;
   font-size: 0.875rem;

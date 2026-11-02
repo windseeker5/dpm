@@ -137,6 +137,8 @@
   </div>
 </div>
 
+{% include 'partials/change_signup_quantity_modal.html' %}
+
 <form method="POST" id="resendPaymentInstructionsForm" style="display:none">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 </form>

@@ -44,6 +44,9 @@
                of the initials avatar when present, e.g. an activity's
                uploaded cover photo or a product's photo>,
       primary: <bold line, e.g. user name>,
+      link_url: <optional URL — makes the avatar and `primary` a link to the
+               row's own page, e.g. an activity's dashboard, so it opens in
+               one click instead of through the Action Menu> (optional),
       secondary: <muted line, e.g. email> (optional),
       mobile_secondary: <muted line shown by table_mobile() instead of
                `secondary`, when the two views want different second-line
@@ -186,6 +189,9 @@
 {%- endfor %}
 {% endmacro %}
 
+{# Wraps its content in a link to the row's page when the row has a link_url. #}
+{% macro _row_link(url) %}{% if url %}<a href="{{ url }}" class="mp-row-link">{{ caller() }}</a>{% else %}{{ caller() }}{% endif %}{% endmacro %}
+
 {% macro table_desktop(id, columns, rows, action_icon_only=True, show_user=True, show_actions=True) %}
 <div class="table-responsive">
   <table class="table table-hover" id="{{ id }}">
@@ -202,9 +208,9 @@
         {% if show_user %}
         <td style="vertical-align: middle;">
           <div class="d-flex align-items-center gap-3">
-            {% if row.avatar_url %}{{ avatar_photo(row.avatar_url, alt=row.primary) }}{% else %}{{ avatar_initials(row.avatar_name) }}{% endif %}
+            {% call _row_link(row.link_url) %}{% if row.avatar_url %}{{ avatar_photo(row.avatar_url, alt=row.primary) }}{% else %}{{ avatar_initials(row.avatar_name) }}{% endif %}{% endcall %}
             <div style="min-width: 0;">
-              <div class="fw-bold">{{ row.primary }}</div>
+              <div class="fw-bold">{% call _row_link(row.link_url) %}{{ row.primary }}{% endcall %}</div>
               {% if row.secondary %}<div class="text-muted small">{{ row.secondary }}</div>{% endif %}
               {% if row.badges %}
               <div class="mt-1 d-flex flex-wrap gap-1">
@@ -236,10 +242,10 @@
   {% set mobile_secondary = row.mobile_secondary if row.mobile_secondary is defined else row.secondary %}
   {% set mobile_badges = row.mobile_badges if row.mobile_badges is defined else row.badges %}
   <div class="mp-table-mobile-card">
-    {% if show_user %}{% if row.avatar_url %}{{ avatar_photo(row.avatar_url, alt=row.primary) }}{% else %}{{ avatar_initials(row.avatar_name) }}{% endif %}{% endif %}
+    {% if show_user %}{% call _row_link(row.link_url) %}{% if row.avatar_url %}{{ avatar_photo(row.avatar_url, alt=row.primary) }}{% else %}{{ avatar_initials(row.avatar_name) }}{% endif %}{% endcall %}{% endif %}
     <div class="mp-table-mobile-card__body">
       {% if show_user %}
-      <div class="mp-table-mobile-card__primary">{{ row.primary }}</div>
+      <div class="mp-table-mobile-card__primary">{% call _row_link(row.link_url) %}{{ row.primary }}{% endcall %}</div>
       {% if mobile_secondary %}<div class="mp-table-mobile-card__secondary">{{ mobile_secondary }}</div>{% endif %}
       {% if mobile_badges %}
       <div class="mp-table-mobile-card__badges">
