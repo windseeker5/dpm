@@ -8,8 +8,8 @@ Minipass sends **7 transactional email types**:
 
 | Template Key | Display Name | Trigger |
 |---|---|---|
-| `newPass` | New Pass Created | A digital pass is created |
-| `paymentReceived` | Payment Received | Payment is confirmed |
+| `newPass` | New Pass Created | An admin creates a pass by hand, or approves an approval-first signup |
+| `paymentReceived` | Payment Received | Payment is confirmed. For a payment-first signup this is the only email after payment, whether it came from Mark Paid, the Interac bot or Stripe |
 | `latePayment` | Late Payment Reminder | Payment is overdue |
 | `signup` | Signup Confirmation | User registers (approval-first activity) |
 | `signup_payment_first` | Signup Confirmation (Pay First) | User registers on payment-first activity |
