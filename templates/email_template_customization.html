@@ -629,6 +629,9 @@
                   class="form-control template-textarea"
                   rows="8"
                   placeholder="Message shown in the email">{{ template_data.get('admin_message', '') }}</textarea>
+        {% if template_key == 'paymentReceived' and activity.workflow_type == 'payment_first' %}
+        <small class="form-hint pay-first-note">This activity is pay-first: this is the email your customer receives after paying.</small>
+        {% endif %}
       </div>
 
       <!-- QR Code Toggle (only for templates that actually show a QR code).

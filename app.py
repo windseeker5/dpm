@@ -2607,9 +2607,13 @@ def approve_and_create_pass(signup_id):
     now_utc = datetime.now(timezone.utc) + timedelta(seconds=1)
 
     # ✅ Step 7: Send confirmation email
+    # Payment-first: the money is in, so this is the same single "Paiement reçu" email the
+    # Interac bot and Stripe send. It carries the QR and the passport details, so "Votre
+    # passeport est prêt" on top would only repeat them, and an admin who customized "Paiement
+    # reçu" expects that text here. Approval-first: nothing is paid yet, so "passeport prêt".
     notify_pass_event(
         app=current_app._get_current_object(),
-        event_type="pass_created",
+        event_type="payment_received" if signup.activity.workflow_type == "payment_first" else "pass_created",
         pass_data=passport,
         activity=passport.activity,
         admin_email=session.get("admin"),
