@@ -297,7 +297,7 @@
             </div>
             <div class="col-md-3">
               <label class="form-label">Sessions</label>
-              <input type="number" class="form-control" id="cpSessions" name="sessions" min="1">
+              <input type="number" class="form-control" id="cpSessions" name="sessions" min="0">
               <small class="text-muted">From type</small>
             </div>
           </div>
@@ -784,8 +784,10 @@ document.getElementById('cpPassportType').addEventListener('change', function() 
   const amountWarning = document.getElementById('cpAmountWarning');
 
   if (selected && selected.dataset.sessions) {
-    // Always use the passport type's included sessions
-    sessionsInput.value = parseInt(selected.dataset.sessions) || 1;
+    // Always use the passport type's included sessions. 0 is real (a donation takes no
+    // place), so only fall back to 1 when the value is missing, never with `|| 1`.
+    const typeSessions = parseInt(selected.dataset.sessions);
+    sessionsInput.value = Number.isNaN(typeSessions) ? 1 : typeSessions;
 
     // Check amount with sessions
     checkAmountMatch();
@@ -809,16 +811,20 @@ function checkAmountMatch() {
 
   const typePrice = parseFloat(selected.dataset.price) || 0;
   const paymentAmount = parseFloat(amountInput.value) || 0;
-  const sessions = parseInt(sessionsInput.value) || 1;
+  const parsedSessions = parseInt(sessionsInput.value);
+  const sessions = Number.isNaN(parsedSessions) ? 1 : parsedSessions;
+  const sessionsIncluded = parseInt(selected.dataset.sessions);
 
+  // A 0-session type (a donation) has no per-session rate: its price is the gift itself.
+  const isDonation = sessionsIncluded === 0;
   // Calculate per-session price from the passport type's package price
-  const sessionsIncluded = parseInt(selected.dataset.sessions) || 1;
-  const perSessionPrice = typePrice / sessionsIncluded;
-  const expectedTotal = perSessionPrice * sessions;
+  const perSessionPrice = isDonation ? 0 : typePrice / (sessionsIncluded || 1);
+  const expectedTotal = isDonation ? typePrice : perSessionPrice * sessions;
 
   if (typePrice > 0 && paymentAmount > 0 && Math.abs(expectedTotal - paymentAmount) > 0.01) {
-    document.getElementById('cpAmountWarningText').textContent =
-      `Payment amount ($${paymentAmount.toFixed(2)}) differs from passport type price ($${typePrice.toFixed(2)} ÷ ${sessionsIncluded} session${sessionsIncluded > 1 ? 's' : ''} × ${sessions} = $${expectedTotal.toFixed(2)})`;
+    document.getElementById('cpAmountWarningText').textContent = isDonation
+      ? `Payment amount ($${paymentAmount.toFixed(2)}) differs from donation price ($${typePrice.toFixed(2)})`
+      : `Payment amount ($${paymentAmount.toFixed(2)}) differs from passport type price ($${typePrice.toFixed(2)} ÷ ${sessionsIncluded} session${sessionsIncluded > 1 ? 's' : ''} × ${sessions} = $${expectedTotal.toFixed(2)})`;
     amountWarning.style.display = 'block';
   } else {
     amountWarning.style.display = 'none';

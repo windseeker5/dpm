@@ -1,0 +1,39 @@
+{# "Change Quantity" (signup Action Menu, unpaid signups only): one popup, filled from the
+   clicked item's data-* attributes. Built by change_quantity_action() in app.py. #}
+{% from 'macros/form_dialog.html' import form_dialog %}
+{% from 'macros/input.html' import text_input %}
+{% call form_dialog(id="changeSignupQuantityModal", title="Change Quantity",
+     description="For a buyer who ordered the wrong number. The amount to pay follows.",
+     confirm_label="Save", confirm_id="change-qty-confirm",
+     confirm_attrs={"onclick": "document.getElementById('change-qty-form').requestSubmit()"}) %}
+  <form id="change-qty-form" method="POST" class="mp-form-fields">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <p class="mp-text-body mb-0" id="change-qty-who"></p>
+    {{ text_input(id="change-qty-input", name="requested_sessions", label="Quantity", type="number",
+       attrs={"min": "1", "step": "1", "required": "required", "inputmode": "numeric"}) }}
+    <p class="mp-text-body mb-0">New amount: <strong id="change-qty-total"></strong></p>
+  </form>
+{% endcall %}
+<script>
+(function () {
+  const modal = document.getElementById('changeSignupQuantityModal');
+  const input = document.getElementById('change-qty-input');
+  const total = document.getElementById('change-qty-total');
+  let unitPrice = 0;
+  function showTotal() {
+    const qty = parseInt(input.value, 10);
+    total.textContent = qty > 0 ? '$' + (qty * unitPrice).toFixed(2) : '—';
+  }
+  modal.addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    unitPrice = parseFloat(btn.getAttribute('data-unit-price')) || 0;
+    document.getElementById('change-qty-form').action = btn.getAttribute('data-update-url');
+    document.getElementById('change-qty-who').textContent =
+      btn.getAttribute('data-user-name') + ' · $' + unitPrice.toFixed(2) + ' each';
+    input.value = btn.getAttribute('data-quantity');
+    showTotal();
+  });
+  modal.addEventListener('shown.bs.modal', function () { input.select(); });
+  input.addEventListener('input', showTotal);
+})();
+</script>
