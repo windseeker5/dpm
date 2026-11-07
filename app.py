@@ -8995,7 +8995,9 @@ def financial_report_export():
                 passport_number,
                 amount,
                 payment_status,
-                entered_by
+                entered_by,
+                passport_type,
+                ticket_or_donation
             FROM monthly_transactions_detail
             WHERE 1=1
         """
@@ -9037,7 +9039,9 @@ def financial_report_export():
             'passport_number',
             'amount',
             'payment_status',
-            'entered_by'
+            'entered_by',
+            'passport_type',
+            'ticket_or_donation'
         ])
 
         # Write data
@@ -9052,7 +9056,9 @@ def financial_report_export():
                 row.passport_number or '',
                 f"{row.amount:.2f}",
                 row.payment_status,
-                row.entered_by or ''
+                row.entered_by or '',
+                row.passport_type or '',
+                row.ticket_or_donation or ''
             ])
 
         csv_content = output.getvalue()
@@ -9085,7 +9091,9 @@ def financial_report_export():
                 entered_by,
                 source_type,
                 record_id,
-                receipt_filename
+                receipt_filename,
+                passport_type,
+                ticket_or_donation
             FROM monthly_transactions_detail
             WHERE 1=1
         """
@@ -9127,6 +9135,8 @@ def financial_report_export():
                 'amount',
                 'payment_status',
                 'entered_by',
+                'passport_type',
+                'ticket_or_donation',
                 'document_filename'
             ])
 
@@ -9170,6 +9180,8 @@ def financial_report_export():
                     f"{row.amount:.2f}",
                     row.payment_status,
                     row.entered_by or '',
+                    row.passport_type or '',
+                    row.ticket_or_donation or '',
                     doc_filename
                 ])
 
