@@ -4933,6 +4933,223 @@ def task61_clear_pre_quebec_rewrite_email_copy(cursor):
 
 
 # ============================================================================
+# TASK 63: Detail view — passport type and ticket/donation on every income row
+# ============================================================================
+def task63_transactions_detail_ticket_or_donation(cursor):
+    """Add passport_type and ticket_or_donation to monthly_transactions_detail.
+
+    Asked by FBI (2026-11): see ticket money and donation money separately in the financial
+    export. The label belongs in the view, because the two views are the only source of truth
+    for money; the export just reads the new columns.
+
+      passport_type       the passport type's name (falls back to the name copied onto the
+                          passport if the type was deleted). Passport rows, and the Stripe income
+                          row that stands for a passport paid by card.
+      ticket_or_donation  'Donation' when the passport TYPE has 0 sessions (same rule as the pass
+                          page in utils.py), otherwise 'Ticket'. Reads the type, never
+                          uses_remaining: a ticket scanned down to 0 at the door stays a Ticket.
+                          NULL when the type is gone, and on expense and shop rows.
+
+    Same SQL as task56 plus two LEFT JOINs on passport_type's primary key, so no row is added
+    or dropped and every amount stays identical — checked below before the task succeeds.
+    """
+    log("📊", "TASK 63: Detail view — passport_type and ticket_or_donation", Colors.BLUE)
+
+    cursor.execute("SELECT COUNT(*), COALESCE(SUM(amount), 0) FROM monthly_transactions_detail")
+    rows_before, total_before = cursor.fetchone()
+
+    cursor.execute("DROP VIEW IF EXISTS monthly_transactions_detail")
+
+    cursor.execute("""
+        CREATE VIEW monthly_transactions_detail AS
+        SELECT
+            strftime('%Y-%m', COALESCE(p.paid_date, p.created_dt)) as month,
+            COALESCE(a.name, 'Deleted activity #' || p.activity_id) as project,
+            a.id as activity_id,
+            'passport' as source_type,
+            p.id as record_id,
+            NULL as receipt_filename,
+            'Income' as transaction_type,
+            COALESCE(p.paid_date, p.created_dt) as transaction_date,
+            'Passport Sales' as account,
+            u.name as customer,
+            NULL as vendor,
+            CASE
+                WHEN p.payment_method IN ('cash', 'pos', 'cheque')
+                THEN CASE WHEN p.notes IS NOT NULL AND p.notes != '' THEN p.notes || ' | ' ELSE '' END
+                     || CASE p.payment_method
+                            WHEN 'cash' THEN 'Cash'
+                            WHEN 'pos' THEN 'POS/TPV'
+                            WHEN 'cheque' THEN 'Cheque'
+                        END
+                WHEN p.payment_method = 'interac'
+                THEN CASE WHEN p.notes IS NOT NULL AND p.notes != '' THEN p.notes || ' | ' ELSE '' END || 'E-Transfer'
+                ELSE p.notes
+            END as memo,
+            p.pass_code AS passport_number,
+            p.sold_amt as amount,
+            CASE WHEN p.paid = 1 THEN 'Paid' ELSE 'Unpaid (AR)' END as payment_status,
+            COALESCE(p.marked_paid_by, 'Passport System') as entered_by,
+            COALESCE(pt.name, p.passport_type_name) as passport_type,
+            CASE
+                WHEN pt.id IS NULL THEN NULL
+                WHEN pt.sessions_included = 0 THEN 'Donation'
+                ELSE 'Ticket'
+            END as ticket_or_donation
+        FROM passport p
+        LEFT JOIN activity a ON p.activity_id = a.id
+        LEFT JOIN user u ON p.user_id = u.id
+        LEFT JOIN passport_type pt ON pt.id = p.passport_type_id
+        WHERE (p.marked_paid_by IS NULL OR p.marked_paid_by NOT LIKE 'stripe%')
+
+        UNION ALL
+
+        SELECT
+            strftime('%Y-%m', i.date) as month,
+            COALESCE(a.name, 'Deleted activity #' || i.activity_id) as project,
+            a.id as activity_id,
+            'income' as source_type,
+            i.id as record_id,
+            i.receipt_filename,
+            'Income' as transaction_type,
+            i.date as transaction_date,
+            i.category as account,
+            u_stripe.name as customer,
+            NULL as vendor,
+            CASE
+                WHEN st.id IS NOT NULL
+                THEN 'Stripe Credit Card' || CASE WHEN p_stripe.pass_code IS NOT NULL THEN ' | ' || p_stripe.pass_code ELSE '' END
+                ELSE i.note
+            END as memo,
+            p_stripe.pass_code AS passport_number,
+            i.amount,
+            CASE
+                WHEN i.payment_status = 'received' THEN 'Paid'
+                WHEN i.payment_status = 'pending' THEN 'Unpaid (AR)'
+                ELSE 'Unpaid (AR)'
+            END as payment_status,
+            COALESCE(i.created_by, 'System') as entered_by,
+            COALESCE(pt_stripe.name, p_stripe.passport_type_name) as passport_type,
+            CASE
+                WHEN pt_stripe.id IS NULL THEN NULL
+                WHEN pt_stripe.sessions_included = 0 THEN 'Donation'
+                ELSE 'Ticket'
+            END as ticket_or_donation
+        FROM income i
+        LEFT JOIN activity a ON i.activity_id = a.id
+        LEFT JOIN stripe_transaction st ON st.income_id = i.id
+        LEFT JOIN signup sg ON sg.id = st.signup_id
+        LEFT JOIN user u_stripe ON u_stripe.id = sg.user_id
+        LEFT JOIN passport p_stripe ON p_stripe.id = st.passport_id
+        LEFT JOIN passport_type pt_stripe ON pt_stripe.id = p_stripe.passport_type_id
+        WHERE i.payment_status IN ('received', 'pending')
+
+        UNION ALL
+
+        SELECT
+            strftime('%Y-%m', CASE
+                WHEN e.payment_status = 'unpaid'
+                THEN COALESCE(e.payment_date, e.due_date, e.date)
+                ELSE COALESCE(e.payment_date, e.date)
+            END) as month,
+            COALESCE(a.name, 'Deleted activity #' || e.activity_id) as project,
+            a.id as activity_id,
+            'expense' as source_type,
+            e.id as record_id,
+            e.receipt_filename,
+            'Expense' as transaction_type,
+            CASE
+                WHEN e.payment_status = 'unpaid'
+                THEN COALESCE(e.payment_date, e.due_date, e.date)
+                ELSE COALESCE(e.payment_date, e.date)
+            END as transaction_date,
+            e.category as account,
+            u_stripe.name as customer,
+            NULL as vendor,
+            CASE
+                WHEN st.id IS NOT NULL
+                THEN 'Stripe processing fee' || CASE WHEN p_stripe.pass_code IS NOT NULL THEN ' | ' || p_stripe.pass_code ELSE '' END
+                ELSE e.description
+            END as memo,
+            p_stripe.pass_code AS passport_number,
+            e.amount,
+            CASE
+                WHEN e.payment_status = 'paid' THEN 'Paid'
+                WHEN e.payment_status = 'unpaid' THEN 'Unpaid (AP)'
+                ELSE 'Unpaid (AP)'
+            END as payment_status,
+            COALESCE(e.created_by, 'System') as entered_by,
+            NULL as passport_type,
+            NULL as ticket_or_donation
+        FROM expense e
+        LEFT JOIN activity a ON e.activity_id = a.id
+        LEFT JOIN stripe_transaction st ON st.id = e.stripe_transaction_id
+        LEFT JOIN signup sg ON sg.id = st.signup_id
+        LEFT JOIN user u_stripe ON u_stripe.id = sg.user_id
+        LEFT JOIN passport p_stripe ON p_stripe.id = st.passport_id
+        WHERE e.payment_status IN ('paid', 'unpaid')
+
+        UNION ALL
+
+        -- Product sales. activity_id is NULL: a product belongs to the shop, not an activity,
+        -- so the project is the literal 'Boutique'.
+        SELECT
+            strftime('%Y-%m', COALESCE(o.paid_at, o.created_dt)) as month,
+            'Boutique' as project,
+            NULL as activity_id,
+            'product' as source_type,
+            o.id as record_id,
+            NULL as receipt_filename,
+            'Income' as transaction_type,
+            COALESCE(o.paid_at, o.created_dt) as transaction_date,
+            'Product Sales' as account,
+            o.buyer_name as customer,
+            NULL as vendor,
+            o.quantity || ' x ' || o.product_name as memo,
+            o.order_code AS passport_number,
+            o.amount,
+            CASE
+                WHEN o.status IN ('paid','ready','picked_up') THEN 'Paid'
+                ELSE 'Unpaid (AR)'
+            END as payment_status,
+            'Shop System' as entered_by,
+            NULL as passport_type,
+            NULL as ticket_or_donation
+        FROM shop_order o
+        WHERE o.status IN ('awaiting_payment','paid','ready','picked_up')
+
+        ORDER BY month DESC, transaction_date DESC
+    """)
+
+    cursor.execute("SELECT COUNT(*), COALESCE(SUM(amount), 0) FROM monthly_transactions_detail")
+    rows_after, total_after = cursor.fetchone()
+    if rows_after != rows_before or abs(float(total_after) - float(total_before)) > 0.01:
+        log("❌", f"  Detail view changed: {rows_before} rows / ${float(total_before):,.2f} before, "
+                  f"{rows_after} rows / ${float(total_after):,.2f} after", Colors.RED)
+        raise RuntimeError("task63 changed the rows or amounts of monthly_transactions_detail")
+
+    # Both views must still report the same revenue (see task56).
+    cursor.execute("SELECT COALESCE(SUM(total_revenue), 0) FROM monthly_financial_summary")
+    summary_revenue = cursor.fetchone()[0] or 0
+    cursor.execute("""
+        SELECT COALESCE(SUM(amount), 0) FROM monthly_transactions_detail
+        WHERE transaction_type = 'Income'
+    """)
+    detail_revenue = cursor.fetchone()[0] or 0
+    if abs(float(summary_revenue) - float(detail_revenue)) > 0.01:
+        log("❌", f"  Views disagree: summary ${summary_revenue:,.2f} vs detail ${detail_revenue:,.2f}",
+            Colors.RED)
+        raise RuntimeError(
+            f"Financial views disagree after task63: monthly_financial_summary reports "
+            f"{summary_revenue:.2f} but monthly_transactions_detail reports {detail_revenue:.2f}"
+        )
+
+    log("✅", f"  monthly_transactions_detail recreated: {rows_after} rows, "
+              f"${float(total_after):,.2f}, unchanged", Colors.GREEN)
+    return True
+
+
+# ============================================================================
 # TASK 62: Add Any Column models.py Has That the Database Lacks
 # ============================================================================
 def _sqlite_default_literal(column, dialect):
@@ -5094,6 +5311,7 @@ def main():
         ("Repair Dangling _old Foreign Keys", task59_repair_dangling_fk_references),
         ("Lookup and Date-Range Indexes", task60_add_lookup_and_date_indexes),
         ("Email Copy: Quebec-French Rewrite", task61_clear_pre_quebec_rewrite_email_copy),
+        ("Financial Views: Ticket or Donation", task63_transactions_detail_ticket_or_donation),
         # After every hand-written task, so it only catches columns none of them added.
         ("Columns Missing From models.py", task62_add_columns_missing_from_models),
         # Runs last so it verifies the final schema; earlier it checked for columns
